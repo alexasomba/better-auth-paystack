@@ -1,5 +1,6 @@
 import type { BetterAuthClientPlugin } from "better-auth";
 import type { paystack } from "./index";
+import type { PaystackNodeClient } from "./types";
 
 export const paystackClient = <
     O extends {
@@ -12,10 +13,10 @@ export const paystackClient = <
         id: "paystack-client",
         $InferServerPlugin: {} as ReturnType<
             typeof paystack<
-                any,
+                PaystackNodeClient,
                 O["subscription"] extends true
                 ? {
-                    paystackClient: any;
+                    paystackClient: PaystackNodeClient;
                     paystackWebhookSecret: string;
                     subscription: {
                         enabled: true;
@@ -23,7 +24,7 @@ export const paystackClient = <
                     };
                 }
                 : {
-                    paystackClient: any;
+                    paystackClient: PaystackNodeClient;
                     paystackWebhookSecret: string;
                 }
             >
