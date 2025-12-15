@@ -104,6 +104,9 @@ export declare const verifyTransaction: (options: AnyPaystackOptions) => import(
 }>;
 export declare const listSubscriptions: (options: AnyPaystackOptions) => import("better-auth").StrictEndpoint<"/paystack/subscription/list-local", {
     method: "GET";
+    query: z.ZodObject<{
+        referenceId: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
     use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         context: {
             referenceId: any;

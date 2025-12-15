@@ -10,7 +10,7 @@ import {
 } from "better-auth/api";
 import * as z from "zod/v4";
 import type { InputSubscription, PaystackOptions, Subscription } from "./types";
-import { getPlanByName } from "./utils";
+import { getPlanByName, getPlans } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -91,6 +91,115 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
             }
 
             const event = JSON.parse(payload) as any;
+
+            // Best-effort local state sync for subscription lifecycle.
+            if (options.subscription?.enabled) {
+                const eventName = String(event?.event ?? "");
+                const data = event?.data as any;
+                try {
+                    if (eventName === "subscription.create") {
+                        const subscriptionCode =
+                            data?.subscription_code ??
+                            data?.subscription?.subscription_code ??
+                            data?.code;
+                        const customerCode =
+                            data?.customer?.customer_code ??
+                            data?.customer_code ??
+                            data?.customer?.code;
+                        const planCode =
+                            data?.plan?.plan_code ?? data?.plan_code ?? data?.plan;
+
+                        let metadata: any = data?.metadata;
+                        if (typeof metadata === "string") {
+                            try {
+                                metadata = JSON.parse(metadata);
+                            } catch {
+                                // ignore
+                            }
+                        }
+
+                        const referenceIdFromMetadata =
+                            typeof metadata === "object" && metadata
+                                ? (metadata.referenceId as string | undefined)
+                                : undefined;
+
+                        let planNameFromMetadata =
+                            typeof metadata === "object" && metadata
+                                ? (metadata.plan as string | undefined)
+                                : undefined;
+                        if (typeof planNameFromMetadata === "string") {
+                            planNameFromMetadata = planNameFromMetadata.toLowerCase();
+                        }
+
+                        const plans = await getPlans(options.subscription);
+                        const planFromCode = planCode
+                            ? plans.find((p) => p.planCode && p.planCode === planCode)
+                            : undefined;
+                        const planName = (planFromCode?.name ?? planNameFromMetadata)?.toLowerCase();
+
+                        if (subscriptionCode) {
+                            const where: Array<{ field: string; value: any }> = [];
+                            if (referenceIdFromMetadata) {
+                                where.push({ field: "referenceId", value: referenceIdFromMetadata });
+                            } else if (customerCode) {
+                                where.push({ field: "paystackCustomerCode", value: customerCode });
+                            }
+                            if (planName) {
+                                where.push({ field: "plan", value: planName });
+                            }
+
+                            if (where.length > 0) {
+                                const matches = await ctx.context.adapter.findMany<Subscription>({
+                                    model: "subscription",
+                                    where,
+                                });
+                                const subscription = matches?.[0];
+                                if (subscription) {
+                                    await ctx.context.adapter.update({
+                                        model: "subscription",
+                                        update: {
+                                            paystackSubscriptionCode: subscriptionCode,
+                                            status: "active",
+                                            updatedAt: new Date(),
+                                        },
+                                        where: [{ field: "id", value: subscription.id }],
+                                    });
+
+                                    const plan = planFromCode ?? (planName ? await getPlanByName(options, planName) : undefined);
+                                    if (plan) {
+                                        await options.subscription.onSubscriptionComplete?.(
+                                            { event, subscription: { ...subscription, paystackSubscriptionCode: subscriptionCode, status: "active" }, plan },
+                                            ctx as any,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (eventName === "subscription.disable" || eventName === "subscription.not_renew") {
+                        const subscriptionCode =
+                            data?.subscription_code ??
+                            data?.subscription?.subscription_code ??
+                            data?.code;
+                        if (subscriptionCode) {
+                            await ctx.context.adapter.update({
+                                model: "subscription",
+                                update: {
+                                    status: "canceled",
+                                    updatedAt: new Date(),
+                                },
+                                where: [
+                                    { field: "paystackSubscriptionCode", value: subscriptionCode },
+                                ],
+                            });
+                        }
+                    }
+                } catch (e: any) {
+                    ctx.context.logger.error("Failed to sync Paystack webhook event", e);
+                }
+            }
+
             await options.onEvent?.(event);
             return ctx.json({ received: true });
         },
@@ -293,6 +402,10 @@ export const verifyTransaction = (options: AnyPaystackOptions) => {
 };
 
 export const listSubscriptions = (options: AnyPaystackOptions) => {
+    const listQuerySchema = z.object({
+        referenceId: z.string().optional(),
+    });
+
     const subscriptionOptions = options.subscription;
     const useMiddlewares = subscriptionOptions?.enabled
         ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "list-subscriptions")]
@@ -302,6 +415,7 @@ export const listSubscriptions = (options: AnyPaystackOptions) => {
         "/paystack/subscription/list-local",
         {
             method: "GET",
+            query: listQuerySchema,
             use: useMiddlewares,
         },
         async (ctx) => {
@@ -312,7 +426,10 @@ export const listSubscriptions = (options: AnyPaystackOptions) => {
             }
             const session = await getSessionFromCtx(ctx);
             if (!session) throw new APIError("UNAUTHORIZED");
-            const referenceId = (session.user as any).id;
+            const referenceId =
+                ((ctx.context as any).referenceId as string | undefined) ??
+                (ctx.query?.referenceId as string | undefined) ??
+                ((session.user as any).id as string);
             const res = await ctx.context.adapter.findMany<Subscription>({
                 model: "subscription",
                 where: [{ field: "referenceId", value: referenceId }],
