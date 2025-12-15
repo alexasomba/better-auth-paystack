@@ -46,5 +46,21 @@ export function getPaystackOps(paystackClient) {
             }
             return paystackClient?.subscription?.enable?.(body);
         },
+        subscriptionFetch: async (idOrCode) => {
+            if (paystackClient?.subscription_fetch) {
+                return paystackClient.subscription_fetch({
+                    params: { path: { id_or_code: idOrCode } },
+                });
+            }
+            return paystackClient?.subscription?.fetch?.(idOrCode);
+        },
+        subscriptionManageLink: async (code) => {
+            if (paystackClient?.subscription_manage_link) {
+                return paystackClient.subscription_manage_link({
+                    params: { path: { code } },
+                });
+            }
+            return paystackClient?.subscription?.manage?.link?.(code);
+        },
     };
 }

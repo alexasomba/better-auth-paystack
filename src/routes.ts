@@ -440,9 +440,36 @@ export const listSubscriptions = (options: AnyPaystackOptions) => {
 };
 
 const enableDisableBodySchema = z.object({
+    referenceId: z.string().optional(),
     subscriptionCode: z.string(),
-    emailToken: z.string(),
+    emailToken: z.string().optional(),
 });
+
+function decodeBase64UrlToString(value: string): string {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "===".slice((normalized.length + 3) % 4);
+    if (typeof (globalThis as any).atob === "function") {
+        return (globalThis as any).atob(padded);
+    }
+    // Node fallback
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return Buffer.from(padded, "base64").toString("utf8");
+}
+
+function tryGetEmailTokenFromSubscriptionManageLink(link: string): string | undefined {
+    try {
+        const url = new URL(link);
+        const subscriptionToken = url.searchParams.get("subscription_token");
+        if (!subscriptionToken) return undefined;
+        const parts = subscriptionToken.split(".");
+        if (parts.length < 2) return undefined;
+        const payloadJson = decodeBase64UrlToString(parts[1]!);
+        const payload = JSON.parse(payloadJson) as any;
+        return typeof payload?.email_token === "string" ? payload.email_token : undefined;
+    } catch {
+        return undefined;
+    }
+}
 
 export const disablePaystackSubscription = (options: AnyPaystackOptions) => {
     const subscriptionOptions = options.subscription;
@@ -454,9 +481,48 @@ export const disablePaystackSubscription = (options: AnyPaystackOptions) => {
         "/paystack/subscription/disable",
         { method: "POST", body: enableDisableBodySchema, use: useMiddlewares },
         async (ctx) => {
-            const { subscriptionCode, emailToken } = ctx.body;
+            const { subscriptionCode } = ctx.body;
             const paystack = getPaystackOps(options.paystackClient);
             try {
+                let emailToken = ctx.body.emailToken;
+                if (!emailToken) {
+                    try {
+                        const raw = await paystack.subscriptionFetch(subscriptionCode);
+                        const fetchRes = unwrapSdkResult<any>(raw);
+                        const data =
+                            fetchRes && typeof fetchRes === "object" && "status" in fetchRes && "data" in fetchRes
+                                ? (fetchRes as any).data
+                                : fetchRes?.data ?? fetchRes;
+                        emailToken = data?.email_token;
+                    } catch {
+                        // ignore; try manage-link fallback below
+                    }
+                }
+
+                if (!emailToken) {
+                    try {
+                        const raw = await paystack.subscriptionManageLink(subscriptionCode);
+                        const linkRes = unwrapSdkResult<any>(raw);
+                        const data =
+                            linkRes && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
+                                ? (linkRes as any).data
+                                : linkRes?.data ?? linkRes;
+                        const link = data?.link;
+                        if (typeof link === "string") {
+                            emailToken = tryGetEmailTokenFromSubscriptionManageLink(link);
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+
+                if (!emailToken) {
+                    throw new APIError("BAD_REQUEST", {
+                        message:
+                            "Missing emailToken. Provide it explicitly or ensure your server can fetch it from Paystack using the subscription code.",
+                    });
+                }
+
                 const raw = await paystack.subscriptionDisable({
                     code: subscriptionCode,
                     token: emailToken,
@@ -485,9 +551,48 @@ export const enablePaystackSubscription = (options: AnyPaystackOptions) => {
         "/paystack/subscription/enable",
         { method: "POST", body: enableDisableBodySchema, use: useMiddlewares },
         async (ctx) => {
-            const { subscriptionCode, emailToken } = ctx.body;
+            const { subscriptionCode } = ctx.body;
             const paystack = getPaystackOps(options.paystackClient);
             try {
+                let emailToken = ctx.body.emailToken;
+                if (!emailToken) {
+                    try {
+                        const raw = await paystack.subscriptionFetch(subscriptionCode);
+                        const fetchRes = unwrapSdkResult<any>(raw);
+                        const data =
+                            fetchRes && typeof fetchRes === "object" && "status" in fetchRes && "data" in fetchRes
+                                ? (fetchRes as any).data
+                                : fetchRes?.data ?? fetchRes;
+                        emailToken = data?.email_token;
+                    } catch {
+                        // ignore; try manage-link fallback below
+                    }
+                }
+
+                if (!emailToken) {
+                    try {
+                        const raw = await paystack.subscriptionManageLink(subscriptionCode);
+                        const linkRes = unwrapSdkResult<any>(raw);
+                        const data =
+                            linkRes && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
+                                ? (linkRes as any).data
+                                : linkRes?.data ?? linkRes;
+                        const link = data?.link;
+                        if (typeof link === "string") {
+                            emailToken = tryGetEmailTokenFromSubscriptionManageLink(link);
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+
+                if (!emailToken) {
+                    throw new APIError("BAD_REQUEST", {
+                        message:
+                            "Missing emailToken. Provide it explicitly or ensure your server can fetch it from Paystack using the subscription code.",
+                    });
+                }
+
                 const raw = await paystack.subscriptionEnable({
                     code: subscriptionCode,
                     token: emailToken,

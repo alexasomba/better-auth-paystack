@@ -22,6 +22,13 @@ export type PaystackClientLike = {
             };
         };
     }) => PaystackApiResult<any>;
+    subscription_fetch?: (init: {
+        params: {
+            path: {
+                id_or_code: string;
+            };
+        };
+    }) => PaystackApiResult<any>;
     subscription_disable?: (init?: {
         body?: {
             code: string;
@@ -34,6 +41,13 @@ export type PaystackClientLike = {
             token: string;
         };
     } | undefined) => PaystackApiResult<any>;
+    subscription_manage_link?: (init: {
+        params: {
+            path: {
+                code: string;
+            };
+        };
+    }) => PaystackApiResult<any>;
     customer?: {
         create?: (params: any) => Promise<any>;
     };
@@ -42,8 +56,12 @@ export type PaystackClientLike = {
         verify?: (reference: string) => Promise<any>;
     };
     subscription?: {
+        fetch?: (idOrCode: string) => Promise<any>;
         disable?: (params: any) => Promise<any>;
         enable?: (params: any) => Promise<any>;
+        manage?: {
+            link?: (code: string) => Promise<any>;
+        };
     };
 };
 type NoInfer<T> = [T][T extends any ? 0 : never];

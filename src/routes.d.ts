@@ -140,8 +140,9 @@ export declare const listSubscriptions: (options: AnyPaystackOptions) => import(
 export declare const disablePaystackSubscription: (options: AnyPaystackOptions) => import("better-auth").StrictEndpoint<"/paystack/subscription/disable", {
     method: "POST";
     body: z.ZodObject<{
+        referenceId: z.ZodOptional<z.ZodString>;
         subscriptionCode: z.ZodString;
-        emailToken: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         context: {
@@ -176,8 +177,9 @@ export declare const disablePaystackSubscription: (options: AnyPaystackOptions) 
 export declare const enablePaystackSubscription: (options: AnyPaystackOptions) => import("better-auth").StrictEndpoint<"/paystack/subscription/enable", {
     method: "POST";
     body: z.ZodObject<{
+        referenceId: z.ZodOptional<z.ZodString>;
         subscriptionCode: z.ZodString;
-        emailToken: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         context: {

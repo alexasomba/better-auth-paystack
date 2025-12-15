@@ -22,8 +22,10 @@ export type PaystackClientLike = {
     customer_create?: (init?: { body?: any } | undefined) => PaystackApiResult<any>;
     transaction_initialize?: (init?: { body?: any } | undefined) => PaystackApiResult<any>;
     transaction_verify?: (init: { params: { path: { reference: string } } }) => PaystackApiResult<any>;
+    subscription_fetch?: (init: { params: { path: { id_or_code: string } } }) => PaystackApiResult<any>;
     subscription_disable?: (init?: { body?: { code: string; token: string } } | undefined) => PaystackApiResult<any>;
     subscription_enable?: (init?: { body?: { code: string; token: string } } | undefined) => PaystackApiResult<any>;
+    subscription_manage_link?: (init: { params: { path: { code: string } } }) => PaystackApiResult<any>;
 
     // Legacy nested style support (kept for compatibility)
     customer?: {
@@ -34,8 +36,12 @@ export type PaystackClientLike = {
         verify?: (reference: string) => Promise<any>;
     };
     subscription?: {
+        fetch?: (idOrCode: string) => Promise<any>;
         disable?: (params: any) => Promise<any>;
         enable?: (params: any) => Promise<any>;
+        manage?: {
+            link?: (code: string) => Promise<any>;
+        };
     };
 };
 

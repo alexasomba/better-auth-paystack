@@ -170,12 +170,14 @@ You can optionally pass `referenceId` as a query param (requires `authorizeRefer
 
 ### Enabling / disabling a subscription
 
-Paystack requires both the subscription code and the email token:
+Paystack requires both the subscription code and the email token.
 
-- `POST {AUTH_BASE}/paystack/subscription/enable` with `{ subscriptionCode, emailToken }`
-- `POST {AUTH_BASE}/paystack/subscription/disable` with `{ subscriptionCode, emailToken }`
+For convenience, the plugin lets you omit `emailToken` and will attempt to fetch it from Paystack using the subscription code (via Subscription fetch, with a fallback to Manage Link).
 
-Paystack documents these as `code` + `token`. You can obtain them from Paystack (e.g., via the Subscription API fetch endpoints or your Paystack dashboard).
+- `POST {AUTH_BASE}/paystack/subscription/enable` with `{ subscriptionCode, emailToken? }`
+- `POST {AUTH_BASE}/paystack/subscription/disable` with `{ subscriptionCode, emailToken? }`
+
+Paystack documents these as `code` + `token`. If the server cannot fetch `emailToken`, you can still provide it explicitly (e.g., from the Subscription API or your Paystack dashboard).
 
 ## Schema
 

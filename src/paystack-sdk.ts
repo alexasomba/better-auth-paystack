@@ -52,5 +52,21 @@ export function getPaystackOps(paystackClient: PaystackClientLike | any) {
             }
             return paystackClient?.subscription?.enable?.(body);
         },
+        subscriptionFetch: async (idOrCode: string) => {
+            if (paystackClient?.subscription_fetch) {
+                return paystackClient.subscription_fetch({
+                    params: { path: { id_or_code: idOrCode } },
+                });
+            }
+            return paystackClient?.subscription?.fetch?.(idOrCode);
+        },
+        subscriptionManageLink: async (code: string) => {
+            if (paystackClient?.subscription_manage_link) {
+                return paystackClient.subscription_manage_link({
+                    params: { path: { code } },
+                });
+            }
+            return paystackClient?.subscription?.manage?.link?.(code);
+        },
     };
 }

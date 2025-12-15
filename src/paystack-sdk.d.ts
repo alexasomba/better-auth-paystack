@@ -12,5 +12,7 @@ export declare function getPaystackOps(paystackClient: PaystackClientLike | any)
         code: string;
         token: string;
     }) => Promise<any>;
+    subscriptionFetch: (idOrCode: string) => Promise<any>;
+    subscriptionManageLink: (code: string) => Promise<any>;
 };
 //# sourceMappingURL=paystack-sdk.d.ts.map
