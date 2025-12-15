@@ -54,9 +54,15 @@ export function getPaystackOps(paystackClient: PaystackClientLike | any) {
         },
         subscriptionFetch: async (idOrCode: string) => {
             if (paystackClient?.subscription_fetch) {
-                return paystackClient.subscription_fetch({
-                    params: { path: { id_or_code: idOrCode } },
-                });
+                try {
+                    return await paystackClient.subscription_fetch({
+                        params: { path: { code: idOrCode } },
+                    });
+                } catch {
+                    return paystackClient.subscription_fetch({
+                        params: { path: { id_or_code: idOrCode } },
+                    });
+                }
             }
             return paystackClient?.subscription?.fetch?.(idOrCode);
         },

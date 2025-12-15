@@ -30,6 +30,12 @@ jobs:
 
       - run: pnpm install
 
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test --silent
+
       - name: Build
         run: pnpm build
 

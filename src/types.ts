@@ -22,7 +22,12 @@ export type PaystackClientLike = {
     customer_create?: (init?: { body?: any } | undefined) => PaystackApiResult<any>;
     transaction_initialize?: (init?: { body?: any } | undefined) => PaystackApiResult<any>;
     transaction_verify?: (init: { params: { path: { reference: string } } }) => PaystackApiResult<any>;
-    subscription_fetch?: (init: { params: { path: { id_or_code: string } } }) => PaystackApiResult<any>;
+    // `subscription_fetch` can accept either `{ params: { path: { code: string } } }`
+    // (used by some SDKs) or `{ params: { path: { id_or_code: string } } }`
+    // (used by others). Accept either shape for compatibility with both.
+    // `subscription_fetch` init types vary across SDK generators (FetchOptions, etc).
+    // Keep it permissive here and normalize in `getPaystackOps().subscriptionFetch()`.
+    subscription_fetch?: (init: any) => PaystackApiResult<any>;
     subscription_disable?: (init?: { body?: { code: string; token: string } } | undefined) => PaystackApiResult<any>;
     subscription_enable?: (init?: { body?: { code: string; token: string } } | undefined) => PaystackApiResult<any>;
     subscription_manage_link?: (init: { params: { path: { code: string } } }) => PaystackApiResult<any>;

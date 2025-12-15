@@ -233,4 +233,84 @@ describe("paystack", () => {
             body: { code: "SUB_test_123", token: "tok_test_123" },
         });
     });
+
+    it("should enable subscription without emailToken by fetching it", async () => {
+        const paystackSdk = {
+            subscription_fetch: vi.fn().mockResolvedValue({
+                data: {
+                    status: true,
+                    message: "ok",
+                    data: {
+                        email_token: "tok_test_123",
+                    },
+                },
+            }),
+            subscription_enable: vi.fn().mockResolvedValue({
+                data: {
+                    status: true,
+                    message: "Subscription enabled successfully",
+                },
+            }),
+        };
+
+        const options = {
+            paystackClient: paystackSdk,
+            paystackWebhookSecret: "whsec_test",
+            subscription: {
+                enabled: true,
+                plans: [],
+            },
+        } satisfies PaystackOptions<any>;
+
+        const auth = betterAuth({
+            database: memory,
+            baseURL: "http://localhost:3000",
+            emailAndPassword: { enabled: true },
+            plugins: [paystack<any>(options)],
+        });
+
+        const authClient = createAuthClient({
+            baseURL: "http://localhost:3000",
+            fetchOptions: {
+                customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
+            },
+        });
+
+        const testUser = {
+            email: "sub-enable@email.com",
+            password: "password",
+            name: "Sub Enable User",
+        };
+
+        await authClient.signUp.email(testUser, { throw: true });
+
+        const headers = new Headers();
+        await authClient.signIn.email(testUser, {
+            throw: true,
+            onSuccess: setCookieToHeader(headers),
+        });
+
+        const reqHeaders = new Headers(headers);
+        reqHeaders.set("content-type", "application/json");
+        reqHeaders.set("origin", "http://localhost:3000");
+
+        const req = new Request(
+            "http://localhost:3000/api/auth/paystack/subscription/enable",
+            {
+                method: "POST",
+                headers: reqHeaders,
+                body: JSON.stringify({
+                    subscriptionCode: "SUB_test_123",
+                    // emailToken intentionally omitted
+                }),
+            },
+        );
+
+        const res = await auth.handler(req);
+        expect(res.status).toBe(200);
+        expect(paystackSdk.subscription_fetch).toHaveBeenCalledTimes(1);
+        expect(paystackSdk.subscription_enable).toHaveBeenCalledWith({
+            body: { code: "SUB_test_123", token: "tok_test_123" },
+        });
+    });
 });
