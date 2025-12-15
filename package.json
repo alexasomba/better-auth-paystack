@@ -1,0 +1,47 @@
+{
+  "name": "@alexasomba/better-auth-paystack",
+  "version": "0.0.1",
+  "description": "Community Better Auth plugin for Paystack (by alexasomba)",
+  "license": "MIT",
+  "author": "alexasomba",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexasomba/better-auth-paystack.git"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "better-auth": ">=1.0.0"
+  },
+  "dependencies": {
+    "defu": "^6.1.4",
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.4",
+    "@alexasomba/paystack-browser": "^1.1.6",
+    "@alexasomba/paystack-node": "^1.1.6",
+    "tsdown": "^0.18.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}
