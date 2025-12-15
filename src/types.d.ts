@@ -1,5 +1,52 @@
 import type { GenericEndpointContext, InferOptionSchema, Session, User } from "better-auth";
+import type { createPaystack } from "@alexasomba/paystack-node";
 import type { subscriptions, user } from "./schema";
+export type PaystackNodeClient = ReturnType<typeof createPaystack>;
+export type PaystackOpenApiFetchResponse<T = unknown> = {
+    data?: T;
+    error?: unknown;
+    response?: Response;
+};
+export type PaystackApiResult<T = unknown> = Promise<T | PaystackOpenApiFetchResponse<T>>;
+export type PaystackClientLike = {
+    customer_create?: (init?: {
+        body?: any;
+    } | undefined) => PaystackApiResult<any>;
+    transaction_initialize?: (init?: {
+        body?: any;
+    } | undefined) => PaystackApiResult<any>;
+    transaction_verify?: (init: {
+        params: {
+            path: {
+                reference: string;
+            };
+        };
+    }) => PaystackApiResult<any>;
+    subscription_disable?: (init?: {
+        body?: {
+            code: string;
+            token: string;
+        };
+    } | undefined) => PaystackApiResult<any>;
+    subscription_enable?: (init?: {
+        body?: {
+            code: string;
+            token: string;
+        };
+    } | undefined) => PaystackApiResult<any>;
+    customer?: {
+        create?: (params: any) => Promise<any>;
+    };
+    transaction?: {
+        initialize?: (params: any) => Promise<any>;
+        verify?: (reference: string) => Promise<any>;
+    };
+    subscription?: {
+        disable?: (params: any) => Promise<any>;
+        enable?: (params: any) => Promise<any>;
+    };
+};
+type NoInfer<T> = [T][T extends any ? 0 : never];
 export type AuthSession = {
     user: User;
     session: Session;
@@ -13,6 +60,10 @@ export type PaystackPlan = {
     amount?: number | undefined;
     /** Currency ISO code (e.g. NGN). */
     currency?: string | undefined;
+    /** Paystack interval keyword (when using Paystack plans). */
+    interval?: "daily" | "weekly" | "monthly" | "quarterly" | "biannually" | "annually" | undefined;
+    /** Optional invoice limit; Paystack uses `invoice_limit` during init. */
+    invoiceLimit?: number | undefined;
     /** Arbitrary limits (stored/consumed by your app). */
     limits?: Record<string, unknown> | undefined;
     /** Optional free trial config, if your app supports it. */
@@ -59,9 +110,9 @@ export type SubscriptionOptions = {
         subscription: Subscription;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
 };
-export interface PaystackOptions {
-    /** Paystack SDK instance (recommended: `@alexasomba/paystack-node`). */
-    paystackClient: any;
+export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackNodeClient> {
+    /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
+    paystackClient: NoInfer<TPaystackClient>;
     /** Paystack webhook secret used to verify `x-paystack-signature`. */
     paystackWebhookSecret: string;
     /** Enable customer creation on Better Auth sign up. */
@@ -83,4 +134,5 @@ export interface PaystackOptions {
 }
 export interface InputSubscription extends Omit<Subscription, "id"> {
 }
+export {};
 //# sourceMappingURL=types.d.ts.map

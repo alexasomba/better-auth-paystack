@@ -69,5 +69,5 @@ export declare const user: {
         };
     };
 };
-export declare const getSchema: (options: PaystackOptions) => BetterAuthPluginDBSchema;
+export declare const getSchema: (options: PaystackOptions<any>) => BetterAuthPluginDBSchema;
 //# sourceMappingURL=schema.d.ts.map

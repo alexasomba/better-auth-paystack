@@ -2,6 +2,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { defu } from "defu";
 import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, paystackWebhook, verifyTransaction, PAYSTACK_ERROR_CODES, } from "./routes";
 import { getSchema } from "./schema";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const INTERNAL_ERROR_CODES = defineErrorCodes({
     ...PAYSTACK_ERROR_CODES,
 });
@@ -44,10 +45,13 @@ export const paystack = (options) => {
                                             last_name: lastName,
                                             metadata: { userId: user.id },
                                         }, extraCreateParams);
-                                        const res = await options.paystackClient?.customer?.create?.(params);
-                                        const paystackCustomer = res?.data ?? res;
-                                        const customerCode = paystackCustomer?.customer_code ??
-                                            paystackCustomer?.data?.customer_code;
+                                        const paystack = getPaystackOps(options.paystackClient);
+                                        const raw = await paystack.customerCreate(params);
+                                        const res = unwrapSdkResult(raw);
+                                        const paystackCustomer = res && typeof res === "object" && "status" in res && "data" in res
+                                            ? res.data
+                                            : res?.data ?? res;
+                                        const customerCode = paystackCustomer?.customer_code;
                                         if (!customerCode)
                                             return;
                                         await hookCtx.context.internalAdapter.updateUser(user.id, {

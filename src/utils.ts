@@ -9,7 +9,7 @@ export async function getPlans(subscriptionOptions: PaystackOptions["subscriptio
     throw new Error("Subscriptions are not enabled in the Paystack options.");
 }
 
-export async function getPlanByName(options: PaystackOptions, name: string) {
+export async function getPlanByName(options: PaystackOptions<any>, name: string) {
     return await getPlans(options.subscription).then((plans) =>
         plans?.find((plan) => plan.name.toLowerCase() === name.toLowerCase()),
     );

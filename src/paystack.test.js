@@ -79,13 +79,15 @@ describe("paystack", () => {
     });
     it("should create Paystack customer on sign up", async () => {
         const paystackSdk = {
-            customer: {
-                create: vi.fn().mockResolvedValue({
+            customer_create: vi.fn().mockResolvedValue({
+                data: {
+                    status: true,
+                    message: "ok",
                     data: {
                         customer_code: "CUS_test_123",
                     },
-                }),
-            },
+                },
+            }),
         };
         const options = {
             paystackClient: paystackSdk,
@@ -113,7 +115,7 @@ describe("paystack", () => {
         };
         const res = await authClient.signUp.email(testUser, { throw: true });
         expect(res.user.id).toBeDefined();
-        expect(paystackSdk.customer.create).toHaveBeenCalledTimes(1);
+        expect(paystackSdk.customer_create).toHaveBeenCalledTimes(1);
         const dbUser = await ctx.adapter.findOne({
             model: "user",
             where: [{ field: "id", value: res.user.id }],

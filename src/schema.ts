@@ -73,7 +73,7 @@ export const user = {
     },
 } satisfies BetterAuthPluginDBSchema;
 
-export const getSchema = (options: PaystackOptions) => {
+export const getSchema = (options: PaystackOptions<any>) => {
     let baseSchema: BetterAuthPluginDBSchema;
 
     if (options.subscription?.enabled) {

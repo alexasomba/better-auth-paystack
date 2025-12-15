@@ -8,6 +8,11 @@
     "type": "git",
     "url": "git+https://github.com/alexasomba/better-auth-paystack.git"
   },
+  "keywords": [
+    "stripe",
+    "auth",
+    "stripe"
+  ],
   "type": "module",
   "files": [
     "dist"
@@ -27,7 +32,13 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint:package": "publint run --strict",
+    "lint:types": "attw --profile esm-only --pack .",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "peerDependencies": {
     "better-auth": ">=1.0.0"

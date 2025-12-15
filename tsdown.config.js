@@ -1,5 +1,6 @@
 import { defineConfig } from "tsdown";
 export default defineConfig({
+    tsconfig: "./tsconfig.build.json",
     dts: { build: true, incremental: true },
     format: ["esm"],
     entry: ["./src/index.ts", "./src/client.ts"],

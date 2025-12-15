@@ -11,13 +11,26 @@ import {
     PAYSTACK_ERROR_CODES,
 } from "./routes";
 import { getSchema } from "./schema";
-import type { PaystackOptions, PaystackPlan, Subscription, SubscriptionOptions } from "./types";
+import type {
+    PaystackNodeClient,
+    PaystackClientLike,
+    PaystackOptions,
+    PaystackPlan,
+    Subscription,
+    SubscriptionOptions,
+} from "./types";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
 const INTERNAL_ERROR_CODES = defineErrorCodes({
     ...PAYSTACK_ERROR_CODES,
 });
 
-export const paystack = <O extends PaystackOptions>(options: O) => {
+export const paystack = <
+    TPaystackClient extends PaystackClientLike = PaystackNodeClient,
+    O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>,
+>(
+    options: O,
+) => {
     const baseEndpoints = {
         paystackWebhook: paystackWebhook(options),
     } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
@@ -64,12 +77,14 @@ export const paystack = <O extends PaystackOptions>(options: O) => {
                                             },
                                             extraCreateParams,
                                         );
-
-                                        const res = await options.paystackClient?.customer?.create?.(params);
-                                        const paystackCustomer = res?.data ?? res;
-                                        const customerCode =
-                                            paystackCustomer?.customer_code ??
-                                            paystackCustomer?.data?.customer_code;
+                                        const paystack = getPaystackOps(options.paystackClient);
+                                        const raw = await paystack.customerCreate(params);
+                                        const res = unwrapSdkResult<any>(raw);
+                                        const paystackCustomer =
+                                            res && typeof res === "object" && "status" in res && "data" in res
+                                                ? (res as any).data
+                                                : res?.data ?? res;
+                                        const customerCode = paystackCustomer?.customer_code;
 
                                         if (!customerCode) return;
 
@@ -105,6 +120,11 @@ export const paystack = <O extends PaystackOptions>(options: O) => {
     } satisfies BetterAuthPlugin;
 };
 
-export type PaystackPlugin<O extends PaystackOptions> = ReturnType<typeof paystack<O>>;
+type PaystackClientFromOptions<O extends PaystackOptions<any>> =
+    O extends PaystackOptions<infer TClient> ? TClient : PaystackNodeClient;
+
+export type PaystackPlugin<O extends PaystackOptions<any> = PaystackOptions> = ReturnType<
+    typeof paystack<PaystackClientFromOptions<O>, O>
+>;
 
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions };

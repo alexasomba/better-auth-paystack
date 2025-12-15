@@ -5,6 +5,7 @@ import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "be
 import * as z from "zod/v4";
 import { getPlanByName } from "./utils";
 import { referenceMiddleware } from "./middleware";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
     SUBSCRIPTION_NOT_FOUND: "Subscription not found",
     SUBSCRIPTION_PLAN_NOT_FOUND: "Subscription plan not found",
@@ -70,12 +71,16 @@ const initializeTransactionBodySchema = z.object({
     callbackURL: z.string().optional(),
 });
 export const initializeTransaction = (options) => {
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "initialize-transaction")]
+        : [sessionMiddleware, originCheck];
     return createAuthEndpoint("/paystack/transaction/initialize", {
         method: "POST",
         body: initializeTransactionBodySchema,
-        use: [sessionMiddleware, originCheck],
+        use: useMiddlewares,
     }, async (ctx) => {
-        const subscriptionOptions = options.subscription;
+        const paystack = getPaystackOps(options.paystackClient);
         if (!subscriptionOptions?.enabled) {
             throw new APIError("BAD_REQUEST", {
                 message: "Subscriptions are not enabled in the Paystack options.",
@@ -100,27 +105,37 @@ export const initializeTransaction = (options) => {
                 message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
             });
         }
-        if (!plan.amount) {
+        if (!plan.planCode && !plan.amount) {
             throw new APIError("BAD_REQUEST", {
-                message: "Paystack transaction initialization requires plan.amount (smallest unit).",
+                message: "Paystack transaction initialization requires either plan.planCode (Paystack plan code) or plan.amount (smallest unit).",
             });
         }
         let url;
         let reference;
         let accessCode;
         try {
-            const initRes = await options.paystackClient?.transaction?.initialize?.({
-                email: user.email,
-                amount: plan.amount,
-                currency: plan.currency,
-                callback_url: ctx.body.callbackURL,
-                metadata: {
-                    referenceId,
-                    userId: user.id,
-                    plan: plan.name.toLowerCase(),
-                },
+            const metadata = JSON.stringify({
+                referenceId,
+                userId: user.id,
+                plan: plan.name.toLowerCase(),
             });
-            const data = initRes?.data?.data ?? initRes?.data ?? initRes;
+            const initBody = {
+                email: user.email,
+                callback_url: ctx.body.callbackURL,
+                currency: plan.currency,
+                plan: plan.planCode,
+                invoice_limit: plan.invoiceLimit,
+                metadata,
+            };
+            // Paystack docs: when `plan` is provided, it invalidates `amount`.
+            if (!plan.planCode && plan.amount) {
+                initBody.amount = String(plan.amount);
+            }
+            const initRaw = await paystack.transactionInitialize(initBody);
+            const initRes = unwrapSdkResult(initRaw);
+            const data = initRes && typeof initRes === "object" && "status" in initRes && "data" in initRes
+                ? initRes.data
+                : initRes?.data ?? initRes;
             url = data?.authorization_url;
             reference = data?.reference;
             accessCode = data?.access_code;
@@ -155,14 +170,20 @@ export const verifyTransaction = (options) => {
     const verifyQuerySchema = z.object({
         reference: z.string(),
     });
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "verify-transaction")]
+        : [sessionMiddleware, originCheck];
     return createAuthEndpoint("/paystack/transaction/verify", {
         method: "GET",
         query: verifyQuerySchema,
-        use: [sessionMiddleware, originCheck],
+        use: useMiddlewares,
     }, async (ctx) => {
+        const paystack = getPaystackOps(options.paystackClient);
         let verifyRes;
         try {
-            verifyRes = await options.paystackClient?.transaction?.verify?.(ctx.query.reference);
+            const verifyRaw = await paystack.transactionVerify(ctx.query.reference);
+            verifyRes = unwrapSdkResult(verifyRaw);
         }
         catch (error) {
             ctx.context.logger.error("Failed to verify Paystack transaction", error);
@@ -171,7 +192,9 @@ export const verifyTransaction = (options) => {
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
             });
         }
-        const data = verifyRes?.data?.data ?? verifyRes?.data ?? verifyRes;
+        const data = verifyRes && typeof verifyRes === "object" && "status" in verifyRes && "data" in verifyRes
+            ? verifyRes.data
+            : verifyRes?.data ?? verifyRes;
         const status = data?.status;
         const reference = data?.reference ?? ctx.query.reference;
         if (status === "success") {
@@ -203,11 +226,14 @@ export const verifyTransaction = (options) => {
     });
 };
 export const listSubscriptions = (options) => {
-    return createAuthEndpoint("/paystack/subscription/list", {
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "list-subscriptions")]
+        : [sessionMiddleware, originCheck];
+    return createAuthEndpoint("/paystack/subscription/list-local", {
         method: "GET",
-        use: [sessionMiddleware, originCheck],
+        use: useMiddlewares,
     }, async (ctx) => {
-        const subscriptionOptions = options.subscription;
         if (!subscriptionOptions?.enabled) {
             throw new APIError("BAD_REQUEST", {
                 message: "Subscriptions are not enabled in the Paystack options.",
@@ -229,23 +255,20 @@ const enableDisableBodySchema = z.object({
     emailToken: z.string(),
 });
 export const disablePaystackSubscription = (options) => {
-    return createAuthEndpoint("/paystack/subscription/disable", { method: "POST", body: enableDisableBodySchema, use: [sessionMiddleware, originCheck] }, async (ctx) => {
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "disable-subscription")]
+        : [sessionMiddleware, originCheck];
+    return createAuthEndpoint("/paystack/subscription/disable", { method: "POST", body: enableDisableBodySchema, use: useMiddlewares }, async (ctx) => {
         const { subscriptionCode, emailToken } = ctx.body;
+        const paystack = getPaystackOps(options.paystackClient);
         try {
-            try {
-                const res = await options.paystackClient?.subscription?.disable?.({
-                    code: subscriptionCode,
-                    token: emailToken,
-                });
-                return ctx.json({ result: res });
-            }
-            catch {
-                const res = await options.paystackClient?.subscription?.disable?.({
-                    subscription_code: subscriptionCode,
-                    email_token: emailToken,
-                });
-                return ctx.json({ result: res });
-            }
+            const raw = await paystack.subscriptionDisable({
+                code: subscriptionCode,
+                token: emailToken,
+            });
+            const result = unwrapSdkResult(raw);
+            return ctx.json({ result });
         }
         catch (error) {
             ctx.context.logger.error("Failed to disable Paystack subscription", error);
@@ -257,23 +280,20 @@ export const disablePaystackSubscription = (options) => {
     });
 };
 export const enablePaystackSubscription = (options) => {
-    return createAuthEndpoint("/paystack/subscription/enable", { method: "POST", body: enableDisableBodySchema, use: [sessionMiddleware, originCheck] }, async (ctx) => {
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "enable-subscription")]
+        : [sessionMiddleware, originCheck];
+    return createAuthEndpoint("/paystack/subscription/enable", { method: "POST", body: enableDisableBodySchema, use: useMiddlewares }, async (ctx) => {
         const { subscriptionCode, emailToken } = ctx.body;
+        const paystack = getPaystackOps(options.paystackClient);
         try {
-            try {
-                const res = await options.paystackClient?.subscription?.enable?.({
-                    code: subscriptionCode,
-                    token: emailToken,
-                });
-                return ctx.json({ result: res });
-            }
-            catch {
-                const res = await options.paystackClient?.subscription?.enable?.({
-                    subscription_code: subscriptionCode,
-                    email_token: emailToken,
-                });
-                return ctx.json({ result: res });
-            }
+            const raw = await paystack.subscriptionEnable({
+                code: subscriptionCode,
+                token: emailToken,
+            });
+            const result = unwrapSdkResult(raw);
+            return ctx.json({ result });
         }
         catch (error) {
             ctx.context.logger.error("Failed to enable Paystack subscription", error);

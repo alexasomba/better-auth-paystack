@@ -13,9 +13,11 @@ npm install better-auth @alexasomba/better-auth-paystack
 ```ts
 import { betterAuth } from "better-auth";
 import { paystack } from "@alexasomba/better-auth-paystack";
-import Paystack from "@alexasomba/paystack-node";
+import { createPaystack } from "@alexasomba/paystack-node";
 
-const paystackClient = new Paystack(process.env.PAYSTACK_SECRET_KEY!);
+const paystackClient = createPaystack({
+  secretKey: process.env.PAYSTACK_SECRET_KEY!,
+});
 
 export const auth = betterAuth({
   plugins: [
@@ -47,3 +49,4 @@ export const client = createAuthClient({
 
 - Webhook verification uses the `x-paystack-signature` header (HMAC-SHA512).
 - For Paystack-native subscription flows, use `/paystack/transaction/initialize` + `/paystack/transaction/verify`, and `/paystack/subscription/enable|disable` (email token + subscription code).
+- `/paystack/subscription/list-local` lists the plugin's local subscription records (not Paystack's `/subscription` list endpoint).

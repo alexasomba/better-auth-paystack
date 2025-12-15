@@ -1,5 +1,5 @@
-import type { PaystackOptions, PaystackPlan, Subscription, SubscriptionOptions } from "./types";
-export declare const paystack: <O extends PaystackOptions>(options: O) => {
+import type { PaystackNodeClient, PaystackClientLike, PaystackOptions, PaystackPlan, Subscription, SubscriptionOptions } from "./types";
+export declare const paystack: <TPaystackClient extends PaystackClientLike = PaystackNodeClient, O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>>(options: O) => {
     id: "paystack";
     endpoints: {
         paystackWebhook: import("better-auth").StrictEndpoint<"/paystack/webhook", {
@@ -47,6 +47,7 @@ export declare const paystack: <O extends PaystackOptions>(options: O) => {
         readonly EMAIL_VERIFICATION_REQUIRED: "Email verification is required before you can subscribe to a plan";
     };
 };
-export type PaystackPlugin<O extends PaystackOptions> = ReturnType<typeof paystack<O>>;
+type PaystackClientFromOptions<O extends PaystackOptions<any>> = O extends PaystackOptions<infer TClient> ? TClient : PaystackNodeClient;
+export type PaystackPlugin<O extends PaystackOptions<any> = PaystackOptions> = ReturnType<typeof paystack<PaystackClientFromOptions<O>, O>>;
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions };
 //# sourceMappingURL=index.d.ts.map
