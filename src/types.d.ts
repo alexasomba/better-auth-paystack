@@ -22,13 +22,7 @@ export type PaystackClientLike = {
             };
         };
     }) => PaystackApiResult<any>;
-    subscription_fetch?: (init: {
-        params: {
-            path: {
-                id_or_code: string;
-            };
-        };
-    }) => PaystackApiResult<any>;
+    subscription_fetch?: (init: any) => PaystackApiResult<any>;
     subscription_disable?: (init?: {
         body?: {
             code: string;
