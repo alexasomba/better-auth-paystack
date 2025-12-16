@@ -67,6 +67,14 @@ jobs:
               echo "No install script for $d"
             fi
           done
+      - name: Debug runtime modules
+        run: |
+          echo "Node: $(node -v)"
+          echo "pnpm: $(pnpm -v)"
+          echo "zod versions:" && pnpm ls zod || true
+          node -e "try{const z=require('zod'); console.log('zod.version=', z?.version || 'unknown'); console.log('ZodSchema.parseAsync:', typeof z.ZodSchema?.prototype?.parseAsync); }catch(e){console.error('zod check failed',e)}"
+          node -e "try{console.log('better-auth version:', require('better-auth/package.json').version)}catch(e){console.error('better-auth pkg missing',e)}"
+          echo "Listing esbuild packages:" && pnpm ls esbuild || true
       - name: Run tests
         shell: bash
         run: |
