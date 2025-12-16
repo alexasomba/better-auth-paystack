@@ -17,7 +17,7 @@ jobs:
       - name: Install pnpm
         run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install deps
-        run: pnpm install --frozen-lockfile --shamefully-hoist
+        run: pnpm install --frozen-lockfile
       - name: Build docs
         run: pnpm run build
       - name: Deploy to GitHub Pages

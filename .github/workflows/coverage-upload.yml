@@ -16,7 +16,7 @@ jobs:
       - name: Install pnpm
         run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install
-        run: pnpm install --frozen-lockfile --shamefully-hoist
+        run: pnpm install --frozen-lockfile
       - name: Run coverage
         run: pnpm run coverage
       - name: Upload coverage to Codecov
