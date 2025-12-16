@@ -72,8 +72,11 @@ jobs:
           echo "Node: $(node -v)"
           echo "pnpm: $(pnpm -v)"
           echo "zod versions:" && pnpm ls zod || true
-          node -e "try{const z=require('zod'); console.log('zod.version=', z?.version || 'unknown'); console.log('ZodSchema.parseAsync:', typeof z.ZodSchema?.prototype?.parseAsync); }catch(e){console.error('zod check failed',e)}"
-          node -e "try{console.log('better-auth version:', require('better-auth/package.json').version)}catch(e){console.error('better-auth pkg missing',e)}"
+          node -e "try{const z=require('zod'); console.log('zod.version=', z?.version || 'unknown'); console.log('ZodSchema.parseAsync:', typeof z.ZodSchema?.prototype?.parseAsync); console.log('ZodSchema prototype keys:', Object.getOwnPropertyNames(z.ZodSchema.prototype)); console.log('zod export keys:', Object.keys(z)); }catch(e){console.error('zod check failed',e)}"
+          node -e "try{const path=require.resolve('zod'); console.log('zod resolved:', path); const pkg=require('fs').readFileSync(require('path').join(path,'..','package.json'),'utf8'); console.log('zod package.json version:', JSON.parse(pkg).version);}catch(e){console.error('zod detailed check failed',e)}"
+          echo "--- pnpm why zod ---" && pnpm why zod || true
+          node -e "try{console.log('better-auth require.resolve:', require.resolve('better-auth')); }catch(e){console.error('better-auth resolve failed',e)}"
+          node -e "try{console.log('better-auth version via require:'); console.log(require('better-auth').version || 'no export') }catch(e){console.error('better-auth version check failed',e)}"
           echo "Listing esbuild packages:" && pnpm ls esbuild || true
       - name: Run tests
         shell: bash
