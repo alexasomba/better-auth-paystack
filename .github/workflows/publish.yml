@@ -18,7 +18,7 @@ jobs:
       - name: Install pnpm
         run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: ESBUILD_BINARY_PATH=/usr/bin/esbuild pnpm install --frozen-lockfile
       - name: Build
         run: pnpm run build
       - name: Run tests

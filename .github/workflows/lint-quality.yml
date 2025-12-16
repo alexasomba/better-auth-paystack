@@ -17,7 +17,7 @@ jobs:
       - name: Install pnpm
         run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: ESBUILD_BINARY_PATH=/usr/bin/esbuild pnpm install --frozen-lockfile
       - name: Lint package.json and metadata
         run: pnpm run lint:package
       - name: Type & package lint
