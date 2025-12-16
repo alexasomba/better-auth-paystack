@@ -18,7 +18,7 @@ importers:
         specifier: ^6.1.4
         version: 6.1.4
       zod:
-        specifier: ^4.2.1
+        specifier: ^4
         version: 4.2.1
     devDependencies:
       '@arethetypeswrong/cli':
