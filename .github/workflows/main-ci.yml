@@ -26,6 +26,12 @@ jobs:
         run: pnpm run typecheck
       - name: Ensure Rollup native package (CI)
         run: pnpm add -w @rollup/rollup-linux-x64-gnu@4.53.5 --save-dev --shamefully-hoist --no-frozen-lockfile || true
+      - name: Shim Rollup native package if missing (CI)
+        run: |
+          if [ ! -d "node_modules/@rollup/rollup-linux-x64-gnu" ]; then
+            mkdir -p "node_modules/@rollup/rollup-linux-x64-gnu"
+            printf "module.exports = {}\n" > "node_modules/@rollup/rollup-linux-x64-gnu/index.js"
+          fi
       - name: Run tests
         run: pnpm run test
       - name: Coverage
