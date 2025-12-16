@@ -23,6 +23,8 @@ jobs:
         run: pnpm install --frozen-lockfile --shamefully-hoist
       - name: Typecheck
         run: pnpm run typecheck
+      - name: Ensure Rollup native package (CI)
+        run: pnpm add -w @rollup/rollup-linux-x64-gnu@4.53.5 --save-dev --shamefully-hoist --no-frozen-lockfile || true
       - name: Run tests
         run: pnpm run test
       - name: Lint package.json and metadata
