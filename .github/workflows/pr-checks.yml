@@ -21,6 +21,10 @@ jobs:
         run: corepack enable && corepack prepare pnpm@latest --activate
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --shamefully-hoist
+      - name: Rebuild native dependencies (CI)
+        run: |
+          pnpm -w rebuild || true
+          pnpm -w rebuild esbuild || true
       - name: Typecheck
         run: pnpm run typecheck
       - name: Ensure Rollup native package (CI)
@@ -49,5 +53,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs
+          name: test-logs-${{ github.run_id }}
           path: ./
+          overwrite: true
