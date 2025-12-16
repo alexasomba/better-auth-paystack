@@ -19,6 +19,39 @@ Better Auth plugin that integrates Paystack for customer creation, checkout, and
 npm install better-auth @alexasomba/better-auth-paystack
 ```
 
+## Development (pnpm workspace)
+
+This repo is set up as a pnpm workspace so you can install once at the repo root and run/build any example via `--filter`.
+
+```bash
+pnpm install
+```
+
+Build the library:
+
+```bash
+pnpm --filter "@alexasomba/better-auth-paystack" build
+```
+
+Run an example:
+
+```bash
+# Cloudflare Workers + Hono
+pnpm --filter hono dev
+
+# Next.js (OpenNext / Cloudflare)
+pnpm --filter my-next-app dev
+
+# TanStack Start
+pnpm --filter tanstack-start dev
+```
+
+Build all workspace packages (library + examples):
+
+```bash
+pnpm -r build
+```
+
 If you want strict typing and the recommended server SDK client:
 
 ```bash

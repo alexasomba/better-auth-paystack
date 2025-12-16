@@ -1,5 +1,30 @@
 # OpenNext Starter
 
+## Better Auth + Paystack
+
+This example mounts Better Auth (with the Paystack plugin) at `GET/POST /api/auth/[...all]`.
+
+### Setup
+
+1. Build the library once (repo root):
+
+```bash
+npm install
+npm run build
+```
+
+2. Install example deps:
+
+```bash
+cd examples/nextjs
+npm install
+```
+
+3. Configure env:
+
+- Copy `.env.example` to `.env.local`
+- Fill in `PAYSTACK_SECRET_KEY` and `PAYSTACK_WEBHOOK_SECRET`
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

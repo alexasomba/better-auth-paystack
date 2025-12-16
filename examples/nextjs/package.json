@@ -13,7 +13,9 @@
 		"cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
 	},
 	"dependencies": {
+		"@alexasomba/better-auth-paystack": "workspace:*",
 		"@opennextjs/cloudflare": "^1.14.6",
+		"better-auth": "^1.4.7",
 		"next": "15.5.9",
 		"react": "19.1.4",
 		"react-dom": "19.1.4"

@@ -18,6 +18,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@alexasomba/better-auth-paystack": "workspace:*",
     "@cloudflare/vite-plugin": "^1.17.1",
     "@faker-js/faker": "^10.1.0",
     "@radix-ui/react-label": "^2.1.8",
@@ -47,6 +48,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/router-plugin": "^1.141.2",
     "@tanstack/store": "^0.8.0",
+    "better-auth": "^1.4.7",
     "better-sqlite3": "^9.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
