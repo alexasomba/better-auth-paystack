@@ -16,7 +16,7 @@ jobs:
       - name: Install pnpm
         run: corepack enable && corepack prepare pnpm@latest --activate
       - name: Install deps
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --shamefully-hoist
       - name: Run full test suite
         run: pnpm run test
       - name: Run slow/integration tests (if any)

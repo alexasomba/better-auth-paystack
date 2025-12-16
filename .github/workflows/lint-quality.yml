@@ -17,7 +17,7 @@ jobs:
       - name: Install pnpm
         run: corepack enable && corepack prepare pnpm@latest --activate
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --shamefully-hoist
       - name: Lint package.json and metadata
         run: pnpm run lint:package
       - name: Type & package lint
