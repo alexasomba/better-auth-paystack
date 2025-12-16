@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@alexasomba/better-auth-paystack": "workspace:*",
-    "@cloudflare/vite-plugin": "^1.17.1",
+    "@cloudflare/vite-plugin": "^1.18.0",
     "@faker-js/faker": "^10.1.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
@@ -33,7 +33,7 @@
     "@tanstack/ai-react": "^0.0.3",
     "@tanstack/db": "0.5.12",
     "@tanstack/match-sorter-utils": "^8.19.4",
-    "@tanstack/query-db-collection": "^1.0.7",
+    "@tanstack/query-db-collection": "^1.0.8",
     "@tanstack/react-ai-devtools": "^0.0.3",
     "@tanstack/react-db": "^0.1.56",
     "@tanstack/react-devtools": "^0.8.4",
@@ -52,10 +52,10 @@
     "better-sqlite3": "^9.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "drizzle-kit": "^0.30.6",
-    "drizzle-orm": "^0.39.3",
+    "drizzle-kit": "^0.31.8",
+    "drizzle-orm": "^0.45.1",
     "highlight.js": "^11.11.1",
-    "lucide-react": "^0.544.0",
+    "lucide-react": "^0.561.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "streamdown": "^1.6.10",
@@ -84,6 +84,6 @@
     "vite": "^7.3.0",
     "vitest": "^3.2.4",
     "web-vitals": "^5.1.0",
-    "wrangler": "^4.54.0"
+    "wrangler": "^4.55.0"
   }
 }
