@@ -49,6 +49,11 @@ jobs:
           mkdir -p test-logs
           # Remove any hoisted esbuild binary symlink to avoid version mismatch during install checks
           rm -f node_modules/.bin/esbuild || true
+
+          # Remove any existing esbuild binary executables under node_modules to ensure the install scripts pick the correct version
+          find node_modules -type f -name esbuild -path "*/bin/esbuild" -exec rm -f {} + || true
+          find node_modules -type f -name esbuild -path "*/bin/esbuild.exe" -exec rm -f {} + || true
+
           echo "Finding esbuild package directories..."
           for d in $(find node_modules -type d -name esbuild 2>/dev/null || true); do
             echo "Found esbuild at: $d"
