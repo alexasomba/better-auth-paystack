@@ -71,7 +71,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p test-logs
-          pnpm run test 2>&1 | tee test-logs/test.log
+          # Run vitest with verbose reporter and debug logging to capture full stack traces
+          VITEST_LOG_LEVEL=debug pnpm run test -- --reporter verbose 2>&1 | tee test-logs/test.log
           status=${PIPESTATUS[0]}
           echo "Test exit status: $status" >> test-logs/test.log
           exit $status
