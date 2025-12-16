@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 20.x
       - name: Install pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
+        run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --shamefully-hoist
       - name: Build hono example

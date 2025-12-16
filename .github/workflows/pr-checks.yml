@@ -18,66 +18,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
+        run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --shamefully-hoist
-      - name: Rebuild native dependencies (CI)
-        run: |
-          pnpm -w rebuild || true
-          pnpm -w rebuild esbuild || true
       - name: Typecheck
         run: pnpm run typecheck
-      - name: Ensure Rollup native package (CI)
-        run: pnpm add -w @rollup/rollup-linux-x64-gnu@4.53.5 --save-dev --shamefully-hoist --no-frozen-lockfile || true
-      - name: Shim Rollup native package if missing (CI)
-        run: |
-          if [ ! -d "node_modules/@rollup/rollup-linux-x64-gnu" ]; then
-            mkdir -p "node_modules/@rollup/rollup-linux-x64-gnu"
-            printf "module.exports = {}\n" > "node_modules/@rollup/rollup-linux-x64-gnu/index.js"
-          fi
-      - name: Debug Rollup native resolution (CI)
-        run: |
-          echo "--- ls node_modules/@rollup ---"
-          ls -la node_modules/@rollup || true
-          echo "--- ls node_modules/@rollup/rollup-linux-x64-gnu ---"
-          ls -la node_modules/@rollup/rollup-linux-x64-gnu || true
-          echo "--- node require.resolve ---"
-          node -e "try{console.log('resolved:', require.resolve('@rollup/rollup-linux-x64-gnu')); console.log(require('@rollup/rollup-linux-x64-gnu'))}catch(e){console.error(e.message); process.exit(0)}"
-      - name: Install esbuild binaries (CI)
-        run: |
-          set -e
-          mkdir -p test-logs
-          # Remove any hoisted esbuild binary symlink to avoid version mismatch during install checks
-          rm -f node_modules/.bin/esbuild || true
-
-          # Remove any existing esbuild binary executables under node_modules to ensure the install scripts pick the correct version
-          find node_modules -type f -name esbuild -path "*/bin/esbuild" -exec rm -f {} + || true
-          find node_modules -type f -name esbuild -path "*/bin/esbuild.exe" -exec rm -f {} + || true
-
-          echo "Finding esbuild package directories..."
-          for d in $(find node_modules -type d -name esbuild 2>/dev/null || true); do
-            echo "Found esbuild at: $d"
-            if [ -f "$d/install.js" ]; then
-              echo "Running install.js in $d"
-              node "$d/install.js" || true
-            elif [ -f "$d/scripts/install.js" ]; then
-              echo "Running scripts/install.js in $d"
-              node "$d/scripts/install.js" || true
-            else
-              echo "No install script for $d"
-            fi
-          done
-      - name: Debug runtime modules
-        run: |
-          echo "Node: $(node -v)"
-          echo "pnpm: $(pnpm -v)"
-          echo "zod versions:" && pnpm ls zod || true
-          node -e "try{const z=require('zod'); console.log('zod.version=', z?.version || 'unknown'); console.log('ZodSchema.parseAsync:', typeof z.ZodSchema?.prototype?.parseAsync); console.log('ZodSchema prototype keys:', Object.getOwnPropertyNames(z.ZodSchema.prototype)); console.log('zod export keys:', Object.keys(z)); }catch(e){console.error('zod check failed',e)}"
-          node -e "try{const path=require.resolve('zod'); console.log('zod resolved:', path); const pkg=require('fs').readFileSync(require('path').join(path,'..','package.json'),'utf8'); console.log('zod package.json version:', JSON.parse(pkg).version);}catch(e){console.error('zod detailed check failed',e)}"
-          echo "--- pnpm why zod ---" && pnpm why zod || true
-          node -e "try{console.log('better-auth require.resolve:', require.resolve('better-auth')); }catch(e){console.error('better-auth resolve failed',e)}"
-          node -e "try{console.log('better-auth version via require:'); console.log(require('better-auth').version || 'no export') }catch(e){console.error('better-auth version check failed',e)}"
-          echo "Listing esbuild packages:" && pnpm ls esbuild || true
       - name: Run tests
         shell: bash
         run: |

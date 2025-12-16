@@ -1,3 +1,8 @@
 packages:
   - "."
   - "examples/*"
+
+# pnpm v10 blocks dependency lifecycle scripts by default ("Ignored build scripts").
+# This workspace needs native/build-time deps (e.g. esbuild) to run their install scripts on CI.
+# See: https://github.com/orgs/pnpm/discussions/9322
+dangerouslyAllowAllBuilds: true
