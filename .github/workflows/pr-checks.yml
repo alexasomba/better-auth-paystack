@@ -31,6 +31,14 @@ jobs:
             mkdir -p "node_modules/@rollup/rollup-linux-x64-gnu"
             printf "module.exports = {}\n" > "node_modules/@rollup/rollup-linux-x64-gnu/index.js"
           fi
+      - name: Debug Rollup native resolution (CI)
+        run: |
+          echo "--- ls node_modules/@rollup ---"
+          ls -la node_modules/@rollup || true
+          echo "--- ls node_modules/@rollup/rollup-linux-x64-gnu ---"
+          ls -la node_modules/@rollup/rollup-linux-x64-gnu || true
+          echo "--- node require.resolve ---"
+          node -e "try{console.log('resolved:', require.resolve('@rollup/rollup-linux-x64-gnu')); console.log(require('@rollup/rollup-linux-x64-gnu'))}catch(e){console.error(e.message); process.exit(0)}"
       - name: Run tests
         run: pnpm run test
       - name: Lint package.json and metadata
