@@ -39,6 +39,11 @@
     "lint:types": "attw --profile esm-only --pack .",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "0.27.0"
+    }
+  },
   "publishConfig": {
     "access": "public"
   },
