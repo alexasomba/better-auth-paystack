@@ -1,0 +1,18 @@
+# Keep dev-only content out of the published package.
+# Note: the root `package.json` already uses `files: ["dist"]`,
+# this is just a safety net.
+
+examples/
+
+# Common dev-only folders
+.vscode/
+.github/
+
+# Source/tests (published builds live in dist/)
+src/
+
+# Tooling / local artifacts
+node_modules/
+coverage/
+*.log
+.DS_Store

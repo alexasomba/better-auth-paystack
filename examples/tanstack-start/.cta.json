@@ -1,0 +1,28 @@
+{
+  "projectName": "tanstack-start",
+  "mode": "file-router",
+  "typescript": true,
+  "tailwind": true,
+  "packageManager": "pnpm",
+  "addOnOptions": {
+    "drizzle": {
+      "database": "sqlite"
+    }
+  },
+  "git": true,
+  "version": 1,
+  "framework": "react-cra",
+  "chosenAddOns": [
+    "eslint",
+    "cloudflare",
+    "start",
+    "db",
+    "drizzle",
+    "form",
+    "shadcn",
+    "table",
+    "store",
+    "tanstack-query",
+    "tanchat"
+  ]
+}
