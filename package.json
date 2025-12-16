@@ -50,6 +50,9 @@
     "defu": "^6.1.4",
     "zod": "^4.2.1"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.53.5"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
     "@better-auth/core": "^1.4.7",
