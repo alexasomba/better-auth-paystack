@@ -53,15 +53,19 @@
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.53.5"
   },
+  "overrides": {
+    "esbuild": "0.27.1"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
     "@better-auth/core": "^1.4.7",
+    "@rollup/rollup-linux-x64-gnu": "4.53.5",
     "@types/node": "^24.10.4",
     "better-auth": "^1.4.7",
+    "esbuild": "0.27.1",
     "publint": "^0.3.16",
     "tsdown": "^0.18.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.15",
-    "@rollup/rollup-linux-x64-gnu": "4.53.5"
+    "vitest": "^4.0.15"
   }
 }
