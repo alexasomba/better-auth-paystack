@@ -1,0 +1,30 @@
+name: Examples CI
+
+on:
+  pull_request:
+    paths:
+      - 'examples/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'examples/**'
+
+jobs:
+  build-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build hono example
+        run: pnpm --filter ./examples/hono build
+      - name: Build nextjs example
+        run: pnpm --filter ./examples/nextjs build
+      - name: Build tanstack-start example
+        run: pnpm --filter ./examples/tanstack-start build

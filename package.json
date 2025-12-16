@@ -42,7 +42,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "better-auth": ">=1.0.0"
+    "better-auth": ">=1.3.0"
   },
   "dependencies": {
     "@alexasomba/paystack-browser": "^1.1.6",
