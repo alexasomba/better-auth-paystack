@@ -2,7 +2,7 @@ name: Publish Docs
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
       - name: Install pnpm
         run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install deps
-        run: ESBUILD_BINARY_PATH=/usr/bin/esbuild pnpm install --frozen-lockfile
+        run: NPM_CONFIG_OPTIONAL=true pnpm install --frozen-lockfile
       - name: Build docs
         run: pnpm run build
       - name: Deploy to GitHub Pages
