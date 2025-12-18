@@ -1,5 +1,6 @@
 import { defineErrorCodes } from "@better-auth/core/utils";
 import type { BetterAuthPlugin } from "better-auth";
+import type { GenericEndpointContext } from "better-auth";
 import { defu } from "defu";
 import {
     disablePaystackSubscription,
@@ -57,7 +58,7 @@ export const paystack = <
                     databaseHooks: {
                         user: {
                             create: {
-                                async after(user, hookCtx) {
+                                async after(user, hookCtx?: GenericEndpointContext | null) {
                                     if (!hookCtx || !options.createCustomerOnSignUp) return;
 
                                     try {
@@ -88,7 +89,7 @@ export const paystack = <
 
                                         if (!customerCode) return;
 
-                                        await hookCtx.context.internalAdapter.updateUser(user.id, {
+                                        await (hookCtx as any).context.internalAdapter.updateUser(user.id, {
                                             paystackCustomerCode: customerCode,
                                         });
 
@@ -103,7 +104,7 @@ export const paystack = <
                                             hookCtx as any,
                                         );
                                     } catch (e: any) {
-                                        hookCtx.context.logger.error(
+                                        (hookCtx as any).context.logger.error(
                                             `Failed to create Paystack customer: ${e?.message || "Unknown error"}`,
                                             e,
                                         );
