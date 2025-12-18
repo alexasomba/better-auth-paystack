@@ -54,7 +54,7 @@
     "@alexasomba/paystack-browser": "^1.1.6",
     "@alexasomba/paystack-node": "^1.1.6",
     "defu": "^6.1.4",
-    "zod": "^4"
+    "zod": "^4.2.1"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.53.5"
@@ -66,7 +66,7 @@
     "@types/node": "^24.10.4",
     "better-auth": "^1.4.7",
     "publint": "^0.3.16",
-    "tsdown": "^0.18.0",
+    "tsdown": "^0.18.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   }
