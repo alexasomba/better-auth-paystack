@@ -235,27 +235,27 @@ The plugin adds the following to your Better Auth database schema.
 
 ### `user`
 
-| Field | Type | Required | Default |
-| --- | --- | --- | --- |
-| `paystackCustomerCode` | `string` | no | — |
+| Field                  | Type     | Required | Default |
+| ---------------------- | -------- | -------- | ------- |
+| `paystackCustomerCode` | `string` | no       | —       |
 
 ### `subscription` (only when `subscription.enabled: true`)
 
-| Field | Type | Required | Default |
-| --- | --- | --- | --- |
-| `plan` | `string` | yes | — |
-| `referenceId` | `string` | yes | — |
-| `paystackCustomerCode` | `string` | no | — |
-| `paystackSubscriptionCode` | `string` | no | — |
-| `paystackTransactionReference` | `string` | no | — |
-| `status` | `string` | no | `"incomplete"` |
-| `periodStart` | `date` | no | — |
-| `periodEnd` | `date` | no | — |
-| `trialStart` | `date` | no | — |
-| `trialEnd` | `date` | no | — |
-| `cancelAtPeriodEnd` | `boolean` | no | `false` |
-| `groupId` | `string` | no | — |
-| `seats` | `number` | no | — |
+| Field                          | Type      | Required | Default        |
+| ------------------------------ | --------- | -------- | -------------- |
+| `plan`                         | `string`  | yes      | —              |
+| `referenceId`                  | `string`  | yes      | —              |
+| `paystackCustomerCode`         | `string`  | no       | —              |
+| `paystackSubscriptionCode`     | `string`  | no       | —              |
+| `paystackTransactionReference` | `string`  | no       | —              |
+| `status`                       | `string`  | no       | `"incomplete"` |
+| `periodStart`                  | `date`    | no       | —              |
+| `periodEnd`                    | `date`    | no       | —              |
+| `trialStart`                   | `date`    | no       | —              |
+| `trialEnd`                     | `date`    | no       | —              |
+| `cancelAtPeriodEnd`            | `boolean` | no       | `false`        |
+| `groupId`                      | `string`  | no       | —              |
+| `seats`                        | `number`  | no       | —              |
 
 ## Options
 
