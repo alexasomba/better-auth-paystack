@@ -19,6 +19,23 @@ Better Auth plugin that integrates Paystack for customer creation, checkout, and
 npm install better-auth @alexasomba/better-auth-paystack
 ```
 
+### Install from GitHub Packages (optional)
+
+If you want to install this package from GitHub Packages (`npm.pkg.github.com`) instead of npmjs, configure a project-level `.npmrc` (or your user `~/.npmrc`) to route the `@alexasomba` scope:
+
+```ini
+@alexasomba:registry=https://npm.pkg.github.com
+```
+
+Then authenticate and install:
+
+```bash
+# npm v9+ may require legacy auth prompts for private registries
+npm login --scope=@alexasomba --auth-type=legacy --registry=https://npm.pkg.github.com
+
+npm install @alexasomba/better-auth-paystack
+```
+
 ## Development (pnpm workspace)
 
 This repo is set up as a pnpm workspace so you can install once at the repo root and run/build any example via `--filter`.

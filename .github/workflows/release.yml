@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   id-token: write
+  packages: write
 
 jobs:
   release:
@@ -24,11 +25,6 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 10
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22.x
-          registry-url: "https://registry.npmjs.org"
 
       - run: NPM_CONFIG_OPTIONAL=true pnpm install
 
@@ -65,8 +61,26 @@ jobs:
           echo "npm_tag=$NPM_TAG" >> $GITHUB_OUTPUT
           echo "Using npm tag: $NPM_TAG"
 
-      - name: Publish to npm
+      - name: Configure npm registry (npmjs)
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish to npmjs
         run: pnpm publish --access public --no-git-checks --tag ${{ steps.determine_npm_tag.outputs.npm_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Configure npm registry (GitHub Packages)
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@alexasomba"
+
+      - name: Publish to GitHub Packages
+        run: pnpm publish --no-git-checks --tag ${{ steps.determine_npm_tag.outputs.npm_tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
