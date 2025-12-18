@@ -27,6 +27,16 @@ describe("paystack type", () => {
         }>;
         expectTypeOf<MyAuth["api"]["paystackWebhook"]>().toBeFunction();
     });
+
+    it("should expose typed transaction routes on authClient", () => {
+        const authClient = createAuthClient({
+            baseURL: "http://localhost:3000",
+            plugins: [paystackClient({ subscription: true })],
+        });
+
+        expectTypeOf<typeof authClient.paystack.transaction.initialize>().toBeFunction();
+        expectTypeOf<typeof authClient.paystack.transaction.verify>().toBeFunction();
+    });
 });
 
 describe("paystack", () => {
