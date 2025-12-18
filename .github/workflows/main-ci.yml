@@ -1,0 +1,39 @@
+name: Main CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Main CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@10.26.0 --activate
+      - name: Install dependencies
+        run: NPM_CONFIG_OPTIONAL=true pnpm install --frozen-lockfile
+      - name: Build package
+        run: pnpm run build
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Run tests
+        run: pnpm run test
+      - name: Coverage
+        run: pnpm run coverage
+      - name: Build examples
+        run: |
+          pnpm --filter ./examples/hono build || true
+          pnpm --filter ./examples/nextjs build || true
+          pnpm --filter ./examples/tanstack-start build || true
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

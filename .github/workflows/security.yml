@@ -1,0 +1,24 @@
+name: Security Checks
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@10.26.0 --activate
+      - name: Install deps
+        run: NPM_CONFIG_OPTIONAL=true pnpm install --frozen-lockfile
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level=moderate || true
+      - name: License checks
+        run: |
+          echo "No license checker configured; consider adding 'license-checker' or similar"

@@ -1,0 +1,45 @@
+name: PR Checks
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  checks:
+    name: PR Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@10.26.0 --activate
+      - name: Install dependencies
+        run: NPM_CONFIG_OPTIONAL=true pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Build
+        run: pnpm run build
+      - name: Run tests
+        shell: bash
+        run: |
+          mkdir -p test-logs
+          # Run vitest with verbose reporter and debug logging to capture full stack traces
+          VITEST_LOG_LEVEL=debug pnpm run test -- --reporter verbose 2>&1 | tee test-logs/test.log
+          status=${PIPESTATUS[0]}
+          echo "Test exit status: $status" >> test-logs/test.log
+          exit $status
+      - name: Lint package.json and metadata
+        run: pnpm run lint:package
+      - name: Lint types
+        run: pnpm run lint:types
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ github.run_id }}
+          path: test-logs/
+          overwrite: true
