@@ -3,6 +3,7 @@ name: Coverage Upload
 on:
   push:
     branches: [main]
+  pull_request:
 
 jobs:
   coverage:
