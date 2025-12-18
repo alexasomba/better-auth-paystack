@@ -7,3 +7,4 @@ dist/
 .env.local
 .env.*.local
 .github/copilot-instructions.md
+ci-artifacts/
