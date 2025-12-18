@@ -9,6 +9,7 @@ on:
 
 jobs:
   build-examples:
+    name: Examples CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
