@@ -41,7 +41,8 @@
   },
   "pnpm": {
     "overrides": {
-      "esbuild": "0.27.0"
+      "esbuild": "0.27.0",
+      "rollup": "npm:@rollup/wasm-node@4.53.5"
     }
   },
   "publishConfig": {
@@ -64,6 +65,7 @@
     "@better-auth/core": "^1.4.7",
     "@rollup/rollup-linux-x64-gnu": "4.53.5",
     "@types/node": "^24.10.4",
+    "@vitest/coverage-v8": "^4.0.16",
     "better-auth": "^1.4.7",
     "publint": "^0.3.16",
     "tsdown": "^0.18.1",

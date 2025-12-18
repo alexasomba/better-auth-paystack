@@ -18,6 +18,8 @@ jobs:
         run: corepack enable && corepack prepare pnpm@10.26.0 --activate
       - name: Install dependencies
         run: NPM_CONFIG_OPTIONAL=true pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm run build
       - name: Lint package.json and metadata
         run: pnpm run lint:package
       - name: Type & package lint

@@ -23,6 +23,8 @@ jobs:
         run: NPM_CONFIG_OPTIONAL=true pnpm install --frozen-lockfile
       - name: Typecheck
         run: pnpm run typecheck
+      - name: Build
+        run: pnpm run build
       - name: Run tests
         shell: bash
         run: |
