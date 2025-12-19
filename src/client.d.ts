@@ -3,7 +3,7 @@ import type { PaystackNodeClient } from "./types";
 export declare const paystackClient: <O extends {
     subscription: boolean;
 }>(_options?: O | undefined) => {
-    id: "paystack-client";
+    id: "paystack";
     $InferServerPlugin: ReturnType<typeof paystack<PaystackNodeClient, O["subscription"] extends true ? {
         paystackClient: PaystackNodeClient;
         paystackWebhookSecret: string;
@@ -16,9 +16,8 @@ export declare const paystackClient: <O extends {
         paystackWebhookSecret: string;
     }>>;
     pathMethods: {
-        "/paystack/webhook": "POST";
         "/paystack/transaction/initialize": "POST";
-        "/paystack/transaction/verify": "GET";
+        "/paystack/transaction/verify": "POST";
         "/paystack/subscription/list-local": "GET";
         "/paystack/subscription/disable": "POST";
         "/paystack/subscription/enable": "POST";
