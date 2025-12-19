@@ -32,6 +32,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsdown",
+    "bd": "node ./scripts/bd.mjs",
     "dev": "tsdown --watch",
     "test": "vitest run",
     "test:integration": "RUN_INTEGRATION_TESTS=1 vitest run",
