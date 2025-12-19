@@ -92,7 +92,9 @@ export const auth = betterAuth({
   plugins: [
     paystack({
       paystackClient,
-      paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+      // Paystack signs webhooks with an HMAC SHA-512 using your Paystack secret key.
+      // Use the same secret key you configured in `createPaystack({ secretKey })`.
+      paystackWebhookSecret: process.env.PAYSTACK_SECRET_KEY!,
       createCustomerOnSignUp: true,
       subscription: {
         enabled: true,
@@ -174,7 +176,7 @@ This flow matches Paystack’s transaction initialize/verify APIs:
 
 1. Call `POST {AUTH_BASE}/paystack/transaction/initialize`
 2. Redirect the user to the returned Paystack `url`
-3. On your callback route/page, call `GET {AUTH_BASE}/paystack/transaction/verify?reference=...`
+3. On your callback route/page, call `POST {AUTH_BASE}/paystack/transaction/verify` (this updates local subscription state)
 
 Example (typed via Better Auth client plugin):
 
@@ -182,10 +184,12 @@ Example (typed via Better Auth client plugin):
 import { createAuthClient } from "better-auth/client";
 import { paystackClient } from "@alexasomba/better-auth-paystack/client";
 
+const plugins = [paystackClient({ subscription: true })];
+
 const authClient = createAuthClient({
   // Your Better Auth base URL (commonly "/api/auth" in Next.js)
   baseURL: "/api/auth",
-  plugins: [paystackClient({ subscription: true })],
+  plugins,
 });
 
 // Start checkout
@@ -204,10 +208,7 @@ if (init?.url) window.location.href = init.url;
 // On your callback page/route
 const reference = new URLSearchParams(window.location.search).get("reference");
 if (reference) {
-  await authClient.paystack.transaction.verify(
-    { query: { reference } },
-    { throw: true },
-  );
+  await authClient.paystack.transaction.verify({ reference }, { throw: true });
 }
 ```
 
@@ -216,7 +217,7 @@ Server-side (no HTTP fetch needed):
 ```ts
 // On the server you can call the endpoints directly:
 // const init = await auth.api.initializeTransaction({ headers: req.headers, body: { plan: "starter" } })
-// const verify = await auth.api.verifyTransaction({ headers: req.headers, query: { reference } })
+// const verify = await auth.api.verifyTransaction({ headers: req.headers, body: { reference } })
 ```
 
 ### Inline modal checkout (optional)

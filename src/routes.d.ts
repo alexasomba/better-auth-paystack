@@ -66,8 +66,8 @@ export declare const initializeTransaction: (options: AnyPaystackOptions) => imp
     redirect: boolean;
 }>;
 export declare const verifyTransaction: (options: AnyPaystackOptions) => import("better-auth").StrictEndpoint<"/paystack/transaction/verify", {
-    method: "GET";
-    query: z.ZodObject<{
+    method: "POST";
+    body: z.ZodObject<{
         reference: z.ZodString;
     }, z.core.$strip>;
     use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{

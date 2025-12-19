@@ -139,6 +139,8 @@ describe("paystack", () => {
         });
 
         const ctx = await auth.$context;
+        const authBase = (ctx as any).baseURL ?? "http://localhost:3000/api/auth";
+        const authBaseUrl = authBase.endsWith("/") ? authBase : `${authBase}/`;
         const authClient = createAuthClient({
             baseURL: "http://localhost:3000",
             plugins: [bearer(), paystackClient({ subscription: false })],
@@ -322,5 +324,247 @@ describe("paystack", () => {
         expect(paystackSdk.subscription_enable).toHaveBeenCalledWith({
             body: { code: "SUB_test_123", token: "tok_test_123" },
         });
+    });
+
+    it("should reject untrusted callbackURL", async () => {
+        const paystackSdk = {
+            transaction_initialize: vi.fn().mockResolvedValue({
+                data: {
+                    status: true,
+                    message: "ok",
+                    data: {
+                        authorization_url: "https://paystack.test/redirect",
+                        reference: "REF_untrusted",
+                        access_code: "ACCESS_test",
+                    },
+                },
+            }),
+        };
+
+        const options = {
+            paystackClient: paystackSdk,
+            paystackWebhookSecret: "whsec_test",
+            subscription: {
+                enabled: true,
+                plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
+            },
+        } satisfies PaystackOptions<any>;
+
+        const auth = betterAuth({
+            database: memory,
+            baseURL: "http://localhost:3000",
+            trustedOrigins: ["http://localhost:3000"],
+            emailAndPassword: { enabled: true },
+            plugins: [paystack<any>(options)],
+        });
+
+        const authClient = createAuthClient({
+            baseURL: "http://localhost:3000",
+            fetchOptions: {
+                customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
+            },
+        });
+
+        const testUser = {
+            email: "cb@email.com",
+            password: "password",
+            name: "Callback User",
+        };
+
+        await authClient.signUp.email(testUser, { throw: true });
+
+        const headers = new Headers();
+        await authClient.signIn.email(testUser, {
+            throw: true,
+            onSuccess: setCookieToHeader(headers),
+        });
+
+        const reqHeaders = new Headers(headers);
+        reqHeaders.set("content-type", "application/json");
+        reqHeaders.set("origin", "http://localhost:3000");
+
+        const req = new Request(
+            "http://localhost:3000/api/auth/paystack/transaction/initialize",
+            {
+                method: "POST",
+                headers: reqHeaders,
+                body: JSON.stringify({
+                    plan: "starter",
+                    callbackURL: "http://evil.com/callback",
+                }),
+            },
+        );
+
+        const res = await auth.handler(req);
+        expect(res.status).toBe(403);
+    });
+
+    it("should not verify another user's subscription by reference", async () => {
+        const paystackSdk = {
+            transaction_initialize: vi.fn().mockResolvedValue({
+                data: {
+                    status: true,
+                    message: "ok",
+                    data: {
+                        authorization_url: "https://paystack.test/redirect",
+                        reference: "REF_shared_123",
+                        access_code: "ACCESS_test",
+                    },
+                },
+            }),
+            transaction_verify: vi.fn().mockResolvedValue({
+                data: {
+                    status: true,
+                    message: "ok",
+                    data: {
+                        status: "success",
+                        reference: "REF_shared_123",
+                    },
+                },
+            }),
+        };
+
+        const options = {
+            paystackClient: paystackSdk,
+            paystackWebhookSecret: "whsec_test",
+            subscription: {
+                enabled: true,
+                plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
+            },
+        } satisfies PaystackOptions<any>;
+
+        const auth = betterAuth({
+            database: memory,
+            baseURL: "http://localhost:3000",
+            trustedOrigins: ["http://localhost:3000"],
+            emailAndPassword: { enabled: true },
+            plugins: [paystack<any>(options)],
+        });
+
+        const ctx = await auth.$context;
+        const authBase = (ctx as any).baseURL ?? "http://localhost:3000/api/auth";
+        const authBaseUrl = authBase.endsWith("/") ? authBase : `${authBase}/`;
+
+        const authClient = createAuthClient({
+            baseURL: "http://localhost:3000",
+            plugins: [bearer(), paystackClient({ subscription: true })],
+            fetchOptions: {
+                customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
+            },
+        });
+
+        const userA = {
+            email: "a@email.com",
+            password: "password",
+            name: "User A",
+        };
+
+        const userB = {
+            email: "b@email.com",
+            password: "password",
+            name: "User B",
+        };
+
+        const signInWithCookies = async (user: typeof userA) => {
+            const headers = new Headers();
+            await authClient.signIn.email(user, {
+                throw: true,
+                onSuccess: setCookieToHeader(headers),
+            });
+            const reqHeaders = new Headers(headers);
+            reqHeaders.set("content-type", "application/json");
+            reqHeaders.set("origin", "http://localhost:3000");
+            return reqHeaders;
+        };
+
+        const aRes = await authClient.signUp.email(userA, { throw: true });
+        const bRes = await authClient.signUp.email(userB, { throw: true });
+
+        const aHeaders = await signInWithCookies(userA);
+
+        // User A initializes a transaction, creating an incomplete local subscription row.
+        const initReq = new Request(
+            new URL("paystack/transaction/initialize", authBaseUrl),
+            {
+                method: "POST",
+                headers: aHeaders,
+                body: JSON.stringify({
+                    plan: "starter",
+                    callbackURL: "http://localhost:3000/callback",
+                }),
+            },
+        );
+        const initRes = await auth.handler(initReq);
+        expect(initRes.status).toBe(200);
+
+        const subA0 = (
+            await ctx.adapter.findMany<any>({
+                model: "subscription",
+                where: [
+                    { field: "referenceId", value: aRes.user.id },
+                    { field: "paystackTransactionReference", value: "REF_shared_123" },
+                ],
+            })
+        )?.[0];
+        expect(subA0?.status).toBe("incomplete");
+
+        // User B tries to verify the same Paystack reference; should NOT update User A's row.
+        const bHeaders = await signInWithCookies(userB);
+        const verifyReqB = new Request(
+            new URL("paystack/transaction/verify", authBaseUrl),
+            {
+                method: "POST",
+                headers: bHeaders,
+                body: JSON.stringify({ reference: "REF_shared_123" }),
+            },
+        );
+        const verifyResB = await auth.handler(verifyReqB);
+        expect(verifyResB.status).toBe(200);
+
+        const subA1 = (
+            await ctx.adapter.findMany<any>({
+                model: "subscription",
+                where: [
+                    { field: "referenceId", value: aRes.user.id },
+                    { field: "paystackTransactionReference", value: "REF_shared_123" },
+                ],
+            })
+        )?.[0];
+        expect(subA1?.status).toBe("incomplete");
+
+        // User A verifies; should update their own subscription.
+        const verifyReqA = new Request(
+            new URL("paystack/transaction/verify", authBaseUrl),
+            {
+                method: "POST",
+                headers: aHeaders,
+                body: JSON.stringify({ reference: "REF_shared_123" }),
+            },
+        );
+        const verifyResA = await auth.handler(verifyReqA);
+        expect(verifyResA.status).toBe(200);
+
+        const subA2 = (
+            await ctx.adapter.findMany<any>({
+                model: "subscription",
+                where: [
+                    { field: "referenceId", value: aRes.user.id },
+                    { field: "paystackTransactionReference", value: "REF_shared_123" },
+                ],
+            })
+        )?.[0];
+        expect(subA2?.status).toBe("active");
+
+        // Sanity: user B doesn't have a subscription row for this reference.
+        const subB = (
+            await ctx.adapter.findMany<any>({
+                model: "subscription",
+                where: [
+                    { field: "referenceId", value: bRes.user.id },
+                    { field: "paystackTransactionReference", value: "REF_shared_123" },
+                ],
+            })
+        )?.[0];
+        expect(subB).toBeUndefined();
     });
 });

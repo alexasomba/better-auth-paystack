@@ -34,6 +34,7 @@
     "build": "tsdown",
     "dev": "tsdown --watch",
     "test": "vitest run",
+    "test:integration": "RUN_INTEGRATION_TESTS=1 vitest run",
     "coverage": "vitest run --coverage",
     "lint:package": "publint run --strict",
     "lint:types": "attw --profile esm-only --pack .",
@@ -54,6 +55,7 @@
   "dependencies": {
     "@alexasomba/paystack-browser": "^1.1.6",
     "@alexasomba/paystack-node": "^1.1.6",
+    "better-call": "^1.1.6",
     "defu": "^6.1.4",
     "zod": "^4.2.1"
   },

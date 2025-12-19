@@ -18,9 +18,9 @@ export const paystack = (options) => {
         disablePaystackSubscription: disablePaystackSubscription(options),
         enablePaystackSubscription: enablePaystackSubscription(options),
     };
-    const endpoints = options.subscription?.enabled
+    const endpoints = (options.subscription?.enabled
         ? subscriptionEnabledEndpoints
-        : baseEndpoints;
+        : baseEndpoints);
     return {
         id: "paystack",
         endpoints,

@@ -45,9 +45,15 @@ export const paystack = <
         enablePaystackSubscription: enablePaystackSubscription(options),
     } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
 
-    const endpoints = options.subscription?.enabled
-        ? subscriptionEnabledEndpoints
-        : baseEndpoints;
+    type EndpointsForOptions = O extends { subscription: { enabled: true } }
+        ? typeof subscriptionEnabledEndpoints
+        : typeof baseEndpoints;
+
+    const endpoints = (
+        options.subscription?.enabled
+            ? subscriptionEnabledEndpoints
+            : baseEndpoints
+    ) as EndpointsForOptions;
 
     return {
         id: "paystack",

@@ -3,6 +3,14 @@ export default defineProject({
     test: {
         clearMocks: true,
         globals: true,
-        exclude: ["**/*.d.ts", "**/*.test.js", "**/dist/**", "**/node_modules/**"],
+        // Run the vitest setup file to polyfill Zod when necessary (fixes CI CJS/ESM cases)
+        setupFiles: ["./test/vitest.setup.ts"],
+        exclude: [
+            "**/*.d.ts",
+            "**/*.test.js",
+            "**/dist/**",
+            "**/node_modules/**",
+            ...(process.env.RUN_INTEGRATION_TESTS ? [] : ["**/*.integration.test.ts"]),
+        ],
     },
 });

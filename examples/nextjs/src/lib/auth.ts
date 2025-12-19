@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { paystack } from "@alexasomba/better-auth-paystack";
-import { createPaystackRestClient } from "@/lib/paystack-rest";
+import { createPaystackRestClient } from "./paystack-rest";
 
 const data = {
     user: [],

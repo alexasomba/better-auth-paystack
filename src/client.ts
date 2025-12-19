@@ -10,7 +10,7 @@ export const paystackClient = <
     _options?: O | undefined,
 ) => {
     return {
-        id: "paystack-client",
+        id: "paystack",
         $InferServerPlugin: {} as ReturnType<
             typeof paystack<
                 PaystackNodeClient,
@@ -30,9 +30,8 @@ export const paystackClient = <
             >
         >,
         pathMethods: {
-            "/paystack/webhook": "POST",
             "/paystack/transaction/initialize": "POST",
-            "/paystack/transaction/verify": "GET",
+            "/paystack/transaction/verify": "POST",
             "/paystack/subscription/list-local": "GET",
             "/paystack/subscription/disable": "POST",
             "/paystack/subscription/enable": "POST",

@@ -179,6 +179,33 @@ export const initializeTransaction = (options) => {
                 message: "Subscriptions are not enabled in the Paystack options.",
             });
         }
+        if (ctx.body.callbackURL) {
+            const isTrustedOriginFn = ctx.context?.isTrustedOrigin;
+            const trusted = isTrustedOriginFn
+                ? isTrustedOriginFn(ctx.body.callbackURL, { allowRelativePaths: true })
+                : (() => {
+                    try {
+                        if (ctx.body.callbackURL.startsWith("/"))
+                            return true;
+                        const baseUrl = ctx.context?.baseURL ??
+                            ctx.request?.url ??
+                            "";
+                        if (!baseUrl)
+                            return false;
+                        const baseOrigin = new URL(baseUrl).origin;
+                        return new URL(ctx.body.callbackURL).origin === baseOrigin;
+                    }
+                    catch {
+                        return false;
+                    }
+                })();
+            if (!trusted) {
+                throw new APIError("FORBIDDEN", {
+                    message: "callbackURL is not a trusted origin.",
+                    status: 403,
+                });
+            }
+        }
         const session = await getSessionFromCtx(ctx);
         if (!session)
             throw new APIError("UNAUTHORIZED");
@@ -187,14 +214,14 @@ export const initializeTransaction = (options) => {
         const referenceId = ctx.body.referenceId || referenceIdFromCtx || session.user.id;
         if (subscriptionOptions.requireEmailVerification && !user.emailVerified) {
             throw new APIError("BAD_REQUEST", {
-                code: PAYSTACK_ERROR_CODES.EMAIL_VERIFICATION_REQUIRED,
+                code: "EMAIL_VERIFICATION_REQUIRED",
                 message: PAYSTACK_ERROR_CODES.EMAIL_VERIFICATION_REQUIRED,
             });
         }
         const plan = await getPlanByName(options, ctx.body.plan);
         if (!plan) {
             throw new APIError("BAD_REQUEST", {
-                code: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
+                code: "SUBSCRIPTION_PLAN_NOT_FOUND",
                 message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
             });
         }
@@ -236,7 +263,7 @@ export const initializeTransaction = (options) => {
         catch (error) {
             ctx.context.logger.error("Failed to initialize Paystack transaction", error);
             throw new APIError("BAD_REQUEST", {
-                code: PAYSTACK_ERROR_CODES.FAILED_TO_INITIALIZE_TRANSACTION,
+                code: "FAILED_TO_INITIALIZE_TRANSACTION",
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_INITIALIZE_TRANSACTION,
             });
         }
@@ -260,7 +287,7 @@ export const initializeTransaction = (options) => {
     });
 };
 export const verifyTransaction = (options) => {
-    const verifyQuerySchema = z.object({
+    const verifyBodySchema = z.object({
         reference: z.string(),
     });
     const subscriptionOptions = options.subscription;
@@ -268,20 +295,20 @@ export const verifyTransaction = (options) => {
         ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "verify-transaction")]
         : [sessionMiddleware, originCheck];
     return createAuthEndpoint("/paystack/transaction/verify", {
-        method: "GET",
-        query: verifyQuerySchema,
+        method: "POST",
+        body: verifyBodySchema,
         use: useMiddlewares,
     }, async (ctx) => {
         const paystack = getPaystackOps(options.paystackClient);
         let verifyRes;
         try {
-            const verifyRaw = await paystack.transactionVerify(ctx.query.reference);
+            const verifyRaw = await paystack.transactionVerify(ctx.body.reference);
             verifyRes = unwrapSdkResult(verifyRaw);
         }
         catch (error) {
             ctx.context.logger.error("Failed to verify Paystack transaction", error);
             throw new APIError("BAD_REQUEST", {
-                code: PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
+                code: "FAILED_TO_VERIFY_TRANSACTION",
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
             });
         }
@@ -289,9 +316,12 @@ export const verifyTransaction = (options) => {
             ? verifyRes.data
             : verifyRes?.data ?? verifyRes;
         const status = data?.status;
-        const reference = data?.reference ?? ctx.query.reference;
+        const reference = data?.reference ?? ctx.body.reference;
         if (status === "success") {
             try {
+                const session = await getSessionFromCtx(ctx);
+                const referenceIdFromCtx = ctx.context.referenceId;
+                const referenceId = referenceIdFromCtx ?? session?.user?.id;
                 await ctx.context.adapter.update({
                     model: "subscription",
                     update: {
@@ -300,10 +330,8 @@ export const verifyTransaction = (options) => {
                         updatedAt: new Date(),
                     },
                     where: [
-                        {
-                            field: "paystackTransactionReference",
-                            value: reference,
-                        },
+                        { field: "paystackTransactionReference", value: reference },
+                        ...(referenceId ? [{ field: "referenceId", value: referenceId }] : []),
                     ],
                 });
             }
@@ -435,7 +463,7 @@ export const disablePaystackSubscription = (options) => {
         catch (error) {
             ctx.context.logger.error("Failed to disable Paystack subscription", error);
             throw new APIError("BAD_REQUEST", {
-                code: PAYSTACK_ERROR_CODES.FAILED_TO_DISABLE_SUBSCRIPTION,
+                code: "FAILED_TO_DISABLE_SUBSCRIPTION",
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_DISABLE_SUBSCRIPTION,
             });
         }
@@ -495,7 +523,7 @@ export const enablePaystackSubscription = (options) => {
         catch (error) {
             ctx.context.logger.error("Failed to enable Paystack subscription", error);
             throw new APIError("BAD_REQUEST", {
-                code: PAYSTACK_ERROR_CODES.FAILED_TO_ENABLE_SUBSCRIPTION,
+                code: "FAILED_TO_ENABLE_SUBSCRIPTION",
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_ENABLE_SUBSCRIPTION,
             });
         }
