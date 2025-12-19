@@ -18,7 +18,7 @@
     "better-auth": "^1.4.7",
     "next": "15.5.9",
     "react": "19.1.4",
-    "react-dom": "19.1.4"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
