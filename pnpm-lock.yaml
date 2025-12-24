@@ -167,8 +167,8 @@ importers:
         specifier: ^0.0.3
         version: 0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1)
       '@tanstack/ai-react':
-        specifier: ^0.0.3
-        version: 0.0.3(@tanstack/ai-client@0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1))(@tanstack/ai@0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1))(@types/react@19.2.7)(react@19.2.3)
+        specifier: ^0.2.0
+        version: 0.2.0(@tanstack/ai@0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1))(@types/react@19.2.7)(react@19.2.3)
       '@tanstack/db':
         specifier: 0.5.12
         version: 0.5.12(typescript@5.9.3)
@@ -2673,14 +2673,16 @@ packages:
   '@tanstack/ai-client@0.0.3':
     resolution: {integrity: sha512-5XIHhRJ2pWeJKfMpeInI46Ytavq78/E/5gllcYMaLJ24aiPXHbxNeO3akiX7kmnwuL6OIkX99Le/MxZBZvdFhg==}
 
+  '@tanstack/ai-client@0.2.0':
+    resolution: {integrity: sha512-0XzSBVFEkgdJRAuHM0lT1U0RyuqCaJxxuxurw7tg9ouXt3MzgLtULvw9c7E6YdklurJb9Wt+UqBpeu7/4CbMIQ==}
+
   '@tanstack/ai-devtools-core@0.0.3':
     resolution: {integrity: sha512-seAVgDee6Omj2Np/MzB2JD/n43FwQNbVAc+1NDCs39pqLCOghxvGYWVk1xbHoAlS99ImFGXZMugAeFub3+3sqg==}
 
-  '@tanstack/ai-react@0.0.3':
-    resolution: {integrity: sha512-C65+F4k0S9Z8Ot8+zhIn5XMxZABejEjbU+Ap99TtJA3C31PlnJry18ny/f82FOZl80G2P5xriehMNKsfcxQM9w==}
+  '@tanstack/ai-react@0.2.0':
+    resolution: {integrity: sha512-tdwYN3/jIodP1louWsDBNzgbHqHchcUPO3RKVKqexM8Iy4xqyHpCrdCzJzXk9lCO6TpUlWvvk04Bq1GyMHC8nA==}
     peerDependencies:
-      '@tanstack/ai': 0.0.3
-      '@tanstack/ai-client': 0.0.3
+      '@tanstack/ai': ^0.2.0
       '@types/react': '>=18.0.0'
       react: '>=18.0.0'
 
@@ -2690,6 +2692,10 @@ packages:
     peerDependencies:
       '@alcyone-labs/zod-to-json-schema': ^4.0.0
       zod: ^3.0.0 || ^4.0.0
+
+  '@tanstack/ai@0.2.0':
+    resolution: {integrity: sha512-liGeP7pa7YsgDbUQZOSBHSunWXTQ9FdzDeBGFnDXt9iXF8Fa/GyYu+x2w8IwjK9aWaKLd4CNpULRbzwHP5SzYA==}
+    engines: {node: '>=18'}
 
   '@tanstack/db-ivm@0.1.14':
     resolution: {integrity: sha512-GluhFsd/Z1E/MZTf60l9dZpKNpmdxtV4izPRnj1RK6TYrhC9LMndN+ywk1VDFBrjtBq/CTShz4CilECLwVlTGg==}
@@ -10497,6 +10503,10 @@ snapshots:
       - '@alcyone-labs/zod-to-json-schema'
       - zod
 
+  '@tanstack/ai-client@0.2.0':
+    dependencies:
+      '@tanstack/ai': 0.2.0
+
   '@tanstack/ai-devtools-core@0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(@types/react@19.2.7)(csstype@3.2.3)(react@19.2.3)(zod@4.2.1)':
     dependencies:
       '@tanstack/ai': 0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1)
@@ -10512,10 +10522,10 @@ snapshots:
       - vue
       - zod
 
-  '@tanstack/ai-react@0.0.3(@tanstack/ai-client@0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1))(@tanstack/ai@0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1))(@types/react@19.2.7)(react@19.2.3)':
+  '@tanstack/ai-react@0.2.0(@tanstack/ai@0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1))(@types/react@19.2.7)(react@19.2.3)':
     dependencies:
       '@tanstack/ai': 0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1)
-      '@tanstack/ai-client': 0.0.3(@alcyone-labs/zod-to-json-schema@4.0.10(zod@4.2.1))(zod@4.2.1)
+      '@tanstack/ai-client': 0.2.0
       '@types/react': 19.2.7
       react: 19.2.3
 
@@ -10525,6 +10535,11 @@ snapshots:
       '@tanstack/devtools-event-client': 0.4.0
       partial-json: 0.1.7
       zod: 4.2.1
+
+  '@tanstack/ai@0.2.0':
+    dependencies:
+      '@tanstack/devtools-event-client': 0.4.0
+      partial-json: 0.1.7
 
   '@tanstack/db-ivm@0.1.14(typescript@5.9.3)':
     dependencies:

@@ -30,7 +30,7 @@
     "@tanstack/ai": "^0.0.3",
     "@tanstack/ai-anthropic": "^0.0.3",
     "@tanstack/ai-client": "^0.0.3",
-    "@tanstack/ai-react": "^0.0.3",
+    "@tanstack/ai-react": "^0.2.0",
     "@tanstack/db": "0.5.12",
     "@tanstack/match-sorter-utils": "^8.19.4",
     "@tanstack/query-db-collection": "^1.0.8",
