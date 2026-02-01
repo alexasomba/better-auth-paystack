@@ -67,11 +67,11 @@
     "@arethetypeswrong/cli": "^0.18.2",
     "@better-auth/core": "^1.4.18",
     "@rollup/rollup-linux-x64-gnu": "4.53.5",
-    "@types/node": "^24.10.9",
+    "@types/node": "^22.19.7",
     "@vitest/coverage-v8": "^4.0.18",
     "better-auth": "^1.4.18",
     "publint": "^0.3.17",
-    "tsdown": "^0.18.4",
+    "tsdown": "^0.20.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   }
