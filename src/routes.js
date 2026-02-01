@@ -68,11 +68,13 @@ export const paystackWebhook = (options) => {
             try {
                 if (eventName === "charge.success") {
                     const reference = data?.reference;
+                    const paystackId = data?.id ? String(data.id) : undefined;
                     if (reference) {
                         await ctx.context.adapter.update({
                             model: "paystackTransaction",
                             update: {
                                 status: "success",
+                                paystackId,
                                 updatedAt: new Date(),
                             },
                             where: [{ field: "reference", value: reference }],
@@ -379,6 +381,7 @@ export const verifyTransaction = (options) => {
         }
         const status = data?.status;
         const reference = data?.reference ?? ctx.body.reference;
+        const paystackId = data?.id ? String(data.id) : undefined;
         if (status === "success") {
             try {
                 const session = await getSessionFromCtx(ctx);
@@ -388,6 +391,7 @@ export const verifyTransaction = (options) => {
                     model: "paystackTransaction",
                     update: {
                         status: "success",
+                        paystackId,
                         updatedAt: new Date(),
                     },
                     where: [{ field: "reference", value: reference }],

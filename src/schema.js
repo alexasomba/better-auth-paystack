@@ -6,6 +6,10 @@ export const transactions = {
                 type: "string",
                 required: true,
             },
+            paystackId: {
+                type: "string",
+                required: false,
+            },
             referenceId: {
                 type: "string",
                 required: true,

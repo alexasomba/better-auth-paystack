@@ -20,11 +20,13 @@ import { CircleNotch, DotsThree, Copy, ArrowSquareOut, Eye } from "@phosphor-ico
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import {
     Dialog,
     DialogContent,
@@ -40,6 +42,7 @@ interface Transaction {
     currency: string;
     status: string;
     reference: string;
+    paystackId?: string;
     createdAt: string | Date;
     plan?: string;
     metadata?: string;
@@ -85,17 +88,18 @@ export default function TransactionsTable() {
             cell: ({ row }) => {
                 const status = row.getValue("status") as string;
                 return (
-                    <div
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                    <Badge
+                        variant={
                             status === "success"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                ? "default"
                                 : status === "pending"
-                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        }`}
+                                ? "secondary"
+                                : "destructive"
+                        }
+                        className="capitalize"
                     >
                         {status}
-                    </div>
+                    </Badge>
                 );
             },
         },
@@ -135,20 +139,26 @@ export default function TransactionsTable() {
                             }
                         />
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => setSelectedTransaction(transaction)}>
-                                <Eye weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
-                                View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={copyReference}>
-                                <Copy weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
-                                Copy Reference
-                            </DropdownMenuItem>
+                            <DropdownMenuGroup>
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => setSelectedTransaction(transaction)}>
+                                    <Eye weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={copyReference}>
+                                    <Copy weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    Copy Reference
+                                </DropdownMenuItem>
+                            </DropdownMenuGroup>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 render={
                                     <a
-                                        href={`https://dashboard.paystack.com/#/transactions/${transaction.reference}`}
+                                        href={
+                                            transaction.paystackId
+                                                ? `https://dashboard.paystack.com/#/transactions/${transaction.paystackId}/analytics`
+                                                : `https://dashboard.paystack.com/#/transactions?q=${transaction.reference}`
+                                        }
                                         target="_blank"
                                         rel="noreferrer"
                                         className="flex w-full items-center p-0"
@@ -168,8 +178,9 @@ export default function TransactionsTable() {
     React.useEffect(() => {
         async function fetchTransactions() {
             try {
-                // @ts-expect-error - types might not be fully synchronized yet
-                const res = await authClient.paystack.transaction.list();
+                const res = await authClient.paystack.transaction.list({
+                    query: {},
+                });
                 if (res.data?.transactions) {
                     setData(res.data.transactions);
                 }

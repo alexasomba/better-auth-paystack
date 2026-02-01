@@ -86,6 +86,7 @@ export type PaystackPlan = {
 export interface PaystackTransaction {
     id: string;
     reference: string;
+    paystackId?: string | undefined;
     referenceId: string;
     userId: string;
     amount: number;
