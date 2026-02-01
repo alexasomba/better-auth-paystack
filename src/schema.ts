@@ -2,6 +2,53 @@ import type { BetterAuthPluginDBSchema } from "@better-auth/core/db";
 import { mergeSchema } from "better-auth/db";
 import type { PaystackOptions } from "./types";
 
+export const transactions = {
+    paystackTransaction: {
+        fields: {
+            reference: {
+                type: "string",
+                required: true,
+            },
+            referenceId: {
+                type: "string",
+                required: true,
+            },
+            userId: {
+                type: "string",
+                required: true,
+            },
+            amount: {
+                type: "number",
+                required: true,
+            },
+            currency: {
+                type: "string",
+                required: true,
+            },
+            status: {
+                type: "string",
+                required: true,
+            },
+            plan: {
+                type: "string",
+                required: false,
+            },
+            metadata: {
+                type: "string",
+                required: false,
+            },
+            createdAt: {
+                type: "date",
+                required: true,
+            },
+            updatedAt: {
+                type: "date",
+                required: true,
+            },
+        },
+    },
+} satisfies BetterAuthPluginDBSchema;
+
 export const subscriptions = {
     subscription: {
         fields: {
@@ -79,11 +126,13 @@ export const getSchema = (options: PaystackOptions<any>) => {
     if (options.subscription?.enabled) {
         baseSchema = {
             ...subscriptions,
+            ...transactions,
             ...user,
         };
     } else {
         baseSchema = {
             ...user,
+            ...transactions,
         };
     }
 

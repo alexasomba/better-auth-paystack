@@ -10,7 +10,11 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         initializeTransaction: import("better-call").StrictEndpoint<"/paystack/transaction/initialize", {
             method: "POST";
             body: import("zod").ZodObject<{
-                plan: import("zod").ZodString;
+                plan: import("zod").ZodOptional<import("zod").ZodString>;
+                amount: import("zod").ZodOptional<import("zod").ZodNumber>;
+                currency: import("zod").ZodOptional<import("zod").ZodString>;
+                email: import("zod").ZodOptional<import("zod").ZodString>;
+                metadata: import("zod").ZodOptional<import("zod").ZodRecord<import("zod").ZodString, import("zod").ZodAny>>;
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
             }, import("better-auth").$strip>;
@@ -206,6 +210,41 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         }, {
             received: boolean;
         }>;
+        listTransactions: import("better-call").StrictEndpoint<"/paystack/transaction/list", {
+            method: "GET";
+            query: import("zod").ZodObject<{
+                referenceId: import("zod").ZodOptional<import("zod").ZodString>;
+            }, import("better-auth").$strip>;
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+                context: {
+                    referenceId: any;
+                };
+            }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+                session: {
+                    session: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        userId: string;
+                        expiresAt: Date;
+                        token: string;
+                        ipAddress?: string | null | undefined;
+                        userAgent?: string | null | undefined;
+                    };
+                    user: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        email: string;
+                        emailVerified: boolean;
+                        name: string;
+                        image?: string | null | undefined;
+                    };
+                };
+            }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+        }, {
+            transactions: import("./types").PaystackTransaction[];
+        }>;
     } : {
         paystackWebhook: import("better-call").StrictEndpoint<"/paystack/webhook", {
             method: "POST";
@@ -219,6 +258,41 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             disableBody: true;
         }, {
             received: boolean;
+        }>;
+        listTransactions: import("better-call").StrictEndpoint<"/paystack/transaction/list", {
+            method: "GET";
+            query: import("zod").ZodObject<{
+                referenceId: import("zod").ZodOptional<import("zod").ZodString>;
+            }, import("better-auth").$strip>;
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+                context: {
+                    referenceId: any;
+                };
+            }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+                session: {
+                    session: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        userId: string;
+                        expiresAt: Date;
+                        token: string;
+                        ipAddress?: string | null | undefined;
+                        userAgent?: string | null | undefined;
+                    };
+                    user: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        email: string;
+                        emailVerified: boolean;
+                        name: string;
+                        image?: string | null | undefined;
+                    };
+                };
+            }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+        }, {
+            transactions: import("./types").PaystackTransaction[];
         }>;
     };
     init(ctx: import("better-auth").AuthContext): {

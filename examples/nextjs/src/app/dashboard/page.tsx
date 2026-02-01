@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Github, Package } from "lucide-react";
 import { redirect } from "next/navigation";
 import SignOutButton from "./SignOutButton";
-import SubscriptionManager from "./SubscriptionManager";
+import PaymentManager from "./PaymentManager";
+import TransactionsTable from "./TransactionsTable";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -25,9 +26,11 @@ export default async function DashboardPage() {
                     </div>
 
                     <Tabs defaultValue="user" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-6">
+                        <TabsList className="grid w-full grid-cols-4 mb-6">
                             <TabsTrigger value="user">User Info</TabsTrigger>
-                            <TabsTrigger value="paystack">Paystack Plugin</TabsTrigger>
+                            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+                            <TabsTrigger value="one-time">One-Time</TabsTrigger>
+                            <TabsTrigger value="transactions">Transactions</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="user" className="space-y-6">
@@ -64,16 +67,24 @@ export default async function DashboardPage() {
                             </Card>
                         </TabsContent>
 
-                        <TabsContent value="paystack" className="space-y-6">
+                        <TabsContent value="subscriptions" className="space-y-6">
+                            <PaymentManager activeTab="subscriptions" />
+                        </TabsContent>
+
+                        <TabsContent value="one-time" className="space-y-6">
+                            <PaymentManager activeTab="one-time" />
+                        </TabsContent>
+
+                        <TabsContent value="transactions" className="space-y-6">
                             <Card className="w-full">
                                 <CardHeader>
-                                    <CardTitle className="text-xl font-semibold">Paystack Integration Test</CardTitle>
+                                    <CardTitle className="text-xl font-semibold">Transaction History</CardTitle>
                                     <p className="text-sm text-gray-600">
-                                        Test subscription management with Paystack
+                                        View and track your previous Paystack transactions
                                     </p>
                                 </CardHeader>
                                 <CardContent>
-                                    <SubscriptionManager />
+                                    <TransactionsTable />
                                 </CardContent>
                             </Card>
                         </TabsContent>

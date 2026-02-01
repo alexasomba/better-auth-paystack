@@ -1,6 +1,6 @@
 import type { GenericEndpointContext } from "better-auth";
 import * as z from "zod/v4";
-import type { PaystackOptions, Subscription } from "./types";
+import type { PaystackOptions, PaystackTransaction, Subscription } from "./types";
 type AnyPaystackOptions = PaystackOptions<any>;
 declare const PAYSTACK_ERROR_CODES: {
     readonly SUBSCRIPTION_NOT_FOUND: "Subscription not found";
@@ -28,7 +28,11 @@ export declare const paystackWebhook: (options: AnyPaystackOptions) => import("b
 export declare const initializeTransaction: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/transaction/initialize", {
     method: "POST";
     body: z.ZodObject<{
-        plan: z.ZodString;
+        plan: z.ZodOptional<z.ZodString>;
+        amount: z.ZodOptional<z.ZodNumber>;
+        currency: z.ZodOptional<z.ZodString>;
+        email: z.ZodOptional<z.ZodString>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
         referenceId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
@@ -136,6 +140,41 @@ export declare const listSubscriptions: (options: AnyPaystackOptions) => import(
     }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     subscriptions: Subscription[];
+}>;
+export declare const listTransactions: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/transaction/list", {
+    method: "GET";
+    query: z.ZodObject<{
+        referenceId: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+        context: {
+            referenceId: any;
+        };
+    }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+        session: {
+            session: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                userId: string;
+                expiresAt: Date;
+                token: string;
+                ipAddress?: string | null | undefined;
+                userAgent?: string | null | undefined;
+            };
+            user: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        };
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+}, {
+    transactions: PaystackTransaction[];
 }>;
 export declare const disablePaystackSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/subscription/disable", {
     method: "POST";

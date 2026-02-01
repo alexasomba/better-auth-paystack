@@ -7,6 +7,7 @@ import {
     enablePaystackSubscription,
     initializeTransaction,
     listSubscriptions,
+    listTransactions,
     paystackWebhook,
     verifyTransaction,
     PAYSTACK_ERROR_CODES,
@@ -34,6 +35,7 @@ export const paystack = <
 ) => {
     const baseEndpoints = {
         paystackWebhook: paystackWebhook(options),
+        listTransactions: listTransactions(options),
     } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
 
     const subscriptionEnabledEndpoints = {

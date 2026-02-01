@@ -1,6 +1,6 @@
 import { defineErrorCodes } from "@better-auth/core/utils";
 import { defu } from "defu";
-import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, paystackWebhook, verifyTransaction, PAYSTACK_ERROR_CODES, } from "./routes";
+import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, listTransactions, paystackWebhook, verifyTransaction, PAYSTACK_ERROR_CODES, } from "./routes";
 import { getSchema } from "./schema";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const INTERNAL_ERROR_CODES = defineErrorCodes({
@@ -9,6 +9,7 @@ const INTERNAL_ERROR_CODES = defineErrorCodes({
 export const paystack = (options) => {
     const baseEndpoints = {
         paystackWebhook: paystackWebhook(options),
+        listTransactions: listTransactions(options),
     };
     const subscriptionEnabledEndpoints = {
         ...baseEndpoints,

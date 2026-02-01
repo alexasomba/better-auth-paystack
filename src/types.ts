@@ -87,6 +87,22 @@ export type PaystackPlan = {
     | undefined;
 };
 
+export interface PaystackTransaction {
+    id: string;
+    reference: string;
+    referenceId: string;
+    userId: string;
+    amount: number;
+    currency: string;
+    status: string;
+    plan?: string | undefined;
+    metadata?: string | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface InputPaystackTransaction extends Omit<PaystackTransaction, "id"> { }
+
 export interface Subscription {
     id: string;
     plan: string;
@@ -124,6 +140,7 @@ export type SubscriptionOptions = {
             | "initialize-transaction"
             | "verify-transaction"
             | "list-subscriptions"
+            | "list-transactions"
             | "disable-subscription"
             | "enable-subscription";
         },

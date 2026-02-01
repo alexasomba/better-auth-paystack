@@ -9,6 +9,7 @@ export const referenceMiddleware = (
         | "initialize-transaction"
         | "verify-transaction"
         | "list-subscriptions"
+        | "list-transactions"
         | "disable-subscription"
         | "enable-subscription",
 ) =>

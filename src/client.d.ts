@@ -14,10 +14,14 @@ export declare const paystackClient: <O extends {
     } : {
         paystackClient: PaystackNodeClient;
         paystackWebhookSecret: string;
+        subscription: {
+            enabled: false;
+        };
     }>>;
     pathMethods: {
         "/paystack/transaction/initialize": "POST";
         "/paystack/transaction/verify": "POST";
+        "/paystack/transaction/list": "GET";
         "/paystack/subscription/list-local": "GET";
         "/paystack/subscription/disable": "POST";
         "/paystack/subscription/enable": "POST";

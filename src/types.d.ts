@@ -83,6 +83,21 @@ export type PaystackPlan = {
         days: number;
     } | undefined;
 };
+export interface PaystackTransaction {
+    id: string;
+    reference: string;
+    referenceId: string;
+    userId: string;
+    amount: number;
+    currency: string;
+    status: string;
+    plan?: string | undefined;
+    metadata?: string | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface InputPaystackTransaction extends Omit<PaystackTransaction, "id"> {
+}
 export interface Subscription {
     id: string;
     plan: string;
@@ -106,7 +121,7 @@ export type SubscriptionOptions = {
         user: User;
         session: AuthSession;
         referenceId: string;
-        action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "disable-subscription" | "enable-subscription";
+        action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "list-transactions" | "disable-subscription" | "enable-subscription";
     }, ctx: GenericEndpointContext) => Promise<boolean>) | undefined;
     onSubscriptionComplete?: ((data: {
         event: any;

@@ -1,5 +1,51 @@
 import type { BetterAuthPluginDBSchema } from "@better-auth/core/db";
 import type { PaystackOptions } from "./types";
+export declare const transactions: {
+    paystackTransaction: {
+        fields: {
+            reference: {
+                type: "string";
+                required: true;
+            };
+            referenceId: {
+                type: "string";
+                required: true;
+            };
+            userId: {
+                type: "string";
+                required: true;
+            };
+            amount: {
+                type: "number";
+                required: true;
+            };
+            currency: {
+                type: "string";
+                required: true;
+            };
+            status: {
+                type: "string";
+                required: true;
+            };
+            plan: {
+                type: "string";
+                required: false;
+            };
+            metadata: {
+                type: "string";
+                required: false;
+            };
+            createdAt: {
+                type: "date";
+                required: true;
+            };
+            updatedAt: {
+                type: "date";
+                required: true;
+            };
+        };
+    };
+};
 export declare const subscriptions: {
     subscription: {
         fields: {
