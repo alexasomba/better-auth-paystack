@@ -180,25 +180,26 @@ export const initializeTransaction = (options) => {
             });
         }
         if (ctx.body.callbackURL) {
-            const isTrustedOriginFn = ctx.context?.isTrustedOrigin;
-            const trusted = isTrustedOriginFn
-                ? isTrustedOriginFn(ctx.body.callbackURL, { allowRelativePaths: true })
-                : (() => {
-                    try {
-                        if (ctx.body.callbackURL.startsWith("/"))
-                            return true;
-                        const baseUrl = ctx.context?.baseURL ??
-                            ctx.request?.url ??
-                            "";
-                        if (!baseUrl)
-                            return false;
-                        const baseOrigin = new URL(baseUrl).origin;
-                        return new URL(ctx.body.callbackURL).origin === baseOrigin;
-                    }
-                    catch {
+            const checkTrusted = () => {
+                try {
+                    const callbackURL = ctx.body.callbackURL;
+                    if (!callbackURL)
                         return false;
-                    }
-                })();
+                    if (callbackURL.startsWith("/"))
+                        return true;
+                    const baseUrl = ctx.context?.baseURL ??
+                        ctx.request?.url ??
+                        "";
+                    if (!baseUrl)
+                        return false;
+                    const baseOrigin = new URL(baseUrl).origin;
+                    return new URL(callbackURL).origin === baseOrigin;
+                }
+                catch {
+                    return false;
+                }
+            };
+            const trusted = checkTrusted();
             if (!trusted) {
                 throw new APIError("FORBIDDEN", {
                     message: "callbackURL is not a trusted origin.",
@@ -253,9 +254,13 @@ export const initializeTransaction = (options) => {
             }
             const initRaw = await paystack.transactionInitialize(initBody);
             const initRes = unwrapSdkResult(initRaw);
-            const data = initRes && typeof initRes === "object" && "status" in initRes && "data" in initRes
+            let data = initRes && typeof initRes === "object" && "status" in initRes && "data" in initRes
                 ? initRes.data
                 : initRes?.data ?? initRes;
+            // Handle case where unwrapped data is still the full Paystack response (has status & data)
+            if (data && typeof data === "object" && "status" in data && "data" in data) {
+                data = data.data;
+            }
             url = data?.authorization_url;
             reference = data?.reference;
             accessCode = data?.access_code;
@@ -312,9 +317,12 @@ export const verifyTransaction = (options) => {
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
             });
         }
-        const data = verifyRes && typeof verifyRes === "object" && "status" in verifyRes && "data" in verifyRes
+        let data = verifyRes && typeof verifyRes === "object" && "status" in verifyRes && "data" in verifyRes
             ? verifyRes.data
             : verifyRes?.data ?? verifyRes;
+        if (data && typeof data === "object" && "status" in data && "data" in data) {
+            data = data.data;
+        }
         const status = data?.status;
         const reference = data?.reference ?? ctx.body.reference;
         if (status === "success") {

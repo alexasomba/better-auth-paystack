@@ -14,9 +14,13 @@
   },
   "dependencies": {
     "@alexasomba/better-auth-paystack": "workspace:*",
+    "@alexasomba/paystack-node": "^1.1.6",
     "@opennextjs/cloudflare": "^1.16.1",
+    "@radix-ui/react-tabs": "^1.1.13",
     "better-auth": "^1.4.18",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
     "next": "^15.5.11",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
