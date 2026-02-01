@@ -44,7 +44,17 @@ export const auth = betterAuth({
                 plans: [
                     {
                         name: "starter",
-                        amount: 5000,
+                        amount: 500000, // Always write this in Kobo (1 NGN = 100 Kobo)
+                        currency: "NGN",
+                    },
+                    {
+                        name: "pro",
+                        amount: 500000, // Always write this in Kobo (1 NGN = 100 Kobo)
+                        currency: "NGN",
+                    },
+                    {
+                        name: "enterprise",
+                        amount: 500000, // Always write this in Kobo (1 NGN = 100 Kobo)
                         currency: "NGN",
                     },
                 ],

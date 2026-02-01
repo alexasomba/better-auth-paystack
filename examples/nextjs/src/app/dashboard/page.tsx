@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Github, Package } from "lucide-react";
+import { GithubLogo, Package } from "@phosphor-icons/react";
 import { redirect } from "next/navigation";
 import SignOutButton from "./SignOutButton";
 import PaymentManager from "./PaymentManager";
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 hover:text-gray-700 transition-colors"
                         >
-                            <Github size={16} />
+                            <GithubLogo weight="duotone" size={16} />
                             <span>GitHub</span>
                         </a>
                         <a
@@ -111,7 +111,7 @@ export default async function DashboardPage() {
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 hover:text-gray-700 transition-colors"
                         >
-                            <Package size={16} />
+                            <Package weight="duotone" size={16} />
                             <span>npm</span>
                         </a>
                     </div>
