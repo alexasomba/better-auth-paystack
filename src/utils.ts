@@ -14,3 +14,12 @@ export async function getPlanByName(options: PaystackOptions<any>, name: string)
         plans?.find((plan) => plan.name.toLowerCase() === name.toLowerCase()),
     );
 }
+
+export async function getProducts(productOptions: PaystackOptions["products"]) {
+    if (productOptions?.products) {
+        return typeof productOptions.products === "function"
+            ? await productOptions.products()
+            : productOptions.products;
+    }
+    return [];
+}

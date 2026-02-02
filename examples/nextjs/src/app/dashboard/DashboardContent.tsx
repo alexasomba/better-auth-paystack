@@ -30,24 +30,26 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                     </div>
 
                     <Tabs defaultValue="user" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 mb-6 h-12">
-                            <TabsTrigger value="user" className="gap-2">
-                                <User weight="duotone" className="size-4" />
-                                User Info
-                            </TabsTrigger>
-                            <TabsTrigger value="subscriptions" className="gap-2">
-                                <Scroll weight="duotone" className="size-4" />
-                                Subscriptions
-                            </TabsTrigger>
-                            <TabsTrigger value="one-time" className="gap-2">
-                                <IdentificationCard weight="duotone" className="size-4" />
-                                One-Time
-                            </TabsTrigger>
-                            <TabsTrigger value="transactions" className="gap-2">
-                                <Clock weight="duotone" className="size-4" />
-                                Transactions
-                            </TabsTrigger>
-                        </TabsList>
+                        <div className="relative mb-6">
+                            <TabsList className="flex w-full h-12 p-1 bg-muted/50 rounded-xl overflow-x-auto no-scrollbar scroll-smooth">
+                                <TabsTrigger value="user" className="flex-1 min-w-[120px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+                                    <User weight="duotone" className="size-4" />
+                                    <span className="text-sm font-medium">User Info</span>
+                                </TabsTrigger>
+                                <TabsTrigger value="subscriptions" className="flex-1 min-w-[140px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+                                    <Scroll weight="duotone" className="size-4" />
+                                    <span className="text-sm font-medium">Subscriptions</span>
+                                </TabsTrigger>
+                                <TabsTrigger value="one-time" className="flex-1 min-w-[120px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+                                    <IdentificationCard weight="duotone" className="size-4" />
+                                    <span className="text-sm font-medium">One-Time</span>
+                                </TabsTrigger>
+                                <TabsTrigger value="transactions" className="flex-1 min-w-[130px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
+                                    <Clock weight="duotone" className="size-4" />
+                                    <span className="text-sm font-medium">Transactions</span>
+                                </TabsTrigger>
+                            </TabsList>
+                        </div>
 
                         <TabsContent value="user" className="space-y-6">
                             <Card className="w-full">

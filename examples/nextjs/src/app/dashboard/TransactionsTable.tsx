@@ -30,7 +30,6 @@ import { Badge } from "@/components/ui/badge";
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -60,12 +59,20 @@ export default function TransactionsTable() {
             cell: ({ row }) => {
                 const reference = row.getValue("reference") as string;
                 return (
-                    <button
-                        onClick={() => setSelectedTransaction(row.original)}
-                        className="font-mono text-xs text-primary hover:underline cursor-pointer"
-                    >
-                        {reference.slice(0, 12)}...
-                    </button>
+                    <div className="flex items-center gap-2 group">
+                        <code className="font-mono text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {reference.slice(0, 12)}...
+                        </code>
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(reference);
+                            }}
+                            className="p-1 hover:bg-primary/10 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            title="Copy Reference"
+                        >
+                            <Copy weight="duotone" className="size-3 text-primary" />
+                        </button>
+                    </div>
                 );
             },
         },
@@ -265,13 +272,23 @@ export default function TransactionsTable() {
                 <DialogContent className="sm:max-w-106.25">
                     <DialogHeader>
                         <DialogTitle>Transaction Details</DialogTitle>
-                        <DialogDescription>
-                            Detailed information for reference:{" "}
-                            <span className="font-mono text-[10px] break-all block mt-1">{selectedTransaction?.reference}</span>
-                        </DialogDescription>
                     </DialogHeader>
                     {selectedTransaction && (
                         <div className="grid gap-4 py-4">
+                            <div className="space-y-1 bg-muted/50 p-3 rounded-lg border border-dashed">
+                                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">Reference</span>
+                                <div className="flex items-center justify-between gap-2">
+                                    <code className="font-mono text-xs break-all">{selectedTransaction.reference}</code>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 shrink-0"
+                                        onClick={() => navigator.clipboard.writeText(selectedTransaction.reference)}
+                                    >
+                                        <Copy weight="duotone" className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                                 <span className="text-sm font-medium text-muted-foreground">Amount</span>
                                 <span className="col-span-3 text-right font-semibold">

@@ -10,6 +10,8 @@ import {
     listTransactions,
     paystackWebhook,
     verifyTransaction,
+    getConfig,
+    getSubscriptionManageLink,
     PAYSTACK_ERROR_CODES,
 } from "./routes";
 import { getSchema } from "./schema";
@@ -20,6 +22,7 @@ import type {
     PaystackPlan,
     Subscription,
     SubscriptionOptions,
+    PaystackProduct,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -36,6 +39,7 @@ export const paystack = <
     const baseEndpoints = {
         paystackWebhook: paystackWebhook(options),
         listTransactions: listTransactions(options),
+        getConfig: getConfig(options),
     } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
 
     const subscriptionEnabledEndpoints = {
@@ -45,6 +49,7 @@ export const paystack = <
         listSubscriptions: listSubscriptions(options),
         disablePaystackSubscription: disablePaystackSubscription(options),
         enablePaystackSubscription: enablePaystackSubscription(options),
+        getSubscriptionManageLink: getSubscriptionManageLink(options),
     } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
 
     type EndpointsForOptions = O extends { subscription: { enabled: true } }
@@ -136,4 +141,4 @@ export type PaystackPlugin<O extends PaystackOptions<any> = PaystackOptions> = R
     typeof paystack<PaystackClientFromOptions<O>, O>
 >;
 
-export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions };
+export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };

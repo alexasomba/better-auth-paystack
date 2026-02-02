@@ -8,7 +8,11 @@ Better Auth plugin that integrates Paystack for customer creation, checkout, and
 - Paystack checkout via transaction initialize + verify (redirect-first)
 - Paystack webhook signature verification (`x-paystack-signature`, HMAC-SHA512)
 - Local subscription records stored in your Better Auth database
-- Subscription management endpoints using Paystack’s email-token flows (`/subscription/enable` + `/subscription/disable`)
+- Subscription management via Paystack-hosted pages (`/subscription/manage-link`)
+- Subscription activation/deactivation endpoints (`/subscription/enable` + `/subscription/disable`)
+- Support for one-time payment products (e.g., credit packs, top-ups)
+- Explicit billing interval support for plans (monthly, annually, etc.)
+- Dynamic configuration sharing via `/paystack/get-config`
 - Reference ID support (user by default; org/team via `referenceId` + `authorizeReference`)
 
 ## Installation
@@ -75,6 +79,8 @@ If you want strict typing and the recommended server SDK client:
 npm install @alexasomba/paystack-node
 ```
 
+You can as well use any other sdk or client library for paystack aside the above and it should work too.
+
 If your app has separate client + server bundles, install the plugin in both.
 
 ### Configure the server plugin
@@ -100,9 +106,10 @@ export const auth = betterAuth({
         enabled: true,
         plans: [
           {
-            name: "starter",
+            name: "pro",
             amount: 500000,
             currency: "NGN",
+            interval: "monthly",
             // If you use Paystack Plans, prefer planCode + (optional) invoiceLimit.
             // planCode: "PLN_...",
             // invoiceLimit: 12,
@@ -114,6 +121,14 @@ export const auth = betterAuth({
           return referenceId === user.id;
         },
       },
+      products: [
+        {
+          name: "50 Credits Pack",
+          amount: 250000,
+          currency: "NGN",
+          metadata: { type: "credits", quantity: 50 },
+        },
+      ],
     }),
   ],
 });
@@ -205,12 +220,34 @@ const init = await authClient.paystack.transaction.initialize(
 // { url, reference, accessCode, redirect: true }
 if (init?.url) window.location.href = init.url;
 
-// On your callback page/route
+// 2. Manage / Upgrade / Downgrade (via Paystack-hosted management page)
+const manage = await authClient.paystack.getSubscriptionManageLink({
+  query: { subscriptionCode: "SUB_..." },
+});
+if (manage.data?.link) window.location.href = manage.data.link;
+
+// 3. Purchase a One-Time Product
+await authClient.paystack.transaction.initialize({
+  amount: 250000,
+  currency: "NGN",
+  metadata: { type: "credits", quantity: 50 },
+  callbackURL: `${window.location.origin}/billing/paystack/callback`,
+});
+
+// 4. On your callback page/route
 const reference = new URLSearchParams(window.location.search).get("reference");
 if (reference) {
   await authClient.paystack.transaction.verify({ reference }, { throw: true });
 }
 ```
+
+### Dynamic Configuration
+
+The plugin exposes an endpoint to share your configured plans and products with the client, reducing hard-coding in your components:
+
+`GET {AUTH_BASE}/paystack/get-config`
+
+Returns: `{ plans: PaystackPlan[], products: PaystackProduct[] }`
 
 Server-side (no HTTP fetch needed):
 

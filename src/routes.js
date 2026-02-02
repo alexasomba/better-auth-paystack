@@ -3,7 +3,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "better-auth/api";
 import * as z from "zod/v4";
-import { getPlanByName, getPlans } from "./utils";
+import { getPlanByName, getPlans, getProducts } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
@@ -646,6 +646,53 @@ export const enablePaystackSubscription = (options) => {
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_ENABLE_SUBSCRIPTION,
             });
         }
+    });
+};
+const subscriptionCodeSchema = z.object({
+    subscriptionCode: z.string(),
+});
+export const getSubscriptionManageLink = (options) => {
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "get-subscription-manage-link")]
+        : [sessionMiddleware, originCheck];
+    return createAuthEndpoint("/paystack/subscription/manage-link", {
+        method: "GET",
+        query: subscriptionCodeSchema,
+        use: useMiddlewares
+    }, async (ctx) => {
+        const { subscriptionCode } = ctx.query;
+        const paystack = getPaystackOps(options.paystackClient);
+        try {
+            const raw = await paystack.subscriptionManageLink(subscriptionCode);
+            const linkRes = unwrapSdkResult(raw);
+            const data = linkRes && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
+                ? linkRes.data
+                : linkRes?.data ?? linkRes;
+            return ctx.json({ link: data?.link });
+        }
+        catch (error) {
+            ctx.context.logger.error("Failed to get Paystack subscription manage link", error);
+            throw new APIError("BAD_REQUEST", {
+                message: error?.message || "Failed to fetch subscription management link",
+            });
+        }
+    });
+};
+export const getConfig = (options) => {
+    return createAuthEndpoint("/paystack/get-config", {
+        method: "GET",
+        metadata: {
+            openapi: {
+                operationId: "getPaystackConfig",
+            },
+        },
+    }, async (ctx) => {
+        const [plans, products] = await Promise.all([
+            options.subscription?.enabled ? getPlans(options.subscription) : Promise.resolve([]),
+            getProducts(options.products),
+        ]);
+        return ctx.json({ plans, products });
     });
 };
 export { PAYSTACK_ERROR_CODES };

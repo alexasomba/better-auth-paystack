@@ -83,6 +83,16 @@ export type PaystackPlan = {
         days: number;
     } | undefined;
 };
+export interface PaystackProduct {
+    /** Human-readable name of the product. */
+    name: string;
+    /** Amount in the smallest currency unit (e.g., kobo). */
+    amount: number;
+    /** Currency ISO code (e.g., NGN). */
+    currency: string;
+    /** Optional metadata to include with the transaction. */
+    metadata?: Record<string, unknown> | undefined;
+}
 export interface PaystackTransaction {
     id: string;
     reference: string;
@@ -138,6 +148,9 @@ export type SubscriptionOptions = {
         subscription: Subscription;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
 };
+export type ProductOptions = {
+    products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
+};
 export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackNodeClient> {
     /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
     paystackClient: NoInfer<TPaystackClient>;
@@ -157,6 +170,7 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
     } | ({
         enabled: true;
     } & SubscriptionOptions)) | undefined;
+    products?: ProductOptions | undefined;
     onEvent?: ((event: any) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user> | undefined;
 }

@@ -44,18 +44,37 @@ export const auth = betterAuth({
                 plans: [
                     {
                         name: "starter",
-                        amount: 500000, // Always write this in Kobo (1 NGN = 100 Kobo)
+                        amount: 500000, // 5,000 NGN
                         currency: "NGN",
+                        interval: "monthly",
                     },
                     {
                         name: "pro",
-                        amount: 500000, // Always write this in Kobo (1 NGN = 100 Kobo)
+                        amount: 1200000, // 12,000 NGN
                         currency: "NGN",
+                        interval: "monthly",
                     },
                     {
                         name: "enterprise",
-                        amount: 500000, // Always write this in Kobo (1 NGN = 100 Kobo)
+                        amount: 10000000, // 100,000 NGN
                         currency: "NGN",
+                        interval: "annually",
+                    },
+                ],
+            },
+            products: {
+                products: [
+                    {
+                        name: "50 Credits Pack",
+                        amount: 250000, // 2,500 NGN
+                        currency: "NGN",
+                        metadata: { type: "credits", quantity: 50 },
+                    },
+                    {
+                        name: "150 Credits Pack",
+                        amount: 600000, // 6,000 NGN
+                        currency: "NGN",
+                        metadata: { type: "credits", quantity: 150 },
                     },
                 ],
             },

@@ -3,7 +3,7 @@
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { GithubLogo, Package } from "@phosphor-icons/react";
+import { GithubLogo, Package, Sparkle, Fingerprint, ShieldCheck, RocketLaunch } from "@phosphor-icons/react";
 import { useState } from "react";
 
 export default function Home() {
@@ -14,13 +14,10 @@ export default function Home() {
         setIsAuthActionInProgress(true);
         try {
             const result = await authClient.signIn.anonymous();
-            console.log("Anonymous login result:", result);
-
             if (result.error) {
                 setIsAuthActionInProgress(false);
                 alert(`Anonymous login failed: ${result.error.message}`);
             } else {
-                // Login succeeded - force reload to update session
                 window.location.href = "/dashboard";
             }
         } catch (e: unknown) {
@@ -39,21 +36,58 @@ export default function Home() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen p-8 font-(family-name:--font-geist-sans)">
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <CardTitle className="text-2xl">Login</CardTitle>
-                    <CardDescription>Powered by better-auth-paystack.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                    <p className="text-sm text-gray-600 text-center">No personal information required.</p>
-                </CardContent>
-                <CardFooter>
-                    <Button onClick={handleAnonymousLogin} className="w-full" disabled={isAuthActionInProgress}>
-                        {isAuthActionInProgress ? "Logging In..." : "Login Anonymously"}
-                    </Button>
-                </CardFooter>
-            </Card>
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-linear-to-b from-background to-muted/20 font-(family-name:--font-geist-sans)">
+            <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="text-center space-y-2">
+                    <div className="inline-flex items-center justify-center p-2 bg-primary/5 rounded-2xl mb-2">
+                        <RocketLaunch weight="duotone" className="size-8 text-primary" />
+                    </div>
+                    <h1 className="text-4xl font-extrabold tracking-tight">Better Auth + Paystack SDK = ♥</h1>
+                    <p className="text-muted-foreground">The ultimate Paystack plugin for Better Auth.</p>
+                </div>
+
+                <Card className="border-border/50 shadow-xl shadow-primary/5 backdrop-blur-sm bg-background/80">
+                    <CardHeader className="text-center pb-2">
+                        <CardTitle className="text-xl flex items-center justify-center gap-2">
+                            <Fingerprint weight="duotone" className="size-5 text-primary" />
+                            Anonymous Login
+                        </CardTitle>
+                        <CardDescription>Experience seamless payments with one click, powered by better-auth-paystack.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 py-4">
+                        <div className="grid grid-cols-1 gap-3 py-2">
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-transparent hover:border-primary/10 transition-colors">
+                                <ShieldCheck weight="duotone" className="size-5 text-primary shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <p className="text-xs font-medium">Secure Checkout</p>
+                                    <p className="text-[10px] text-muted-foreground leading-relaxed">Enterprise-grade security for every transaction.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button 
+                            onClick={handleAnonymousLogin} 
+                            className="w-full h-11 text-sm font-semibold gap-2 shadow-lg shadow-primary/20 group" 
+                            disabled={isAuthActionInProgress}
+                        >
+                            {isAuthActionInProgress ? (
+                                "Logging In..."
+                            ) : (
+                                <>
+                                    <Sparkle weight="duotone" className="size-4 group-hover:animate-pulse" />
+                                    Login Anonymously
+                                </>
+                            )}
+                        </Button>
+                    </CardFooter>
+                </Card>
+
+                <p className="text-center text-[11px] text-muted-foreground">
+                    No personal information required.
+                </p>
+            </div>
+
             <footer className="absolute bottom-0 w-full text-center text-sm text-gray-500 py-4">
                 <div className="space-y-3">
                     <div>Powered by better-auth-paystack</div>

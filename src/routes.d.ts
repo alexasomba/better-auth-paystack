@@ -250,5 +250,51 @@ export declare const enablePaystackSubscription: (options: AnyPaystackOptions) =
 }, {
     result: any;
 }>;
+export declare const getSubscriptionManageLink: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/subscription/manage-link", {
+    method: "GET";
+    query: z.ZodObject<{
+        subscriptionCode: z.ZodString;
+    }, z.core.$strip>;
+    use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+        context: {
+            referenceId: any;
+        };
+    }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+        session: {
+            session: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                userId: string;
+                expiresAt: Date;
+                token: string;
+                ipAddress?: string | null | undefined;
+                userAgent?: string | null | undefined;
+            };
+            user: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        };
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+}, {
+    link: any;
+}>;
+export declare const getConfig: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/get-config", {
+    method: "GET";
+    metadata: {
+        openapi: {
+            operationId: string;
+        };
+    };
+}, {
+    plans: import("./types").PaystackPlan[];
+    products: import("./types").PaystackProduct[];
+}>;
 export { PAYSTACK_ERROR_CODES };
 //# sourceMappingURL=routes.d.ts.map
