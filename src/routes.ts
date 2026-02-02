@@ -355,12 +355,12 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
                     initBody.invoice_limit = plan.invoiceLimit;
                     // If plan has no code but has amount (e.g. local plans?), Paystack usually needs amount
                     if (!plan.planCode && plan.amount) {
-                        initBody.amount = plan.amount;
+                        initBody.amount = String(plan.amount);
                     }
                 } else {
                     // One-Time Payment Flow
                     if (!amount) throw new Error("Amount is required for one-time payments");
-                    initBody.amount = amount;
+                    initBody.amount = String(amount);
                 }
 
                 const initRaw = await paystack.transactionInitialize(initBody);
