@@ -13,7 +13,7 @@ export const paystack = (options) => {
         getConfig: getConfig(options),
         initializeTransaction: initializeTransaction(options),
         verifyTransaction: verifyTransaction(options),
-        listSubscriptions: listSubscriptions(options),
+        listLocalSubscriptions: listSubscriptions(options),
         disablePaystackSubscription: disablePaystackSubscription(options),
         enablePaystackSubscription: enablePaystackSubscription(options),
         getSubscriptionManageLink: getSubscriptionManageLink(options),

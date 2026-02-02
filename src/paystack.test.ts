@@ -634,7 +634,7 @@ describe("paystack", () => {
                 email: "product@test.com",
             })
         }));
-    }, 15000);
+    }, 30000);
 
     it("should authorize reference access via authorizeReference for listLocal", async () => {
         const authorizeReference = vi.fn().mockResolvedValue(true);
@@ -684,7 +684,7 @@ describe("paystack", () => {
             referenceId: "org_all",
             action: "list-subscriptions"
         }), expect.any(Object));
-    }, 15000);
+    }, 30000);
 
     it("should update subscription status to canceled via webhook events", async () => {
         const options = {

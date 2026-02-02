@@ -11,6 +11,7 @@ export default defineProject({
             "**/*.test.js",
             "**/dist/**",
             "**/node_modules/**",
+            "**/examples/**", // Examples have their own test configs
             ...(process.env.RUN_INTEGRATION_TESTS ? [] : ["**/*.integration.test.ts"]),
         ],
     },
