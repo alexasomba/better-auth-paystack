@@ -7,6 +7,6 @@ export const authClient = createAuthClient({
     baseURL: process.env.BETTER_AUTH_BASE_URL ?? process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
     plugins: [
         anonymousClient(),
-        paystackClient(),
+        paystackClient({ subscription: true }),
     ],
 });
