@@ -3,7 +3,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "better-auth/api";
 import * as z from "zod/v4";
-import { getPlanByName, getPlans, getProducts } from "./utils";
+import { getPlanByName, getPlans, getProductByName, getProducts } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
@@ -175,6 +175,7 @@ export const paystackWebhook = (options) => {
 };
 const initializeTransactionBodySchema = z.object({
     plan: z.string().optional(),
+    product: z.string().optional(),
     amount: z.number().optional(), // Amount in smallest currency unit (e.g., kobo)
     currency: z.string().optional(),
     email: z.string().optional(),
@@ -196,7 +197,7 @@ export const initializeTransaction = (options) => {
         use: useMiddlewares,
     }, async (ctx) => {
         const paystack = getPaystackOps(options.paystackClient);
-        const { plan: planName, amount, currency, email, metadata: extraMetadata, callbackURL } = ctx.body;
+        const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL } = ctx.body;
         // 1. Validate Callback URL validation (same as before)
         if (callbackURL) {
             const checkTrusted = () => {
@@ -236,8 +237,9 @@ export const initializeTransaction = (options) => {
                 message: PAYSTACK_ERROR_CODES.EMAIL_VERIFICATION_REQUIRED,
             });
         }
-        // 4. Determine Payment Mode: Subscription (Plan) vs One-Time (Amount)
+        // 4. Determine Payment Mode: Subscription (Plan) vs Product vs One-Time (Amount)
         let plan;
+        let product;
         if (planName) {
             if (!subscriptionOptions?.enabled) {
                 throw new APIError("BAD_REQUEST", { message: "Subscriptions are not enabled." });
@@ -250,11 +252,21 @@ export const initializeTransaction = (options) => {
                 });
             }
         }
-        else if (!amount) {
+        else if (productName) {
+            product = await getProductByName(options, productName);
+            if (!product) {
+                throw new APIError("BAD_REQUEST", {
+                    message: `Product '${productName}' not found.`,
+                });
+            }
+        }
+        else if (!bodyAmount) {
             throw new APIError("BAD_REQUEST", {
-                message: "Either 'plan' or 'amount' is required to initialize a transaction.",
+                message: "Either 'plan', 'product', or 'amount' is required to initialize a transaction.",
             });
         }
+        const amount = bodyAmount || product?.amount;
+        const finalCurrency = currency || product?.currency || plan?.currency || "NGN";
         // 5. Prepare Payload
         const referenceIdFromCtx = ctx.context.referenceId;
         const referenceId = ctx.body.referenceId || referenceIdFromCtx || session.user.id;
@@ -267,14 +279,15 @@ export const initializeTransaction = (options) => {
                 referenceId,
                 userId: user.id,
                 plan: plan?.name.toLowerCase(), // Undefined for one-time
+                product: product?.name.toLowerCase(),
                 ...extraMetadata,
             });
             const initBody = {
                 email: email || user.email,
                 callback_url: callbackURL,
                 metadata,
-                // If plan exists, use its currency; otherwise fallback to provided or default
-                currency: plan?.currency || currency || "NGN",
+                // If plan/product exists, use its currency; otherwise fallback to provided or default
+                currency: finalCurrency,
             };
             if (plan) {
                 // Subscription Flow
@@ -282,14 +295,14 @@ export const initializeTransaction = (options) => {
                 initBody.invoice_limit = plan.invoiceLimit;
                 // If plan has no code but has amount (e.g. local plans?), Paystack usually needs amount
                 if (!plan.planCode && plan.amount) {
-                    initBody.amount = String(plan.amount);
+                    initBody.amount = plan.amount;
                 }
             }
             else {
                 // One-Time Payment Flow
                 if (!amount)
                     throw new Error("Amount is required for one-time payments");
-                initBody.amount = String(amount);
+                initBody.amount = amount;
             }
             const initRaw = await paystack.transactionInitialize(initBody);
             const initRes = unwrapSdkResult(initRaw);

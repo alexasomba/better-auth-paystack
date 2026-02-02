@@ -23,3 +23,9 @@ export async function getProducts(productOptions: PaystackOptions["products"]) {
     }
     return [];
 }
+
+export async function getProductByName(options: PaystackOptions<any>, name: string) {
+    return await getProducts(options.products).then((products) =>
+        products?.find((product) => product.name.toLowerCase() === name.toLowerCase()),
+    );
+}

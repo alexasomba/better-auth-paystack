@@ -7,13 +7,10 @@ const INTERNAL_ERROR_CODES = defineErrorCodes({
     ...PAYSTACK_ERROR_CODES,
 });
 export const paystack = (options) => {
-    const baseEndpoints = {
+    const endpoints = {
         paystackWebhook: paystackWebhook(options),
         listTransactions: listTransactions(options),
         getConfig: getConfig(options),
-    };
-    const subscriptionEnabledEndpoints = {
-        ...baseEndpoints,
         initializeTransaction: initializeTransaction(options),
         verifyTransaction: verifyTransaction(options),
         listSubscriptions: listSubscriptions(options),
@@ -21,9 +18,6 @@ export const paystack = (options) => {
         enablePaystackSubscription: enablePaystackSubscription(options),
         getSubscriptionManageLink: getSubscriptionManageLink(options),
     };
-    const endpoints = (options.subscription?.enabled
-        ? subscriptionEnabledEndpoints
-        : baseEndpoints);
     return {
         id: "paystack",
         endpoints,

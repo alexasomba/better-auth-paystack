@@ -11,7 +11,7 @@ export default defineConfig({
         /^@better-fetch\/fetch($|\/)/,
         /^@better-auth\/core($|\/)/,
         /^@alexasomba\/paystack-node($|\/)/,
-        /^@alexasomba\/paystack-browser($|\/)/,
+
         "kysely",
         "@standard-schema/spec",
         "zod",

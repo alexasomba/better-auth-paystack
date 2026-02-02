@@ -36,31 +36,21 @@ export const paystack = <
 >(
     options: O,
 ) => {
-    const baseEndpoints = {
+    type EndpointsForOptions = O extends { subscription: { enabled: true } }
+        ? NonNullable<BetterAuthPlugin["endpoints"]>
+        : NonNullable<BetterAuthPlugin["endpoints"]>;
+
+    const endpoints = {
         paystackWebhook: paystackWebhook(options),
         listTransactions: listTransactions(options),
         getConfig: getConfig(options),
-    } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
-
-    const subscriptionEnabledEndpoints = {
-        ...baseEndpoints,
         initializeTransaction: initializeTransaction(options),
         verifyTransaction: verifyTransaction(options),
         listSubscriptions: listSubscriptions(options),
         disablePaystackSubscription: disablePaystackSubscription(options),
         enablePaystackSubscription: enablePaystackSubscription(options),
         getSubscriptionManageLink: getSubscriptionManageLink(options),
-    } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
-
-    type EndpointsForOptions = O extends { subscription: { enabled: true } }
-        ? typeof subscriptionEnabledEndpoints
-        : typeof baseEndpoints;
-
-    const endpoints = (
-        options.subscription?.enabled
-            ? subscriptionEnabledEndpoints
-            : baseEndpoints
-    ) as EndpointsForOptions;
+    } as any;
 
     return {
         id: "paystack",

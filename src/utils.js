@@ -17,3 +17,6 @@ export async function getProducts(productOptions) {
     }
     return [];
 }
+export async function getProductByName(options, name) {
+    return await getProducts(options.products).then((products) => products?.find((product) => product.name.toLowerCase() === name.toLowerCase()));
+}

@@ -54,7 +54,6 @@
     "better-auth": ">=1.3.0"
   },
   "dependencies": {
-    "@alexasomba/paystack-browser": "^1.1.6",
     "@alexasomba/paystack-node": "^1.1.6",
     "better-call": "^1.2.1",
     "defu": "^6.1.4",

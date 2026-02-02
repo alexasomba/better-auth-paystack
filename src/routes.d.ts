@@ -29,6 +29,7 @@ export declare const initializeTransaction: (options: AnyPaystackOptions) => imp
     method: "POST";
     body: z.ZodObject<{
         plan: z.ZodOptional<z.ZodString>;
+        product: z.ZodOptional<z.ZodString>;
         amount: z.ZodOptional<z.ZodNumber>;
         currency: z.ZodOptional<z.ZodString>;
         email: z.ZodOptional<z.ZodString>;
