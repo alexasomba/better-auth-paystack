@@ -57,8 +57,6 @@ pnpm --filter "@alexasomba/better-auth-paystack" build
 Run an example:
 
 ```bash
-# Cloudflare Workers + Hono
-pnpm --filter hono dev
 
 # Next.js (OpenNext / Cloudflare)
 pnpm --filter my-next-app dev

@@ -4,11 +4,19 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { GithubLogo, Package, Sparkle, Fingerprint, ShieldCheck, RocketLaunch } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-    const { error: sessionError } = authClient.useSession();
+    const { data: sessionData, error: sessionError } = authClient.useSession();
+    const router = useRouter();
     const [isAuthActionInProgress, setIsAuthActionInProgress] = useState(false);
+
+    useEffect(() => {
+        if (sessionData?.user) {
+            router.push("/dashboard");
+        }
+    }, [sessionData, router]);
 
     const handleAnonymousLogin = async () => {
         setIsAuthActionInProgress(true);

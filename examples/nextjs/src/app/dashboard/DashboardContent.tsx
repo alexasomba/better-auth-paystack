@@ -31,22 +31,22 @@ export default function DashboardContent({ session }: DashboardContentProps) {
 
                     <Tabs defaultValue="user" className="w-full">
                         <div className="relative mb-6">
-                            <TabsList className="flex w-full h-12 p-1 bg-muted/50 rounded-xl overflow-x-auto no-scrollbar scroll-smooth">
-                                <TabsTrigger value="user" className="flex-1 min-w-[120px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
-                                    <User weight="duotone" className="size-4" />
-                                    <span className="text-sm font-medium">User Info</span>
+                            <TabsList className="flex items-center justify-center w-full h-12 p-1 bg-muted/50 rounded-xl overflow-hidden gap-1">
+                                <TabsTrigger value="user" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-28 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                    <User weight="duotone" className="size-4 shrink-0" />
+                                    <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">User Info</span>
                                 </TabsTrigger>
-                                <TabsTrigger value="subscriptions" className="flex-1 min-w-[140px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
-                                    <Scroll weight="duotone" className="size-4" />
-                                    <span className="text-sm font-medium">Subscriptions</span>
+                                <TabsTrigger value="subscriptions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                    <Scroll weight="duotone" className="size-4 shrink-0" />
+                                    <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Subscriptions</span>
                                 </TabsTrigger>
-                                <TabsTrigger value="one-time" className="flex-1 min-w-[120px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
-                                    <IdentificationCard weight="duotone" className="size-4" />
-                                    <span className="text-sm font-medium">One-Time</span>
+                                <TabsTrigger value="one-time" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-28 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                    <IdentificationCard weight="duotone" className="size-4 shrink-0" />
+                                    <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">One-Time</span>
                                 </TabsTrigger>
-                                <TabsTrigger value="transactions" className="flex-1 min-w-[130px] gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all duration-200">
-                                    <Clock weight="duotone" className="size-4" />
-                                    <span className="text-sm font-medium">Transactions</span>
+                                <TabsTrigger value="transactions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                    <Clock weight="duotone" className="size-4 shrink-0" />
+                                    <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Transactions</span>
                                 </TabsTrigger>
                             </TabsList>
                         </div>

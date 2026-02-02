@@ -19,5 +19,7 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
+  "menuAccent": "bold",
+  "menuColor": "inverted",
   "registries": {}
 }

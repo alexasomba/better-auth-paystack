@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Sparkle, CheckCircle, Coins, ShieldCheck, ArrowRight } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Subscription {
   plan: string;
@@ -149,7 +150,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         return <div className="text-center py-8 text-muted-foreground animate-pulse">Loading billing details...</div>;
     }
 
-    const activeSubscription = subscriptions?.find((sub: Subscription) => sub.status === "active" || sub.status === "non-renewing");
+    const activeSubscription = subscriptions?.find((sub: Subscription) => ["active", "non-renewing", "past_due", "unpaid"].includes(sub.status));
 
     const formatCurrency = (amount: number, currency: string) => {
         return new Intl.NumberFormat("en-NG", {
@@ -166,67 +167,118 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                     <p className="text-sm text-muted-foreground">Choose a plan or manage your current subscription.</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {activeSubscription ? (
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-primary uppercase text-xs tracking-wider flex items-center gap-1">
-                                        <Sparkle weight="duotone" className="size-3" />
-                                        Current Plan
-                                    </p>
-                                    <p className="text-2xl font-bold capitalize">{activeSubscription.plan}</p>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    {activeSubscription && (
+                        <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-lg">
+                            <div>
+                                <p className="font-medium text-primary uppercase text-xs tracking-wider flex items-center gap-1">
+                                    <Sparkle weight="duotone" className="size-3" />
+                                    Active Subscription
+                                </p>
+                                <p className="text-2xl font-bold capitalize">{activeSubscription.plan}</p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                    <span className="flex items-center gap-1">
                                         Status: <span className="text-green-600 font-medium lowercase">{activeSubscription.status}</span>
-                                    </p>
-                                </div>
-                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <CheckCircle weight="duotone" className="text-primary size-6" />
-                                </div>
+                                    </span>
+                                    {activeSubscription.paystackSubscriptionCode && (
+                                        <>
+                                            <span className="text-muted-foreground/30">•</span>
+                                            <button 
+                                                onClick={() => handleManageSubscription(activeSubscription.paystackSubscriptionCode!)}
+                                                className="text-xs text-red-500 hover:text-red-600 hover:underline transition-all"
+                                                disabled={actionLoading}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </>
+                                    )}
+                                </p>
                             </div>
-                            {activeSubscription.paystackSubscriptionCode && (
-                                <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-2">
+                                {activeSubscription.paystackSubscriptionCode && (
                                     <Button
                                         onClick={() => handleManageBilling(activeSubscription.paystackSubscriptionCode!)}
                                         disabled={actionLoading}
-                                        className="w-full h-11 gap-2"
-                                    >
-                                        <ArrowRight className="size-4" />
-                                        {actionLoading ? "Loading..." : "Manage Billing & Upgrade"}
-                                    </Button>
-                                    <Button
-                                        onClick={() => handleManageSubscription(activeSubscription.paystackSubscriptionCode!)}
+                                        size="sm"
                                         variant="outline"
-                                        disabled={actionLoading}
-                                        className="w-full h-11"
+                                        className="h-9 gap-2 text-xs"
                                     >
-                                        {actionLoading ? "Processing..." : "Cancel Subscription"}
+                                        <ArrowRight className="size-3" />
+                                        Manage Cards
                                     </Button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {config.plans.map((plan) => (
-                                <div key={plan.name} className="flex flex-col p-4 border rounded-xl bg-muted/20 hover:border-primary/50 transition-all group">
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {config.plans.map((plan) => {
+                            const isCurrentPlan = activeSubscription?.plan?.toLowerCase() === plan.name.toLowerCase();
+                            
+                            return (
+                                <div 
+                                    key={plan.name} 
+                                    className={cn(
+                                        "relative flex flex-col p-5 border rounded-2xl transition-all duration-300 group",
+                                        isCurrentPlan 
+                                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                                            : "bg-muted/20 hover:border-primary/50 hover:bg-muted/30"
+                                    )}
+                                >
+                                    {isCurrentPlan && (
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                                            Current Plan
+                                        </div>
+                                    )}
                                     <div className="mb-4">
                                         <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{plan.name}</p>
-                                        <p className="text-2xl font-bold">{formatCurrency(plan.amount, plan.currency)}</p>
-                                        <p className="text-xs text-muted-foreground italic">billed {plan.interval || "monthly"}</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <p className="text-3xl font-bold">{formatCurrency(plan.amount, plan.currency)}</p>
+                                            <p className="text-xs text-muted-foreground">/{plan.interval || "mo"}</p>
+                                        </div>
                                     </div>
+                                    
+                                    <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            Full access to all features
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            Priority support
+                                        </li>
+                                    </ul>
+
                                     <div className="mt-auto">
                                         <Button 
-                                            onClick={() => handleSubscribe(plan.name)} 
-                                            disabled={actionLoading} 
-                                            className="w-full h-10 gap-2 text-xs"
+                                            onClick={() => !isCurrentPlan && handleSubscribe(plan.name)} 
+                                            disabled={actionLoading || isCurrentPlan} 
+                                            variant={isCurrentPlan ? "secondary" : "default"}
+                                            className={cn(
+                                                "w-full h-11 gap-2 text-sm font-semibold transition-all duration-300",
+                                                isCurrentPlan && "opacity-50 cursor-default"
+                                            )}
                                         >
-                                            <CreditCard weight="duotone" className="size-4" />
-                                            {actionLoading ? "Starting..." : `Select ${plan.name}`}
+                                            {isCurrentPlan ? (
+                                                <>
+                                                    <CheckCircle weight="bold" className="size-4" />
+                                                    Current Plan
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CreditCard weight="duotone" className="size-4" />
+                                                    {actionLoading ? "Processing..." : `Select ${plan.name}`}
+                                                </>
+                                            )}
                                         </Button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            );
+                        })}
+                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
+                        <ShieldCheck weight="duotone" className="size-3" />
+                        Secure payments by Paystack
+                    </p>
                 </CardContent>
             </Card>
         );
