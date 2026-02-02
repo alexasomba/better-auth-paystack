@@ -39,7 +39,11 @@ export const auth = betterAuth({
             ipAddressHeaders: ["cf-connecting-ip"], // Cloudflare specific header
             ipv6Subnet: 64, // Rate limit by /64 subnet for IPv6
         },
+        crossSubDomainCookies: {
+            enabled: true,
+        },
     },
+    trustedOrigins: baseURL ? [baseURL] : [],
     rateLimit: {
         enabled: true,
         window: 60, // 60 seconds

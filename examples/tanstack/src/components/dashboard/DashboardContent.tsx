@@ -18,8 +18,12 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ session }: DashboardContentProps) {
+    if (!session?.user) {
+        return null;
+    }
+
     return (
-        <div className="flex flex-col min-h-[calc(100vh-100px)]">
+        <div className="flex flex-col min-h-screen font-sans">
             <main className="flex-1 flex flex-col items-center justify-center p-8">
                 <div className="w-full max-w-3xl">
                     <div className="text-center mb-8">
