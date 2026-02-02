@@ -1,13 +1,17 @@
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 describe("Paystack Integration (Next.js)", () => {
     beforeEach(() => {
         vi.resetModules();
-        process.env.PAYSTACK_SECRET_KEY = "pk_test_mock";
-        process.env.PAYSTACK_WEBHOOK_SECRET = "mock_secret";
-        process.env.BETTER_AUTH_SECRET = "mock_auth_secret";
-        process.env.BETTER_AUTH_URL = "http://localhost:3000";
+        vi.stubEnv("PAYSTACK_SECRET_KEY", "pk_test_mock");
+        vi.stubEnv("PAYSTACK_WEBHOOK_SECRET", "mock_secret");
+        vi.stubEnv("BETTER_AUTH_SECRET", "mock_auth_secret");
+        vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
     });
 
     it("should initialize a one-time transaction with string amount", async () => {
