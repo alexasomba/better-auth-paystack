@@ -154,7 +154,8 @@ export type SubscriptionOptions = {
             | "list-subscriptions"
             | "list-transactions"
             | "disable-subscription"
-            | "enable-subscription";
+            | "enable-subscription"
+            | "get-subscription-manage-link";
         },
         ctx: GenericEndpointContext,
     ) => Promise<boolean>)

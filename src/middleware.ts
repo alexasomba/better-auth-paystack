@@ -11,7 +11,8 @@ export const referenceMiddleware = (
         | "list-subscriptions"
         | "list-transactions"
         | "disable-subscription"
-        | "enable-subscription",
+        | "enable-subscription"
+        | "get-subscription-manage-link",
 ) =>
     createAuthMiddleware(async (ctx) => {
         const session = ctx.context.session as any;

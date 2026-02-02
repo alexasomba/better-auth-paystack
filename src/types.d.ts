@@ -132,7 +132,7 @@ export type SubscriptionOptions = {
         user: User;
         session: AuthSession;
         referenceId: string;
-        action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "list-transactions" | "disable-subscription" | "enable-subscription";
+        action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "list-transactions" | "disable-subscription" | "enable-subscription" | "get-subscription-manage-link";
     }, ctx: GenericEndpointContext) => Promise<boolean>) | undefined;
     onSubscriptionComplete?: ((data: {
         event: any;
