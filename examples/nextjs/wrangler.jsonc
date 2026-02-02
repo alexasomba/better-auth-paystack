@@ -49,6 +49,7 @@
    */
   "vars": {
     "BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
+    "NEXT_PUBLIC_BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev"
   },
   /**
    * Note: Use secrets to store sensitive data.
