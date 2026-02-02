@@ -23,7 +23,9 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@alexasomba/better-auth-paystack": ["../../src/index.ts"],
+      "@alexasomba/better-auth-paystack/client": ["../../src/client.ts"]
     }
   }
 }
