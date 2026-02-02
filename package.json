@@ -39,7 +39,8 @@
     "coverage": "vitest run --coverage",
     "lint:package": "publint run --strict",
     "lint:types": "attw --profile esm-only --pack .",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepare": "husky"
   },
   "pnpm": {
     "overrides": {
@@ -69,9 +70,17 @@
     "@types/node": "^22.19.7",
     "@vitest/coverage-v8": "^4.0.18",
     "better-auth": "^1.4.18",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "publint": "^0.3.17",
     "tsdown": "^0.20.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "bash -c 'pnpm tsc --noEmit'",
+      "vitest related --run"
+    ]
   }
 }
