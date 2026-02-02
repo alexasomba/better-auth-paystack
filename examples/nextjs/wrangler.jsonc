@@ -8,7 +8,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "nextjs-better-auth-paystack",
+  "name": "better-auth-paystack",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-02-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -26,7 +26,7 @@
       // Self-reference service binding, the service name must match the worker name
       // see https://opennext.js.org/cloudflare/caching
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "nextjs-better-auth-paystack",
+      "service": "better-auth-paystack",
     },
   ],
   "observability": {
