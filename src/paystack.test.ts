@@ -567,4 +567,171 @@ describe("paystack", () => {
         )?.[0];
         expect(subB).toBeUndefined();
     });
+
+    it("should handle one-time product transaction initialization with comprehensive checks", async () => {
+        const paystackSdk = {
+            transaction_initialize: vi.fn().mockResolvedValue({
+                data: {
+                    status: true,
+                    data: {
+                        authorization_url: "https://paystack.test/buy",
+                        reference: "REF_PRODUCT_123",
+                    },
+                },
+            }),
+        };
+
+        const options = {
+            paystackClient: paystackSdk,
+            paystackWebhookSecret: "whsec_test",
+            subscription: { enabled: true, plans: [] },
+            products: {
+                products: [
+                    { name: "credits", amount: 1000, currency: "NGN" }
+                ]
+            }
+        } satisfies PaystackOptions<any>;
+
+        const auth = betterAuth({
+            baseURL: "http://localhost:3000",
+            trustedOrigins: ["http://localhost:3000"],
+            database: memory,
+            emailAndPassword: { enabled: true },
+            plugins: [paystack<any>(options)],
+        });
+
+        const cookieHeaders = new Headers();
+        const authClient = createAuthClient({
+            baseURL: "http://localhost:3000",
+            plugins: [bearer(), paystackClient({ subscription: true })],
+            fetchOptions: {
+                customFetchImpl: async (url, init) => {
+                    const merged = new Headers(cookieHeaders);
+                    const initHeaders = new Headers((init as any)?.headers ?? {});
+                    initHeaders.forEach((v, k) => merged.set(k, v));
+                    if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+                    return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+                },
+            },
+        });
+
+        const user = { email: "product@test.com", password: "password", name: "Buyer" };
+        const signUpRes = await authClient.signUp.email(user, { throw: true });
+        await authClient.signIn.email(user, {
+            throw: true,
+            onSuccess: setCookieToHeader(cookieHeaders),
+        });
+
+        const res = await authClient.paystack.transaction.initialize({
+            product: "credits",
+            callbackURL: "http://localhost:3000/done"
+        }, { throw: true });
+
+        expect(res.url).toBe("https://paystack.test/buy");
+        expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
+            body: expect.objectContaining({
+                amount: 1000,
+                email: "product@test.com",
+            })
+        }));
+    }, 15000);
+
+    it("should authorize reference access via authorizeReference for listLocal", async () => {
+        const authorizeReference = vi.fn().mockResolvedValue(true);
+        const options = {
+            paystackClient: {},
+            paystackWebhookSecret: "whsec_test",
+            subscription: {
+                enabled: true,
+                plans: [],
+                authorizeReference,
+            }
+        } satisfies PaystackOptions<any>;
+
+        const auth = betterAuth({
+            baseURL: "http://localhost:3000",
+            trustedOrigins: ["http://localhost:3000"],
+            database: memory,
+            emailAndPassword: { enabled: true },
+            plugins: [paystack<any>(options)],
+        });
+
+        const cookieHeaders = new Headers();
+        const authClient = createAuthClient({
+            baseURL: "http://localhost:3000",
+            plugins: [bearer(), paystackClient({ subscription: true })],
+            fetchOptions: {
+                customFetchImpl: async (url, init) => {
+                    const merged = new Headers(cookieHeaders);
+                    const initHeaders = new Headers((init as any)?.headers ?? {});
+                    initHeaders.forEach((v, k) => merged.set(k, v));
+                    if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+                    return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+                },
+            },
+        });
+
+        const user = { email: "user1@test.com", password: "password", name: "User 1" };
+        await authClient.signUp.email(user, { throw: true });
+        await authClient.signIn.email(user, {
+            throw: true,
+            onSuccess: setCookieToHeader(cookieHeaders),
+        });
+
+        await authClient.paystack.subscription.listLocal({ query: { referenceId: "org_all" } }, { throw: true });
+
+        expect(authorizeReference).toHaveBeenCalledWith(expect.objectContaining({
+            referenceId: "org_all",
+            action: "list-subscriptions"
+        }), expect.any(Object));
+    }, 15000);
+
+    it("should update subscription status to canceled via webhook events", async () => {
+        const options = {
+            paystackClient: {},
+            paystackWebhookSecret: "test_secret",
+            subscription: { enabled: true, plans: [] }
+        } satisfies PaystackOptions<any>;
+
+        const auth = betterAuth({
+            baseURL: "http://localhost:3000",
+            database: memory,
+            plugins: [paystack<any>(options)],
+        });
+
+        const ctx = await auth.$context;
+        const sub = {
+            id: "sub_123",
+            plan: "pro",
+            referenceId: "user_1",
+            paystackSubscriptionCode: "SUB_ABC",
+            status: "active",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+        await ctx.adapter.create({ model: "subscription", data: sub as any });
+
+        const payload = JSON.stringify({
+            event: "subscription.disable",
+            data: {
+                subscription_code: "SUB_ABC",
+                status: "disabled",
+            }
+        });
+        const signature = createHmac("sha512", "test_secret").update(payload).digest("hex");
+
+        const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
+            method: "POST",
+            headers: { "x-paystack-signature": signature },
+            body: payload
+        });
+
+        await auth.handler(req);
+
+        const updatedSub = await ctx.adapter.findOne<any>({
+            model: "subscription",
+            where: [{ field: "paystackSubscriptionCode", value: "SUB_ABC" }]
+        });
+        expect(updatedSub?.status).toBe("canceled");
+    });
 });

@@ -7,8 +7,11 @@ import {
     enablePaystackSubscription,
     initializeTransaction,
     listSubscriptions,
+    listTransactions,
     paystackWebhook,
     verifyTransaction,
+    getConfig,
+    getSubscriptionManageLink,
     PAYSTACK_ERROR_CODES,
 } from "./routes";
 import { getSchema } from "./schema";
@@ -19,6 +22,7 @@ import type {
     PaystackPlan,
     Subscription,
     SubscriptionOptions,
+    PaystackProduct,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -32,28 +36,20 @@ export const paystack = <
 >(
     options: O,
 ) => {
-    const baseEndpoints = {
+    type GenericEndpoints = NonNullable<BetterAuthPlugin["endpoints"]>;
+    const endpoints = {
         paystackWebhook: paystackWebhook(options),
-    } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
-
-    const subscriptionEnabledEndpoints = {
-        ...baseEndpoints,
+        listTransactions: listTransactions(options),
+        getConfig: getConfig(options),
         initializeTransaction: initializeTransaction(options),
         verifyTransaction: verifyTransaction(options),
         listSubscriptions: listSubscriptions(options),
         disablePaystackSubscription: disablePaystackSubscription(options),
         enablePaystackSubscription: enablePaystackSubscription(options),
-    } satisfies NonNullable<BetterAuthPlugin["endpoints"]>;
+        getSubscriptionManageLink: getSubscriptionManageLink(options),
+    } satisfies GenericEndpoints;
 
-    type EndpointsForOptions = O extends { subscription: { enabled: true } }
-        ? typeof subscriptionEnabledEndpoints
-        : typeof baseEndpoints;
-
-    const endpoints = (
-        options.subscription?.enabled
-            ? subscriptionEnabledEndpoints
-            : baseEndpoints
-    ) as EndpointsForOptions;
+    type EndpointsForOptions = typeof endpoints;
 
     return {
         id: "paystack",
@@ -127,11 +123,8 @@ export const paystack = <
     } satisfies BetterAuthPlugin;
 };
 
-type PaystackClientFromOptions<O extends PaystackOptions<any>> =
-    O extends PaystackOptions<infer TClient> ? TClient : PaystackNodeClient;
-
 export type PaystackPlugin<O extends PaystackOptions<any> = PaystackOptions> = ReturnType<
-    typeof paystack<PaystackClientFromOptions<O>, O>
+    typeof paystack<any, O>
 >;
 
-export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions };
+export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };

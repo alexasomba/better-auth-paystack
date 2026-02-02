@@ -3,7 +3,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "better-auth/api";
 import * as z from "zod/v4";
-import { getPlanByName, getPlans } from "./utils";
+import { getPlanByName, getPlans, getProductByName, getProducts } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
@@ -66,6 +66,21 @@ export const paystackWebhook = (options) => {
             const eventName = String(event?.event ?? "");
             const data = event?.data;
             try {
+                if (eventName === "charge.success") {
+                    const reference = data?.reference;
+                    const paystackId = data?.id ? String(data.id) : undefined;
+                    if (reference) {
+                        await ctx.context.adapter.update({
+                            model: "paystackTransaction",
+                            update: {
+                                status: "success",
+                                paystackId,
+                                updatedAt: new Date(),
+                            },
+                            where: [{ field: "reference", value: reference }],
+                        });
+                    }
+                }
                 if (eventName === "subscription.create") {
                     const subscriptionCode = data?.subscription_code ??
                         data?.subscription?.subscription_code ??
@@ -159,12 +174,20 @@ export const paystackWebhook = (options) => {
     });
 };
 const initializeTransactionBodySchema = z.object({
-    plan: z.string(),
+    plan: z.string().optional(),
+    product: z.string().optional(),
+    amount: z.number().optional(), // Amount in smallest currency unit (e.g., kobo)
+    currency: z.string().optional(),
+    email: z.string().optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
     referenceId: z.string().optional(),
     callbackURL: z.string().optional(),
 });
 export const initializeTransaction = (options) => {
     const subscriptionOptions = options.subscription;
+    // If subscriptions are enabled, use full middleware stack; otherwise just basics.
+    // However, for one-time payments, we might not strictly need subscription middleware
+    // checking for existing subs, but let's keep it consistent for now.
     const useMiddlewares = subscriptionOptions?.enabled
         ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "initialize-transaction")]
         : [sessionMiddleware, originCheck];
@@ -174,88 +197,121 @@ export const initializeTransaction = (options) => {
         use: useMiddlewares,
     }, async (ctx) => {
         const paystack = getPaystackOps(options.paystackClient);
-        if (!subscriptionOptions?.enabled) {
-            throw new APIError("BAD_REQUEST", {
-                message: "Subscriptions are not enabled in the Paystack options.",
-            });
-        }
-        if (ctx.body.callbackURL) {
-            const isTrustedOriginFn = ctx.context?.isTrustedOrigin;
-            const trusted = isTrustedOriginFn
-                ? isTrustedOriginFn(ctx.body.callbackURL, { allowRelativePaths: true })
-                : (() => {
-                    try {
-                        if (ctx.body.callbackURL.startsWith("/"))
-                            return true;
-                        const baseUrl = ctx.context?.baseURL ??
-                            ctx.request?.url ??
-                            "";
-                        if (!baseUrl)
-                            return false;
-                        const baseOrigin = new URL(baseUrl).origin;
-                        return new URL(ctx.body.callbackURL).origin === baseOrigin;
-                    }
-                    catch {
+        const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL } = ctx.body;
+        // 1. Validate Callback URL validation (same as before)
+        if (callbackURL) {
+            const checkTrusted = () => {
+                try {
+                    if (!callbackURL)
                         return false;
-                    }
-                })();
-            if (!trusted) {
+                    if (callbackURL.startsWith("/"))
+                        return true;
+                    const baseUrl = ctx.context?.baseURL ??
+                        ctx.request?.url ??
+                        "";
+                    if (!baseUrl)
+                        return false;
+                    const baseOrigin = new URL(baseUrl).origin;
+                    return new URL(callbackURL).origin === baseOrigin;
+                }
+                catch {
+                    return false;
+                }
+            };
+            if (!checkTrusted()) {
                 throw new APIError("FORBIDDEN", {
                     message: "callbackURL is not a trusted origin.",
                     status: 403,
                 });
             }
         }
+        // 2. Get User & Session
         const session = await getSessionFromCtx(ctx);
         if (!session)
             throw new APIError("UNAUTHORIZED");
         const user = session.user;
-        const referenceIdFromCtx = ctx.context.referenceId;
-        const referenceId = ctx.body.referenceId || referenceIdFromCtx || session.user.id;
-        if (subscriptionOptions.requireEmailVerification && !user.emailVerified) {
+        // 3. Email Verification Check (only if subscription options enforce it)
+        if (subscriptionOptions?.enabled && subscriptionOptions.requireEmailVerification && !user.emailVerified) {
             throw new APIError("BAD_REQUEST", {
                 code: "EMAIL_VERIFICATION_REQUIRED",
                 message: PAYSTACK_ERROR_CODES.EMAIL_VERIFICATION_REQUIRED,
             });
         }
-        const plan = await getPlanByName(options, ctx.body.plan);
-        if (!plan) {
+        // 4. Determine Payment Mode: Subscription (Plan) vs Product vs One-Time (Amount)
+        let plan;
+        let product;
+        if (planName) {
+            if (!subscriptionOptions?.enabled) {
+                throw new APIError("BAD_REQUEST", { message: "Subscriptions are not enabled." });
+            }
+            plan = await getPlanByName(options, planName);
+            if (!plan) {
+                throw new APIError("BAD_REQUEST", {
+                    code: "SUBSCRIPTION_PLAN_NOT_FOUND",
+                    message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
+                });
+            }
+        }
+        else if (productName) {
+            product = await getProductByName(options, productName);
+            if (!product) {
+                throw new APIError("BAD_REQUEST", {
+                    message: `Product '${productName}' not found.`,
+                });
+            }
+        }
+        else if (!bodyAmount) {
             throw new APIError("BAD_REQUEST", {
-                code: "SUBSCRIPTION_PLAN_NOT_FOUND",
-                message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
+                message: "Either 'plan', 'product', or 'amount' is required to initialize a transaction.",
             });
         }
-        if (!plan.planCode && !plan.amount) {
-            throw new APIError("BAD_REQUEST", {
-                message: "Paystack transaction initialization requires either plan.planCode (Paystack plan code) or plan.amount (smallest unit).",
-            });
-        }
+        const amount = bodyAmount || product?.amount;
+        const finalCurrency = currency || product?.currency || plan?.currency || "NGN";
+        // 5. Prepare Payload
+        const referenceIdFromCtx = ctx.context.referenceId;
+        const referenceId = ctx.body.referenceId || referenceIdFromCtx || session.user.id;
         let url;
         let reference;
         let accessCode;
         try {
+            // Construct Metadata
             const metadata = JSON.stringify({
                 referenceId,
                 userId: user.id,
-                plan: plan.name.toLowerCase(),
+                plan: plan?.name.toLowerCase(), // Undefined for one-time
+                product: product?.name.toLowerCase(),
+                ...extraMetadata,
             });
             const initBody = {
-                email: user.email,
-                callback_url: ctx.body.callbackURL,
-                currency: plan.currency,
-                plan: plan.planCode,
-                invoice_limit: plan.invoiceLimit,
+                email: email || user.email,
+                callback_url: callbackURL,
                 metadata,
+                // If plan/product exists, use its currency; otherwise fallback to provided or default
+                currency: finalCurrency,
             };
-            // Paystack docs: when `plan` is provided, it invalidates `amount`.
-            if (!plan.planCode && plan.amount) {
-                initBody.amount = String(plan.amount);
+            if (plan) {
+                // Subscription Flow
+                initBody.plan = plan.planCode;
+                initBody.invoice_limit = plan.invoiceLimit;
+                // If plan has no code but has amount (e.g. local plans?), Paystack usually needs amount
+                if (!plan.planCode && plan.amount) {
+                    initBody.amount = plan.amount;
+                }
+            }
+            else {
+                // One-Time Payment Flow
+                if (!amount)
+                    throw new Error("Amount is required for one-time payments");
+                initBody.amount = amount;
             }
             const initRaw = await paystack.transactionInitialize(initBody);
             const initRes = unwrapSdkResult(initRaw);
-            const data = initRes && typeof initRes === "object" && "status" in initRes && "data" in initRes
+            let data = initRes && typeof initRes === "object" && "status" in initRes && "data" in initRes
                 ? initRes.data
                 : initRes?.data ?? initRes;
+            if (data && typeof data === "object" && "status" in data && "data" in data) {
+                data = data.data;
+            }
             url = data?.authorization_url;
             reference = data?.reference;
             accessCode = data?.access_code;
@@ -267,17 +323,35 @@ export const initializeTransaction = (options) => {
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_INITIALIZE_TRANSACTION,
             });
         }
+        // 6. Record Transaction & Subscription
         const paystackCustomerCode = user.paystackCustomerCode;
         await ctx.context.adapter.create({
-            model: "subscription",
+            model: "paystackTransaction",
             data: {
-                plan: plan.name.toLowerCase(),
+                reference: reference,
                 referenceId,
-                paystackCustomerCode,
-                paystackTransactionReference: reference,
-                status: "incomplete",
+                userId: user.id,
+                amount: plan?.amount || amount,
+                currency: plan?.currency || currency || "NGN",
+                status: "pending",
+                plan: plan?.name.toLowerCase(),
+                metadata: extraMetadata ? JSON.stringify(extraMetadata) : undefined,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             },
         });
+        if (plan) {
+            await ctx.context.adapter.create({
+                model: "subscription",
+                data: {
+                    plan: plan.name.toLowerCase(),
+                    referenceId,
+                    paystackCustomerCode,
+                    paystackTransactionReference: reference,
+                    status: "incomplete",
+                },
+            });
+        }
         return ctx.json({
             url,
             reference,
@@ -312,16 +386,29 @@ export const verifyTransaction = (options) => {
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
             });
         }
-        const data = verifyRes && typeof verifyRes === "object" && "status" in verifyRes && "data" in verifyRes
+        let data = verifyRes && typeof verifyRes === "object" && "status" in verifyRes && "data" in verifyRes
             ? verifyRes.data
             : verifyRes?.data ?? verifyRes;
+        if (data && typeof data === "object" && "status" in data && "data" in data) {
+            data = data.data;
+        }
         const status = data?.status;
         const reference = data?.reference ?? ctx.body.reference;
+        const paystackId = data?.id ? String(data.id) : undefined;
         if (status === "success") {
             try {
                 const session = await getSessionFromCtx(ctx);
                 const referenceIdFromCtx = ctx.context.referenceId;
                 const referenceId = referenceIdFromCtx ?? session?.user?.id;
+                await ctx.context.adapter.update({
+                    model: "paystackTransaction",
+                    update: {
+                        status: "success",
+                        paystackId,
+                        updatedAt: new Date(),
+                    },
+                    where: [{ field: "reference", value: reference }],
+                });
                 await ctx.context.adapter.update({
                     model: "subscription",
                     update: {
@@ -336,7 +423,22 @@ export const verifyTransaction = (options) => {
                 });
             }
             catch (e) {
-                ctx.context.logger.error("Failed to update subscription after transaction verification", e);
+                ctx.context.logger.error("Failed to update transaction/subscription after verification", e);
+            }
+        }
+        else if (status === "failed" || status === "abandoned") {
+            try {
+                await ctx.context.adapter.update({
+                    model: "paystackTransaction",
+                    update: {
+                        status,
+                        updatedAt: new Date(),
+                    },
+                    where: [{ field: "reference", value: reference }],
+                });
+            }
+            catch (e) {
+                ctx.context.logger.error("Failed to update transaction status", e);
             }
         }
         return ctx.json({
@@ -375,6 +477,36 @@ export const listSubscriptions = (options) => {
             where: [{ field: "referenceId", value: referenceId }],
         });
         return ctx.json({ subscriptions: res });
+    });
+};
+export const listTransactions = (options) => {
+    const listQuerySchema = z.object({
+        referenceId: z.string().optional(),
+    });
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "list-transactions")]
+        : [sessionMiddleware, originCheck];
+    return createAuthEndpoint("/paystack/transaction/list", {
+        method: "GET",
+        query: listQuerySchema,
+        use: useMiddlewares,
+    }, async (ctx) => {
+        const session = await getSessionFromCtx(ctx);
+        if (!session)
+            throw new APIError("UNAUTHORIZED");
+        const referenceId = ctx.context.referenceId ??
+            ctx.query?.referenceId ??
+            session.user.id;
+        const res = await ctx.context.adapter.findMany({
+            model: "paystackTransaction",
+            where: [{ field: "referenceId", value: referenceId }],
+        });
+        // Sort by createdAt desc locally if adapter doesn't support it well, 
+        // but Better Auth adapters usually return in insertion order.
+        // Let's sort to be sure.
+        const sorted = res.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        return ctx.json({ transactions: sorted });
     });
 };
 const enableDisableBodySchema = z.object({
@@ -527,6 +659,53 @@ export const enablePaystackSubscription = (options) => {
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_ENABLE_SUBSCRIPTION,
             });
         }
+    });
+};
+const subscriptionCodeSchema = z.object({
+    subscriptionCode: z.string(),
+});
+export const getSubscriptionManageLink = (options) => {
+    const subscriptionOptions = options.subscription;
+    const useMiddlewares = subscriptionOptions?.enabled
+        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "get-subscription-manage-link")]
+        : [sessionMiddleware, originCheck];
+    return createAuthEndpoint("/paystack/subscription/manage-link", {
+        method: "GET",
+        query: subscriptionCodeSchema,
+        use: useMiddlewares
+    }, async (ctx) => {
+        const { subscriptionCode } = ctx.query;
+        const paystack = getPaystackOps(options.paystackClient);
+        try {
+            const raw = await paystack.subscriptionManageLink(subscriptionCode);
+            const linkRes = unwrapSdkResult(raw);
+            const data = linkRes && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
+                ? linkRes.data
+                : linkRes?.data ?? linkRes;
+            return ctx.json({ link: data?.link });
+        }
+        catch (error) {
+            ctx.context.logger.error("Failed to get Paystack subscription manage link", error);
+            throw new APIError("BAD_REQUEST", {
+                message: error?.message || "Failed to fetch subscription management link",
+            });
+        }
+    });
+};
+export const getConfig = (options) => {
+    return createAuthEndpoint("/paystack/get-config", {
+        method: "GET",
+        metadata: {
+            openapi: {
+                operationId: "getPaystackConfig",
+            },
+        },
+    }, async (ctx) => {
+        const [plans, products] = await Promise.all([
+            options.subscription?.enabled ? getPlans(options.subscription) : Promise.resolve([]),
+            getProducts(options.products),
+        ]);
+        return ctx.json({ plans, products });
     });
 };
 export { PAYSTACK_ERROR_CODES };

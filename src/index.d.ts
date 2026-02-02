@@ -1,20 +1,80 @@
 import type { GenericEndpointContext } from "better-auth";
-import type { PaystackNodeClient, PaystackClientLike, PaystackOptions, PaystackPlan, Subscription, SubscriptionOptions } from "./types";
+import type { PaystackNodeClient, PaystackClientLike, PaystackOptions, PaystackPlan, Subscription, SubscriptionOptions, PaystackProduct } from "./types";
 export declare const paystack: <TPaystackClient extends PaystackClientLike = PaystackNodeClient, O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>>(options: O) => {
     id: "paystack";
-    endpoints: O extends {
-        subscription: {
-            enabled: true;
-        };
-    } ? {
-        initializeTransaction: import("better-auth").StrictEndpoint<"/paystack/transaction/initialize", {
+    endpoints: {
+        paystackWebhook: import("better-call").StrictEndpoint<"/paystack/webhook", {
+            method: "POST";
+            metadata: {
+                openapi: {
+                    operationId: string;
+                };
+                scope: "server";
+            };
+            cloneRequest: true;
+            disableBody: true;
+        }, {
+            received: boolean;
+        }>;
+        listTransactions: import("better-call").StrictEndpoint<"/paystack/transaction/list", {
+            method: "GET";
+            query: import("zod").ZodObject<{
+                referenceId: import("zod").ZodOptional<import("zod").ZodString>;
+            }, import("better-auth").$strip>;
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+                context: {
+                    referenceId: any;
+                };
+            }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+                session: {
+                    session: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        userId: string;
+                        expiresAt: Date;
+                        token: string;
+                        ipAddress?: string | null | undefined;
+                        userAgent?: string | null | undefined;
+                    };
+                    user: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        email: string;
+                        emailVerified: boolean;
+                        name: string;
+                        image?: string | null | undefined;
+                    };
+                };
+            }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+        }, {
+            transactions: import("./types").PaystackTransaction[];
+        }>;
+        getConfig: import("better-call").StrictEndpoint<"/paystack/get-config", {
+            method: "GET";
+            metadata: {
+                openapi: {
+                    operationId: string;
+                };
+            };
+        }, {
+            plans: PaystackPlan[];
+            products: PaystackProduct[];
+        }>;
+        initializeTransaction: import("better-call").StrictEndpoint<"/paystack/transaction/initialize", {
             method: "POST";
             body: import("zod").ZodObject<{
-                plan: import("zod").ZodString;
+                plan: import("zod").ZodOptional<import("zod").ZodString>;
+                product: import("zod").ZodOptional<import("zod").ZodString>;
+                amount: import("zod").ZodOptional<import("zod").ZodNumber>;
+                currency: import("zod").ZodOptional<import("zod").ZodString>;
+                email: import("zod").ZodOptional<import("zod").ZodString>;
+                metadata: import("zod").ZodOptional<import("zod").ZodRecord<import("zod").ZodString, import("zod").ZodAny>>;
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
             }, import("better-auth").$strip>;
-            use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 context: {
                     referenceId: any;
                 };
@@ -47,12 +107,12 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             accessCode: string | undefined;
             redirect: boolean;
         }>;
-        verifyTransaction: import("better-auth").StrictEndpoint<"/paystack/transaction/verify", {
+        verifyTransaction: import("better-call").StrictEndpoint<"/paystack/transaction/verify", {
             method: "POST";
             body: import("zod").ZodObject<{
                 reference: import("zod").ZodString;
             }, import("better-auth").$strip>;
-            use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 context: {
                     referenceId: any;
                 };
@@ -84,12 +144,12 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             reference: any;
             data: any;
         }>;
-        listSubscriptions: import("better-auth").StrictEndpoint<"/paystack/subscription/list-local", {
+        listSubscriptions: import("better-call").StrictEndpoint<"/paystack/subscription/list-local", {
             method: "GET";
             query: import("zod").ZodObject<{
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
             }, import("better-auth").$strip>;
-            use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 context: {
                     referenceId: any;
                 };
@@ -119,14 +179,14 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         }, {
             subscriptions: Subscription[];
         }>;
-        disablePaystackSubscription: import("better-auth").StrictEndpoint<"/paystack/subscription/disable", {
+        disablePaystackSubscription: import("better-call").StrictEndpoint<"/paystack/subscription/disable", {
             method: "POST";
             body: import("zod").ZodObject<{
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 subscriptionCode: import("zod").ZodString;
                 emailToken: import("zod").ZodOptional<import("zod").ZodString>;
             }, import("better-auth").$strip>;
-            use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 context: {
                     referenceId: any;
                 };
@@ -156,14 +216,14 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         }, {
             result: any;
         }>;
-        enablePaystackSubscription: import("better-auth").StrictEndpoint<"/paystack/subscription/enable", {
+        enablePaystackSubscription: import("better-call").StrictEndpoint<"/paystack/subscription/enable", {
             method: "POST";
             body: import("zod").ZodObject<{
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 subscriptionCode: import("zod").ZodString;
                 emailToken: import("zod").ZodOptional<import("zod").ZodString>;
             }, import("better-auth").$strip>;
-            use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 context: {
                     referenceId: any;
                 };
@@ -193,35 +253,43 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         }, {
             result: any;
         }>;
-        paystackWebhook: import("better-auth").StrictEndpoint<"/paystack/webhook", {
-            method: "POST";
-            metadata: {
-                openapi: {
-                    operationId: string;
+        getSubscriptionManageLink: import("better-call").StrictEndpoint<"/paystack/subscription/manage-link", {
+            method: "GET";
+            query: import("zod").ZodObject<{
+                subscriptionCode: import("zod").ZodString;
+            }, import("better-auth").$strip>;
+            use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+                context: {
+                    referenceId: any;
                 };
-                scope: "server";
-            };
-            cloneRequest: true;
-            disableBody: true;
-        }, {
-            received: boolean;
-        }>;
-    } : {
-        paystackWebhook: import("better-auth").StrictEndpoint<"/paystack/webhook", {
-            method: "POST";
-            metadata: {
-                openapi: {
-                    operationId: string;
+            }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+                session: {
+                    session: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        userId: string;
+                        expiresAt: Date;
+                        token: string;
+                        ipAddress?: string | null | undefined;
+                        userAgent?: string | null | undefined;
+                    };
+                    user: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        email: string;
+                        emailVerified: boolean;
+                        name: string;
+                        image?: string | null | undefined;
+                    };
                 };
-                scope: "server";
-            };
-            cloneRequest: true;
-            disableBody: true;
+            }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
         }, {
-            received: boolean;
+            link: any;
         }>;
     };
-    init(ctx: import("better-auth").AuthContext<import("better-auth").BetterAuthOptions>): {
+    init(ctx: import("better-auth").AuthContext): {
         options: {
             databaseHooks: {
                 user: {
@@ -240,7 +308,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             };
         };
     };
-    schema: import("better-auth").BetterAuthPluginDBSchema;
+    schema: import("@better-auth/core/db").BetterAuthPluginDBSchema;
     $ERROR_CODES: {
         readonly SUBSCRIPTION_NOT_FOUND: "Subscription not found";
         readonly SUBSCRIPTION_PLAN_NOT_FOUND: "Subscription plan not found";
@@ -252,7 +320,6 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         readonly EMAIL_VERIFICATION_REQUIRED: "Email verification is required before you can subscribe to a plan";
     };
 };
-type PaystackClientFromOptions<O extends PaystackOptions<any>> = O extends PaystackOptions<infer TClient> ? TClient : PaystackNodeClient;
-export type PaystackPlugin<O extends PaystackOptions<any> = PaystackOptions> = ReturnType<typeof paystack<PaystackClientFromOptions<O>, O>>;
-export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions };
+export type PaystackPlugin<O extends PaystackOptions<any> = PaystackOptions> = ReturnType<typeof paystack<any, O>>;
+export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };
 //# sourceMappingURL=index.d.ts.map

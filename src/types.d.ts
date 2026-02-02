@@ -83,6 +83,32 @@ export type PaystackPlan = {
         days: number;
     } | undefined;
 };
+export interface PaystackProduct {
+    /** Human-readable name of the product. */
+    name: string;
+    /** Amount in the smallest currency unit (e.g., kobo). */
+    amount: number;
+    /** Currency ISO code (e.g., NGN). */
+    currency: string;
+    /** Optional metadata to include with the transaction. */
+    metadata?: Record<string, unknown> | undefined;
+}
+export interface PaystackTransaction {
+    id: string;
+    reference: string;
+    paystackId?: string | undefined;
+    referenceId: string;
+    userId: string;
+    amount: number;
+    currency: string;
+    status: string;
+    plan?: string | undefined;
+    metadata?: string | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface InputPaystackTransaction extends Omit<PaystackTransaction, "id"> {
+}
 export interface Subscription {
     id: string;
     plan: string;
@@ -106,7 +132,7 @@ export type SubscriptionOptions = {
         user: User;
         session: AuthSession;
         referenceId: string;
-        action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "disable-subscription" | "enable-subscription";
+        action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "list-transactions" | "disable-subscription" | "enable-subscription" | "get-subscription-manage-link";
     }, ctx: GenericEndpointContext) => Promise<boolean>) | undefined;
     onSubscriptionComplete?: ((data: {
         event: any;
@@ -121,6 +147,9 @@ export type SubscriptionOptions = {
         event: any;
         subscription: Subscription;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
+};
+export type ProductOptions = {
+    products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
 };
 export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackNodeClient> {
     /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
@@ -141,6 +170,7 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
     } | ({
         enabled: true;
     } & SubscriptionOptions)) | undefined;
+    products?: ProductOptions | undefined;
     onEvent?: ((event: any) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user> | undefined;
 }

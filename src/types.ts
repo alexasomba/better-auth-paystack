@@ -87,6 +87,34 @@ export type PaystackPlan = {
     | undefined;
 };
 
+export interface PaystackProduct {
+    /** Human-readable name of the product. */
+    name: string;
+    /** Amount in the smallest currency unit (e.g., kobo). */
+    amount: number;
+    /** Currency ISO code (e.g., NGN). */
+    currency: string;
+    /** Optional metadata to include with the transaction. */
+    metadata?: Record<string, unknown> | undefined;
+}
+
+export interface PaystackTransaction {
+    id: string;
+    reference: string;
+    paystackId?: string | undefined;
+    referenceId: string;
+    userId: string;
+    amount: number;
+    currency: string;
+    status: string;
+    plan?: string | undefined;
+    metadata?: string | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface InputPaystackTransaction extends Omit<PaystackTransaction, "id"> { }
+
 export interface Subscription {
     id: string;
     plan: string;
@@ -124,8 +152,10 @@ export type SubscriptionOptions = {
             | "initialize-transaction"
             | "verify-transaction"
             | "list-subscriptions"
+            | "list-transactions"
             | "disable-subscription"
-            | "enable-subscription";
+            | "enable-subscription"
+            | "get-subscription-manage-link";
         },
         ctx: GenericEndpointContext,
     ) => Promise<boolean>)
@@ -160,6 +190,10 @@ export type SubscriptionOptions = {
     | undefined;
 };
 
+export type ProductOptions = {
+    products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
+};
+
 export interface PaystackOptions<
     TPaystackClient extends PaystackClientLike = PaystackNodeClient,
 > {
@@ -191,6 +225,7 @@ export interface PaystackOptions<
         } & SubscriptionOptions)
     )
     | undefined;
+    products?: ProductOptions | undefined;
     onEvent?: ((event: any) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user> | undefined;
 }

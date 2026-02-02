@@ -2,13 +2,19 @@
 
 Better Auth plugin that integrates Paystack for customer creation, checkout, and Paystack-native subscription flows.
 
+[**Live Demo (Next.js)**](https://better-auth-paystack.gittech.workers.dev)
+
 ## Features
 
 - Optional Paystack customer creation on sign up (`createCustomerOnSignUp`)
 - Paystack checkout via transaction initialize + verify (redirect-first)
 - Paystack webhook signature verification (`x-paystack-signature`, HMAC-SHA512)
 - Local subscription records stored in your Better Auth database
-- Subscription management endpoints using Paystack’s email-token flows (`/subscription/enable` + `/subscription/disable`)
+- Subscription management via Paystack-hosted pages (`/subscription/manage-link`)
+- Subscription activation/deactivation endpoints (`/subscription/enable` + `/subscription/disable`)
+- Support for one-time payment products (e.g., credit packs, top-ups)
+- Explicit billing interval support for plans (monthly, annually, etc.)
+- Dynamic configuration sharing via `/paystack/get-config`
 - Reference ID support (user by default; org/team via `referenceId` + `authorizeReference`)
 
 ## Installation
@@ -19,65 +25,22 @@ Better Auth plugin that integrates Paystack for customer creation, checkout, and
 npm install better-auth @alexasomba/better-auth-paystack
 ```
 
-### Install from GitHub Packages (optional)
+## 🔑 Environment Variables
 
-If you want to install this package from GitHub Packages (`npm.pkg.github.com`) instead of npmjs, configure a project-level `.npmrc` (or your user `~/.npmrc`) to route the `@alexasomba` scope:
+To use this plugin, you'll need to configure the following in your `.env`:
 
-```ini
-@alexasomba:registry=https://npm.pkg.github.com
+```env
+PAYSTACK_SECRET_KEY=sk_test_...
+PAYSTACK_WEBHOOK_SECRET=sk_test_... # Usually the same as SECRET_KEY
+BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=http://localhost:3000
 ```
 
-Then authenticate and install:
+---
 
-```bash
-# npm v9+ may require legacy auth prompts for private registries
-npm login --scope=@alexasomba --auth-type=legacy --registry=https://npm.pkg.github.com
+## ⚙️ Configuration
 
-npm install @alexasomba/better-auth-paystack
-```
-
-## Development (pnpm workspace)
-
-This repo is set up as a pnpm workspace so you can install once at the repo root and run/build any example via `--filter`.
-
-```bash
-pnpm install
-```
-
-Build the library:
-
-```bash
-pnpm --filter "@alexasomba/better-auth-paystack" build
-```
-
-Run an example:
-
-```bash
-# Cloudflare Workers + Hono
-pnpm --filter hono dev
-
-# Next.js (OpenNext / Cloudflare)
-pnpm --filter my-next-app dev
-
-# TanStack Start
-pnpm --filter tanstack-start dev
-```
-
-Build all workspace packages (library + examples):
-
-```bash
-pnpm -r build
-```
-
-If you want strict typing and the recommended server SDK client:
-
-```bash
-npm install @alexasomba/paystack-node
-```
-
-If your app has separate client + server bundles, install the plugin in both.
-
-### Configure the server plugin
+### 1. Server Plugin
 
 ```ts
 import { betterAuth } from "better-auth";
@@ -93,26 +56,18 @@ export const auth = betterAuth({
     paystack({
       paystackClient,
       // Paystack signs webhooks with an HMAC SHA-512 using your Paystack secret key.
-      // Use the same secret key you configured in `createPaystack({ secretKey })`.
       paystackWebhookSecret: process.env.PAYSTACK_SECRET_KEY!,
       createCustomerOnSignUp: true,
       subscription: {
         enabled: true,
         plans: [
           {
-            name: "starter",
+            name: "pro",
             amount: 500000,
             currency: "NGN",
-            // If you use Paystack Plans, prefer planCode + (optional) invoiceLimit.
-            // planCode: "PLN_...",
-            // invoiceLimit: 12,
+            interval: "monthly",
           },
         ],
-        authorizeReference: async ({ user, referenceId, action }, ctx) => {
-          // Allow only the current user by default; authorize org/team IDs here.
-          // return await canUserManageOrg(user.id, referenceId)
-          return referenceId === user.id;
-        },
       },
     }),
   ],
@@ -178,7 +133,7 @@ This flow matches Paystack’s transaction initialize/verify APIs:
 2. Redirect the user to the returned Paystack `url`
 3. On your callback route/page, call `POST {AUTH_BASE}/paystack/transaction/verify` (this updates local subscription state)
 
-Example (typed via Better Auth client plugin):
+**Example (typed via Better Auth client plugin):**
 
 ```ts
 import { createAuthClient } from "better-auth/client";
@@ -205,12 +160,34 @@ const init = await authClient.paystack.transaction.initialize(
 // { url, reference, accessCode, redirect: true }
 if (init?.url) window.location.href = init.url;
 
-// On your callback page/route
+// 2. Manage / Upgrade / Downgrade (via Paystack-hosted management page)
+const manage = await authClient.paystack.getSubscriptionManageLink({
+  query: { subscriptionCode: "SUB_..." },
+});
+if (manage.data?.link) window.location.href = manage.data.link;
+
+// 3. Purchase a One-Time Product
+await authClient.paystack.transaction.initialize({
+  amount: 250000,
+  currency: "NGN",
+  metadata: { type: "credits", quantity: 50 },
+  callbackURL: `${window.location.origin}/billing/paystack/callback`,
+});
+
+// 4. On your callback page/route
 const reference = new URLSearchParams(window.location.search).get("reference");
 if (reference) {
   await authClient.paystack.transaction.verify({ reference }, { throw: true });
 }
 ```
+
+### Dynamic Configuration
+
+The plugin exposes an endpoint to share your configured plans and products with the client, reducing hard-coding in your components:
+
+`GET {AUTH_BASE}/paystack/get-config`
+
+Returns: `{ plans: PaystackPlan[], products: PaystackProduct[] }`
 
 Server-side (no HTTP fetch needed):
 
@@ -218,6 +195,36 @@ Server-side (no HTTP fetch needed):
 // On the server you can call the endpoints directly:
 // const init = await auth.api.initializeTransaction({ headers: req.headers, body: { plan: "starter" } })
 // const verify = await auth.api.verifyTransaction({ headers: req.headers, body: { reference } })
+```
+
+**Example (framework-agnostic):**
+
+On your callback route/page, call `GET {AUTH_BASE}/paystack/transaction/verify?reference=...`
+
+```ts
+// Start checkout
+const initRes = await fetch("/api/auth/paystack/transaction/initialize", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    plan: "starter",
+    callbackURL: `${window.location.origin}/billing/paystack/callback`,
+    // Optional for org/team billing (requires authorizeReference)
+    // referenceId: "org_123",
+  }),
+});
+
+const init = await initRes.json();
+// { url, reference, accessCode, redirect: true }
+if (init?.url) window.location.href = init.url;
+
+// On your callback page/route
+const reference = new URLSearchParams(window.location.search).get("reference");
+if (reference) {
+  await fetch(
+    `/api/auth/paystack/transaction/verify?reference=${encodeURIComponent(reference)}`,
+  );
+}
 ```
 
 ### Inline modal checkout (optional)
@@ -297,8 +304,29 @@ Subscription options (when `subscription.enabled: true`):
 - Subscription list returns empty: verify you’re passing the correct `referenceId`, and that `authorizeReference` allows it.
 - Transaction initializes but verify doesn’t update: ensure you call the verify endpoint after redirect, and confirm Paystack returns `status: "success"` for the reference.
 
+---
+
+## 🏗️ Development & Contributing
+
+This repository is set up as a pnpm workspace. You can run and build examples via `--filter`.
+
+```bash
+# Install everything
+pnpm install
+
+# Build the core library
+pnpm --filter "@alexasomba/better-auth-paystack" build
+
+# Run Next.js example (Next.js + Better Auth)
+pnpm --filter nextjs-better-auth-paystack dev
+
+# Run TanStack Start example (TanStack Start + Better Auth)
+pnpm --filter tanstack-start-better-auth-paystack dev
+```
+
 ## Links
 
+- GitHub Repository: [alexasomba/better-auth-paystack](https://github.com/alexasomba/better-auth-paystack)
 - Paystack Webhooks: https://paystack.com/docs/payments/webhooks/
 - Paystack Transaction API: https://paystack.com/docs/api/transaction/
 - Paystack Subscription API: https://paystack.com/docs/api/subscription/

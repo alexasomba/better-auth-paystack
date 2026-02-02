@@ -1,0 +1,329 @@
+"use client";
+
+import { authClient } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CreditCard, Sparkle, CheckCircle, Coins, ShieldCheck, ArrowRight } from "@phosphor-icons/react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+interface Subscription {
+  plan: string;
+  status: string;
+  paystackSubscriptionCode?: string;
+}
+
+interface PaystackPlan {
+    name: string;
+    amount: number;
+    currency: string;
+    interval?: string;
+}
+
+interface PaystackProduct {
+    name: string;
+    amount: number;
+    currency: string;
+    metadata?: Record<string, unknown>;
+}
+
+export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+    const [config, setConfig] = useState<{ plans: PaystackPlan[], products: PaystackProduct[] }>({ plans: [], products: [] });
+    const [isLoading, setIsLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [subRes, configRes] = await Promise.all([
+                    authClient.paystack.subscription.listLocal({ query: {} }),
+                    authClient.paystack.getConfig(),
+                ]);
+
+                if (subRes.data) {
+                    const data = subRes.data as unknown as { subscriptions: Subscription[] } | Subscription[];
+                    setSubscriptions(Array.isArray(data) ? data : data.subscriptions || []);
+                }
+                
+                if (configRes.data) {
+                    const data = configRes.data as { plans: PaystackPlan[], products: PaystackProduct[] };
+                    setConfig(data);
+                }
+            } catch (e) {
+                console.error("Failed to fetch billing data", e);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchData();
+    }, []);
+
+    const handleSubscribe = async (planName: string) => {
+        setActionLoading(true);
+        try {
+            const res = await authClient.paystack.transaction.initialize({
+                plan: planName,
+                callbackURL: `${window.location.origin}/billing/paystack/callback`,
+            });
+            if (res?.data?.url) {
+                window.location.href = res.data.url;
+            } else {
+                alert("Failed to get redirect URL from Paystack");
+            }
+        } catch (e: unknown) {
+            console.error(e);
+            if (e instanceof Error) {
+                alert(e.message || "Failed to initialize payment");
+            }
+            setActionLoading(false);
+        }
+    };
+
+    const handleBuyProduct = async (product: PaystackProduct) => {
+        setActionLoading(true);
+        try {
+            const res = await authClient.paystack.transaction.initialize({
+                amount: product.amount, 
+                currency: product.currency,
+                metadata: product.metadata,
+                callbackURL: `${window.location.origin}/billing/paystack/callback`,
+            });
+            if (res?.data?.url) {
+                window.location.href = res.data.url;
+            } else {
+                alert("Failed to get redirect URL from Paystack");
+            }
+        } catch (e: unknown) {
+            console.error(e);
+            if (e instanceof Error) {
+                alert(e.message || "Failed to initialize payment");
+            }
+            setActionLoading(false);
+        }
+    };
+
+    const handleManageBilling = async (subscriptionCode: string) => {
+        setActionLoading(true);
+        try {
+            const res = await authClient.paystack.subscription.manageLink({
+                query: { subscriptionCode },
+            });
+            if (res.data?.link) {
+                window.location.href = res.data.link;
+            } else {
+                alert("Failed to get management link from Paystack");
+            }
+        } catch (e: unknown) {
+            console.error(e);
+            if (e instanceof Error) {
+                alert(e.message || "Failed to fetch management link");
+            }
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleManageSubscription = async (subscriptionCode: string) => {
+        setActionLoading(true);
+        try {
+            await authClient.paystack.subscription.disable({
+                subscriptionCode,
+            });
+            const res = await authClient.paystack.subscription.listLocal({ query: {} });
+            if (res.data) {
+                const data = res.data as unknown as { subscriptions: Subscription[] } | Subscription[];
+                setSubscriptions(Array.isArray(data) ? data : data.subscriptions || []);
+            }
+        } catch (e: unknown) {
+            console.error(e);
+            if (e instanceof Error) {
+                alert(e.message || "Failed to manage subscription");
+            }
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    if (isLoading) {
+        return <div className="text-center py-8 text-muted-foreground animate-pulse">Loading billing details...</div>;
+    }
+
+    const activeSubscription = subscriptions?.find((sub: Subscription) => ["active", "non-renewing", "past_due", "unpaid"].includes(sub.status));
+
+    const formatCurrency = (amount: number, currency: string) => {
+        return new Intl.NumberFormat("en-NG", {
+            style: "currency",
+            currency: currency,
+        }).format(amount / 100);
+    };
+
+    if (activeTab === "subscriptions") {
+        return (
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Subscription Plans</CardTitle>
+                    <p className="text-sm text-muted-foreground">Choose a plan or manage your current subscription.</p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {activeSubscription && (
+                        <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-lg">
+                            <div>
+                                <p className="font-medium text-primary uppercase text-xs tracking-wider flex items-center gap-1">
+                                    <Sparkle weight="duotone" className="size-3" />
+                                    Active Subscription
+                                </p>
+                                <p className="text-2xl font-bold capitalize">{activeSubscription.plan}</p>
+                                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                    <span className="flex items-center gap-1">
+                                        Status: <span className="text-green-600 font-medium lowercase">{activeSubscription.status}</span>
+                                    </span>
+                                    {activeSubscription.paystackSubscriptionCode && (
+                                        <>
+                                            <span className="text-muted-foreground/30">•</span>
+                                            <button 
+                                                onClick={() => handleManageSubscription(activeSubscription.paystackSubscriptionCode!)}
+                                                className="text-xs text-red-500 hover:text-red-600 hover:underline transition-all"
+                                                disabled={actionLoading}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                {activeSubscription.paystackSubscriptionCode && (
+                                    <Button
+                                        onClick={() => handleManageBilling(activeSubscription.paystackSubscriptionCode!)}
+                                        disabled={actionLoading}
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-9 gap-2 text-xs"
+                                    >
+                                        <ArrowRight className="size-3" />
+                                        Manage Cards
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {config.plans.map((plan) => {
+                            const isCurrentPlan = activeSubscription?.plan?.toLowerCase() === plan.name.toLowerCase();
+                            
+                            return (
+                                <div 
+                                    key={plan.name} 
+                                    className={cn(
+                                        "relative flex flex-col p-5 border rounded-2xl transition-all duration-300 group",
+                                        isCurrentPlan 
+                                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                                            : "bg-muted/20 hover:border-primary/50 hover:bg-muted/30"
+                                    )}
+                                >
+                                    {isCurrentPlan && (
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                                            Current Plan
+                                        </div>
+                                    )}
+                                    <div className="mb-4">
+                                        <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{plan.name}</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <p className="text-3xl font-bold">{formatCurrency(plan.amount, plan.currency)}</p>
+                                            <p className="text-xs text-muted-foreground">/{plan.interval || "mo"}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            Full access to all features
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            Priority support
+                                        </li>
+                                    </ul>
+
+                                    <div className="mt-auto">
+                                        <Button 
+                                            onClick={() => !isCurrentPlan && handleSubscribe(plan.name)} 
+                                            disabled={actionLoading || isCurrentPlan} 
+                                            variant={isCurrentPlan ? "secondary" : "default"}
+                                            className={cn(
+                                                "w-full h-11 gap-2 text-sm font-semibold transition-all duration-300",
+                                                isCurrentPlan && "opacity-50 cursor-default"
+                                            )}
+                                        >
+                                            {isCurrentPlan ? (
+                                                <>
+                                                    <CheckCircle weight="bold" className="size-4" />
+                                                    Current Plan
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CreditCard weight="duotone" className="size-4" />
+                                                    {actionLoading ? "Processing..." : `Select ${plan.name}`}
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
+                        <ShieldCheck weight="duotone" className="size-3" />
+                        Secure payments by Paystack
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="w-full">
+            <CardHeader>
+                <CardTitle className="text-xl font-semibold">One-Time Payments</CardTitle>
+                <p className="text-sm text-muted-foreground">Purchase fixed packs or top up your account balance.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {config.products.length > 0 ? config.products.map((product) => (
+                            <div key={product.name} className="p-4 border rounded-lg hover:border-primary/50 transition-colors cursor-default bg-muted/5 flex flex-col justify-between">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <p className="font-bold text-lg">{product.name}</p>
+                                        <p className="text-xs text-muted-foreground">One-time payment</p>
+                                    </div>
+                                    <Badge variant="outline" className="text-primary border-primary/20">{formatCurrency(product.amount, product.currency)}</Badge>
+                                </div>
+                                <Button 
+                                    onClick={() => handleBuyProduct(product)} 
+                                    disabled={actionLoading} 
+                                    variant="default"
+                                    className="w-full h-10 gap-2"
+                                >
+                                    <Coins weight="duotone" className="size-5" />
+                                    {actionLoading ? "Initializing..." : "Buy Now"}
+                                </Button>
+                            </div>
+                        )) : (
+                            <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                                No one-time products configured.
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
+                        <ShieldCheck weight="duotone" className="size-3" />
+                        Secure payments by Paystack
+                    </p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}

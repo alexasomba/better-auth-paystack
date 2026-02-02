@@ -1,26 +1,18 @@
 import type { paystack } from "./index";
-import type { PaystackNodeClient } from "./types";
 export declare const paystackClient: <O extends {
     subscription: boolean;
 }>(_options?: O | undefined) => {
     id: "paystack";
-    $InferServerPlugin: ReturnType<typeof paystack<PaystackNodeClient, O["subscription"] extends true ? {
-        paystackClient: PaystackNodeClient;
-        paystackWebhookSecret: string;
-        subscription: {
-            enabled: true;
-            plans: [];
-        };
-    } : {
-        paystackClient: PaystackNodeClient;
-        paystackWebhookSecret: string;
-    }>>;
+    $InferServerPlugin: ReturnType<typeof paystack<any, any>>;
     pathMethods: {
         "/paystack/transaction/initialize": "POST";
         "/paystack/transaction/verify": "POST";
+        "/paystack/transaction/list": "GET";
+        "/paystack/get-config": "GET";
         "/paystack/subscription/list-local": "GET";
         "/paystack/subscription/disable": "POST";
         "/paystack/subscription/enable": "POST";
+        "/paystack/subscription/manage-link": "GET";
     };
 };
 //# sourceMappingURL=client.d.ts.map
