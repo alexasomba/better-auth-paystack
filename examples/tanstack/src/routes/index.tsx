@@ -44,7 +44,7 @@ function Home() {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)] p-6 bg-linear-to-b from-background to-muted/20">
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-linear-to-b from-background to-muted/20 font-sans">
             <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="text-center space-y-2">
                     <div className="inline-flex items-center justify-center p-2 bg-primary/5 rounded-2xl mb-2">
