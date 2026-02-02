@@ -2,6 +2,8 @@
 
 Better Auth plugin that integrates Paystack for customer creation, checkout, and Paystack-native subscription flows.
 
+[**Live Demo (Next.js)**](https://better-auth-paystack.gittech.workers.dev)
+
 ## Features
 
 - Optional Paystack customer creation on sign up (`createCustomerOnSignUp`)
