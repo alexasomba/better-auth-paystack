@@ -8,5 +8,11 @@
     "VITE_BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
     "BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
     "URL": "https://better-auth-paystack.gittech.workers.dev"
+  },
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "invocation_logs": true
+    }
   }
 }
