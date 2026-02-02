@@ -11,25 +11,7 @@ export const paystackClient = <
 ) => {
     return {
         id: "paystack",
-        $InferServerPlugin: {} as ReturnType<
-            typeof paystack<
-                PaystackNodeClient,
-                O["subscription"] extends true
-                ? {
-                    paystackClient: PaystackNodeClient;
-                    paystackWebhookSecret: string;
-                    subscription: {
-                        enabled: true;
-                        plans: [];
-                    };
-                }
-                : {
-                    paystackClient: PaystackNodeClient;
-                    paystackWebhookSecret: string;
-                    subscription: { enabled: false };
-                }
-            >
-        >,
+        $InferServerPlugin: {} as ReturnType<typeof paystack<any, any>>,
         pathMethods: {
             "/paystack/transaction/initialize": "POST",
             "/paystack/transaction/verify": "POST",

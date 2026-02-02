@@ -36,10 +36,7 @@ export const paystack = <
 >(
     options: O,
 ) => {
-    type EndpointsForOptions = O extends { subscription: { enabled: true } }
-        ? NonNullable<BetterAuthPlugin["endpoints"]>
-        : NonNullable<BetterAuthPlugin["endpoints"]>;
-
+    type GenericEndpoints = NonNullable<BetterAuthPlugin["endpoints"]>;
     const endpoints = {
         paystackWebhook: paystackWebhook(options),
         listTransactions: listTransactions(options),
@@ -50,7 +47,9 @@ export const paystack = <
         disablePaystackSubscription: disablePaystackSubscription(options),
         enablePaystackSubscription: enablePaystackSubscription(options),
         getSubscriptionManageLink: getSubscriptionManageLink(options),
-    } as any;
+    } satisfies GenericEndpoints;
+
+    type EndpointsForOptions = typeof endpoints;
 
     return {
         id: "paystack",
@@ -124,11 +123,8 @@ export const paystack = <
     } satisfies BetterAuthPlugin;
 };
 
-type PaystackClientFromOptions<O extends PaystackOptions<any>> =
-    O extends PaystackOptions<infer TClient> ? TClient : PaystackNodeClient;
-
 export type PaystackPlugin<O extends PaystackOptions<any> = PaystackOptions> = ReturnType<
-    typeof paystack<PaystackClientFromOptions<O>, O>
+    typeof paystack<any, O>
 >;
 
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };
