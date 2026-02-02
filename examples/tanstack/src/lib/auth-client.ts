@@ -4,7 +4,7 @@ import { paystackClient } from "@alexasomba/better-auth-paystack/client";
 
 
 export const authClient = createAuthClient({
-    baseURL: process.env.VITE_BETTER_AUTH_BASE_URL ?? process.env.VITE_BETTER_AUTH_URL ?? "http://localhost:4173",
+    baseURL: process.env.VITE_BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL ?? "http://localhost:4173",
     plugins: [
         anonymousClient(),
         paystackClient({ subscription: true }),
