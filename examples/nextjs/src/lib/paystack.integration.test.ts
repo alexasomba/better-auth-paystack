@@ -28,11 +28,11 @@ describe("Paystack Integration (Next.js)", () => {
                     email: "test@example.com",
                 },
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
              // If we get here, it means it didn't crash with "body locked".
              // It likely failed because the SDK tried to fetch with a mock key.
              expect(error).toBeDefined();
-             expect(error.message).not.toContain("object should not be disturbed");
+             expect((error as Error).message).not.toContain("object should not be disturbed");
         }
     });
 
@@ -45,8 +45,8 @@ describe("Paystack Integration (Next.js)", () => {
                     email: "sub@example.com",
                 }
              });
-        } catch (error: any) {
-             expect(error.message).not.toContain("object should not be disturbed");
+        } catch (error: unknown) {
+             expect((error as Error).message).not.toContain("object should not be disturbed");
         }
     });
 });
