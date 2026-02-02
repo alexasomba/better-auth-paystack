@@ -144,7 +144,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             reference: any;
             data: any;
         }>;
-        listSubscriptions: import("better-call").StrictEndpoint<"/paystack/subscription/list-local", {
+        listLocalSubscriptions: import("better-call").StrictEndpoint<"/paystack/subscription/list-local", {
             method: "GET";
             query: import("zod").ZodObject<{
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
