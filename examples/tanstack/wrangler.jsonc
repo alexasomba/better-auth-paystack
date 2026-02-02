@@ -5,7 +5,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
   "vars": {
-    "VITE_BETTER_AUTH_URL": "https://better-auth-paystack.alexasomba.workers.dev",
-    "BETTER_AUTH_URL": "https://better-auth-paystack.alexasomba.workers.dev",
+    "VITE_BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
+    "BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
+    "URL": "https://better-auth-paystack.gittech.workers.dev"
   }
 }
