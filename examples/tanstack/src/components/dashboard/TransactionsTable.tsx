@@ -54,7 +54,7 @@ export default function TransactionsTable() {
         {
             accessorKey: "reference",
             header: "Reference",
-            cell: ({ row }) => {
+            cell: ({ row }: { row: any }) => {
                 const reference = row.getValue("reference") as string;
                 return (
                     <div className="flex items-center gap-2 group">
@@ -77,7 +77,7 @@ export default function TransactionsTable() {
         {
             accessorKey: "amount",
             header: "Amount",
-            cell: ({ row }) => {
+            cell: ({ row }: { row: any }) => {
                 const amount = parseFloat(row.getValue("amount") as string);
                 const currency = row.original.currency;
                 const formatted = new Intl.NumberFormat("en-NG", {
@@ -90,7 +90,7 @@ export default function TransactionsTable() {
         {
             accessorKey: "status",
             header: "Status",
-            cell: ({ row }) => {
+            cell: ({ row }: { row: any }) => {
                 const status = row.getValue("status") as string;
                 return (
                     <Badge
@@ -111,8 +111,8 @@ export default function TransactionsTable() {
         {
             accessorKey: "createdAt",
             header: "Date",
-            cell: ({ row }) => {
-                const date = new Date(row.getValue("createdAt"));
+            cell: ({ row }: { row: any }) => {
+                const date = new Date(row.getValue("createdAt") as string);
                 return (
                     <div className="flex flex-col">
                         <span>{date.toLocaleDateString()}</span>
@@ -126,7 +126,7 @@ export default function TransactionsTable() {
         {
             id: "actions",
             header: "Actions",
-            cell: ({ row }) => {
+            cell: ({ row }: { row: any }) => {
                 const transaction = row.original;
 
                 const copyReference = () => {
@@ -135,7 +135,7 @@ export default function TransactionsTable() {
 
                 return (
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger>
                             <Button variant="ghost" className="h-8 w-8 p-0">
                                 <span className="sr-only">Open menu</span>
                                 <DotsThree weight="duotone" className="h-4 w-4" />
@@ -154,7 +154,7 @@ export default function TransactionsTable() {
                                 </DropdownMenuItem>
                             </DropdownMenuGroup>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
+                            <DropdownMenuItem>
                                 <a
                                     href={
                                         transaction.paystackId
@@ -214,9 +214,9 @@ export default function TransactionsTable() {
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
+                        {table.getHeaderGroups().map((headerGroup: any) => (
                             <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => (
+                                {headerGroup.headers.map((header: any) => (
                                     <TableHead key={header.id}>
                                         {header.isPlaceholder
                                             ? null
@@ -231,12 +231,12 @@ export default function TransactionsTable() {
                     </TableHeader>
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
+                            table.getRowModel().rows.map((row: any) => (
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
                                 >
-                                    {row.getVisibleCells().map((cell) => (
+                                    {row.getVisibleCells().map((cell: any) => (
                                         <TableCell key={cell.id}>
                                             {flexRender(
                                                 cell.column.columnDef.cell,
