@@ -1,8 +1,12 @@
 # Better Auth Paystack Plugin
 
-Better Auth plugin that integrates Paystack for customer creation, checkout, and Paystack-native subscription flows.
+A TypeScript-first plugin that integrates Paystack into Better Auth, enabling seamless customer creation, secure checkout, webhook verification, and native subscription flows. Designed for modern frameworks like Tanstack Start, Next.js, Hono, and Cloudflare Workers, it provides typed APIs, subscription management, and end-to-end payment integration with Paystack.
 
-[**Live Demo (Next.js)**](https://better-auth-paystack.gittech.workers.dev)
+[**Live Demo (Tanstack Start)**](https://better-auth-paystack.gittech.workers.dev)
+- Hosted on Cloudflre Workers
+- Better-Auth Anonymous Login (for demo purpose)
+- Session stored in Memory, no DB (for demo purpose)
+- Please note that due to rate-limit on Paystack Secrete Test API, you might get Error "Failed to get redirect URL from Paystack" during the demo if your IP is rate limited.
 
 ## Features
 
