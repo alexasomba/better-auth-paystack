@@ -14,6 +14,9 @@ const config = defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  ssr: {
+    noExternal: ['@alexasomba/better-auth-paystack'],
+  },
   plugins: [
     devtools(),
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
