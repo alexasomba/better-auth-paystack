@@ -8,7 +8,7 @@
  */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "better-auth-paystack",
+  "name": "nextjs-better-auth-paystack",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-02-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -47,7 +47,9 @@
    * Environment Variables
    * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
    */
-  // "vars": { "MY_VARIABLE": "production_value" }
+  "vars": {
+    "NEXT_PUBLIC_BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
+  },
   /**
    * Note: Use secrets to store sensitive data.
    * https://developers.cloudflare.com/workers/configuration/secrets/

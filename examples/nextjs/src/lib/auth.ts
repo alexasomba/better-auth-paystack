@@ -34,6 +34,56 @@ export const auth = betterAuth({
     baseURL,
     database: memory,
     emailAndPassword: { enabled: true },
+    advanced: {
+        ipAddress: {
+            ipAddressHeaders: ["cf-connecting-ip"], // Cloudflare specific header
+            ipv6Subnet: 64, // Rate limit by /64 subnet for IPv6
+        },
+        crossSubDomainCookies: {
+            enabled: true,
+        },
+    },
+    trustedOrigins: baseURL ? [baseURL] : [],
+    rateLimit: {
+        enabled: true,
+        window: 60, // 60 seconds
+        max: 50, // 50 requests per minute (stricter for demo)
+        customRules: {
+            // Strict limits for anonymous sign-in to prevent bot abuse
+            "/sign-in/anonymous": {
+                window: 60,
+                max: 5, // Only 5 anonymous logins per minute per IP
+            },
+            // Strict limits for email sign-in
+            "/sign-in/email": {
+                window: 10,
+                max: 3,
+            },
+            // Allow more frequent session checks
+            "/get-session": {
+                window: 60,
+                max: 100,
+            },
+            // Paystack payment initialization - prevent abuse
+            "/paystack/initialize-transaction": {
+                window: 60,
+                max: 6, // Max 10 payment initializations per minute
+            },
+            // Paystack subscription management
+            "/paystack/list-local-subscriptions": {
+                window: 60,
+                max: 20,
+            },
+            "/paystack/disable-subscription": {
+                window: 60,
+                max: 5,
+            },
+            "/paystack/enable-subscription": {
+                window: 60,
+                max: 5,
+            },
+        },
+    },
     plugins: [
         anonymous(),
         paystack({
