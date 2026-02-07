@@ -327,6 +327,8 @@ pnpm --filter tanstack-start-better-auth-paystack dev
 ## Links
 
 - GitHub Repository: [alexasomba/better-auth-paystack](https://github.com/alexasomba/better-auth-paystack)
+- Comprehensive Paystack Node SDK: [alexasomba/paystack-node](https://github.com/alexasomba/paystack-node)
+- Comprehensive Paystack Browser SDK: [alexasomba/better-auth-paystack](https://github.com/alexasomba/paystack-browser)
 - Paystack Webhooks: https://paystack.com/docs/payments/webhooks/
 - Paystack Transaction API: https://paystack.com/docs/api/transaction/
 - Paystack Subscription API: https://paystack.com/docs/api/subscription/
