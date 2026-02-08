@@ -137,7 +137,7 @@ This flow matches Paystack’s transaction initialize/verify APIs:
 2. Redirect the user to the returned Paystack `url`
 3. On your callback route/page, call `POST {AUTH_BASE}/paystack/transaction/verify` (this updates local subscription state)
 
-**Example (typed via Better Auth client plugin):**
+#### Example (typed via Better Auth client plugin):
 
 ```ts
 import { createAuthClient } from "better-auth/client";
@@ -201,7 +201,7 @@ Server-side (no HTTP fetch needed):
 // const verify = await auth.api.verifyTransaction({ headers: req.headers, body: { reference } })
 ```
 
-**Example (framework-agnostic):**
+#### Example (framework-agnostic):
 
 On your callback route/page, call `GET {AUTH_BASE}/paystack/transaction/verify?reference=...`
 
