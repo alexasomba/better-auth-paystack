@@ -2,6 +2,7 @@ import { defineProject } from "vitest/config";
 
 export default defineProject({
     test: {
+        testTimeout: 30000, // 30s timeout for coverage instrumentation overhead
         clearMocks: true,
         globals: true,
         // Run the vitest setup file to polyfill Zod when necessary (fixes CI CJS/ESM cases)

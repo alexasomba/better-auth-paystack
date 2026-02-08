@@ -306,6 +306,11 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                         } & Record<string, unknown>, hookCtx?: GenericEndpointContext | null): Promise<void>;
                     };
                 };
+                organization: {
+                    create: {
+                        after(org: any, hookCtx?: GenericEndpointContext | null): Promise<void>;
+                    };
+                } | undefined;
             };
             member: {
                 create: {

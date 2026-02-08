@@ -142,6 +142,8 @@ export const paystackWebhook = (options) => {
                                 const plan = planFromCode ?? (planName ? await getPlanByName(options, planName) : undefined);
                                 if (plan) {
                                     await options.subscription.onSubscriptionComplete?.({ event, subscription: { ...subscription, paystackSubscriptionCode: subscriptionCode, status: "active" }, plan }, ctx);
+                                    // Also call onSubscriptionCreated for subscriptions created outside of checkout
+                                    await options.subscription.onSubscriptionCreated?.({ event, subscription: { ...subscription, paystackSubscriptionCode: subscriptionCode, status: "active" }, plan }, ctx);
                                 }
                             }
                         }
@@ -152,6 +154,11 @@ export const paystackWebhook = (options) => {
                         data?.subscription?.subscription_code ??
                         data?.code;
                     if (subscriptionCode) {
+                        // Find the subscription first to get full data for the hook
+                        const existing = await ctx.context.adapter.findOne({
+                            model: "subscription",
+                            where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+                        });
                         await ctx.context.adapter.update({
                             model: "subscription",
                             update: {
@@ -162,6 +169,9 @@ export const paystackWebhook = (options) => {
                                 { field: "paystackSubscriptionCode", value: subscriptionCode },
                             ],
                         });
+                        if (existing) {
+                            await options.subscription.onSubscriptionCancel?.({ event, subscription: { ...existing, status: "canceled" } }, ctx);
+                        }
                     }
                 }
             }
@@ -308,13 +318,13 @@ export const initializeTransaction = (options) => {
                 // Subscription Flow
                 initBody.plan = plan.planCode;
                 initBody.invoice_limit = plan.invoiceLimit;
-                // Paystack requires amount even when planCode is provided
-                // The planCode overrides the amount, but the field must still be present
-                // For planCode plans without local amount, use a placeholder (Paystack uses plan's amount)
-                const planAmount = finalAmount ?? plan.amount ?? 50000; // 500 NGN minimum fallback
-                initBody.amount = Math.max(Math.round(planAmount), 50000); // Ensure valid positive integer, min 500 NGN
-                if (quantity) {
-                    initBody.amount = initBody.amount * quantity;
+                // Only include amount if NO planCode is set (local amount plans)
+                // When planCode is set, Paystack uses the plan's stored amount
+                if (!plan.planCode && finalAmount) {
+                    initBody.amount = Math.round(finalAmount);
+                    if (quantity) {
+                        initBody.amount = initBody.amount * quantity;
+                    }
                 }
             }
             else {
@@ -360,17 +370,39 @@ export const initializeTransaction = (options) => {
             },
         });
         if (plan) {
-            await ctx.context.adapter.create({
+            // Check trial eligibility - prevent trial abuse
+            let trialStart;
+            let trialEnd;
+            if (plan.freeTrial?.days && plan.freeTrial.days > 0) {
+                // Check if user/referenceId has ever had a trial
+                const previousTrials = await ctx.context.adapter.findMany({
+                    model: "subscription",
+                    where: [{ field: "referenceId", value: referenceId }],
+                });
+                const hadTrial = previousTrials?.some((sub) => sub.trialStart || sub.trialEnd || sub.status === "trialing");
+                if (!hadTrial) {
+                    trialStart = new Date();
+                    trialEnd = new Date();
+                    trialEnd.setDate(trialEnd.getDate() + plan.freeTrial.days);
+                }
+            }
+            const newSubscription = await ctx.context.adapter.create({
                 model: "subscription",
                 data: {
                     plan: plan.name.toLowerCase(),
                     referenceId,
                     paystackCustomerCode,
                     paystackTransactionReference: reference,
-                    status: "incomplete",
+                    status: trialStart ? "trialing" : "incomplete",
                     seats: quantity,
+                    trialStart,
+                    trialEnd,
                 },
             });
+            // Call trial start hook if trial was granted
+            if (trialStart && newSubscription && plan.freeTrial?.onTrialStart) {
+                await plan.freeTrial.onTrialStart(newSubscription);
+            }
         }
         return ctx.json({
             url,

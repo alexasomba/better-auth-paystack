@@ -119,5 +119,15 @@ export declare const user: {
         };
     };
 };
+export declare const organization: {
+    organization: {
+        fields: {
+            paystackCustomerCode: {
+                type: "string";
+                required: false;
+            };
+        };
+    };
+};
 export declare const getSchema: (options: PaystackOptions<any>) => BetterAuthPluginDBSchema;
 //# sourceMappingURL=schema.d.ts.map

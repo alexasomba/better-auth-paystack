@@ -386,13 +386,13 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
                     // Subscription Flow
                     initBody.plan = plan.planCode;
                     initBody.invoice_limit = plan.invoiceLimit;
-                    // Paystack requires amount even when planCode is provided
-                    // The planCode overrides the amount, but the field must still be present
-                    // For planCode plans without local amount, use a placeholder (Paystack uses plan's amount)
-                    const planAmount = finalAmount ?? plan.amount ?? 50000; // 500 NGN minimum fallback
-                    initBody.amount = Math.max(Math.round(planAmount), 50000); // Ensure valid positive integer, min 500 NGN
-                    if (quantity) {
-                        initBody.amount = initBody.amount * quantity;
+                    // Only include amount if NO planCode is set (local amount plans)
+                    // When planCode is set, Paystack uses the plan's stored amount
+                    if (!plan.planCode && finalAmount) {
+                        initBody.amount = Math.round(finalAmount);
+                        if (quantity) {
+                            initBody.amount = initBody.amount * quantity;
+                        }
                     }
                 } else {
                     // One-Time Payment Flow

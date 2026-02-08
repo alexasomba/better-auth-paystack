@@ -1,1 +1,0 @@
-{"root":["./src/client.ts","./src/index.ts","./src/limits.ts","./src/middleware.ts","./src/paystack-sdk.ts","./src/paystack.test.ts","./src/routes.ts","./src/schema.ts","./src/types.ts","./src/utils.ts","./tsdown.config.ts","./vitest.config.ts"],"version":"5.9.3"}
