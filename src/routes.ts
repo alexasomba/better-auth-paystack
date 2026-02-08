@@ -353,10 +353,8 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
                     // Subscription Flow
                     initBody.plan = plan.planCode;
                     initBody.invoice_limit = plan.invoiceLimit;
-                    // If plan has no code but has amount (e.g. local plans?), Paystack usually needs amount
-                    if (!plan.planCode && plan.amount) {
-                        initBody.amount = String(plan.amount);
-                    }
+                    // Always pass amount, even if using a plan as the source of truth, as `amount` is a required field: https://paystack.com/docs/api/transaction/#initialize
+                    initBody.amount = String(plan.amount);
                 } else {
                     // One-Time Payment Flow
                     if (!amount) throw new Error("Amount is required for one-time payments");
