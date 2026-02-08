@@ -1,10 +1,17 @@
+import { useEffect, useState } from "react";
+import { ArrowRight, Buildings, CheckCircle, Coins, CreditCard, ShieldCheck, Sparkle, User } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, Sparkle, CheckCircle, Coins, ShieldCheck, ArrowRight } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface Subscription {
   plan: string;
@@ -26,28 +33,41 @@ interface PaystackProduct {
     metadata?: Record<string, unknown>;
 }
 
+interface Organization {
+    id: string;
+    name: string;
+    slug: string;
+}
+
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
-    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-    const [config, setConfig] = useState<{ plans: PaystackPlan[], products: PaystackProduct[] }>({ plans: [], products: [] });
+    const [subscriptions, setSubscriptions] = useState<Array<Subscription>>([]);
+    const [config, setConfig] = useState<{ plans: Array<PaystackPlan>, products: Array<PaystackProduct> }>({ plans: [], products: [] });
     const [isLoading, setIsLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [organizations, setOrganizations] = useState<Array<Organization>>([]);
+    const [selectedBillingTarget, setSelectedBillingTarget] = useState<string>("personal"); // "personal" or org.id
+    const [seats, setSeats] = useState<number>(1);
 
     useEffect(() => {
         async function fetchData() {
             try {
-                // @ts-ignore
+                // @ts-ignore: Paystack plugin types are not fully inferred in client
                 const [subRes, configRes] = await Promise.all([
                     authClient.paystack.subscription.listLocal({ query: {} }),
                     authClient.paystack.getConfig(),
                 ]);
 
                 if (subRes.data) {
-                    const data = subRes.data as unknown as { subscriptions: Subscription[] } | Subscription[];
-                    setSubscriptions(Array.isArray(data) ? data : data.subscriptions || []);
+                    const data = subRes.data as unknown as { subscriptions: Array<Subscription> } | Array<Subscription>;
+                    if (Array.isArray(data)) {
+                        setSubscriptions(data);
+                    } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
+                         setSubscriptions(data.subscriptions);
+                    }
                 }
                 
                 if (configRes.data) {
-                    const data = configRes.data as { plans: PaystackPlan[], products: PaystackProduct[] };
+                    const data = configRes.data as { plans: Array<PaystackPlan>, products: Array<PaystackProduct> };
                     setConfig(data);
                 }
             } catch (e) {
@@ -59,14 +79,38 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         fetchData();
     }, []);
 
+    // Fetch organizations for billing target selection
+    useEffect(() => {
+        async function fetchOrganizations() {
+            try {
+                const result = await authClient.organization.list();
+                if (result.data) {
+                    setOrganizations(result.data as Array<Organization>);
+                }
+            } catch (e) {
+                console.error("Failed to fetch organizations", e);
+            }
+        }
+        fetchOrganizations();
+    }, []);
+
     const handleSubscribe = async (planName: string) => {
         setActionLoading(true);
         try {
-            const res = await authClient.paystack.transaction.initialize({
+            const initPayload: { plan: string; callbackURL: string; referenceId?: string } = {
                 plan: planName,
                 callbackURL: `${window.location.origin}/billing/paystack/callback`,
-            });
-            if (res?.data?.url) {
+            };
+            // If billing to an organization, pass referenceId and quantity (seats)
+            if (selectedBillingTarget && selectedBillingTarget !== "personal") {
+                initPayload.referenceId = selectedBillingTarget;
+                if (seats > 1) {
+                    // @ts-ignore: Quantity is not yet in the client type definition
+                    initPayload.quantity = seats;
+                }
+            }
+            const res = await authClient.paystack.transaction.initialize(initPayload);
+            if (res.data?.url) {
                 window.location.href = res.data.url;
             } else {
                 alert("Failed to get redirect URL from Paystack");
@@ -89,7 +133,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 metadata: product.metadata,
                 callbackURL: `${window.location.origin}/billing/paystack/callback`,
             });
-            if (res?.data?.url) {
+            if (res.data?.url) {
                 window.location.href = res.data.url;
             } else {
                 alert("Failed to get redirect URL from Paystack");
@@ -132,8 +176,12 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             });
             const res = await authClient.paystack.subscription.listLocal({ query: {} });
             if (res.data) {
-                const data = res.data as unknown as { subscriptions: Subscription[] } | Subscription[];
-                setSubscriptions(Array.isArray(data) ? data : data.subscriptions || []);
+                const data = res.data as unknown as { subscriptions: Array<Subscription> } | Array<Subscription>;
+                if (Array.isArray(data)) {
+                    setSubscriptions(data);
+                } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
+                     setSubscriptions(data.subscriptions);
+                }
             }
         } catch (e: unknown) {
             console.error(e);
@@ -149,12 +197,15 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         return <div className="text-center py-8 text-muted-foreground animate-pulse">Loading billing details...</div>;
     }
 
-    const activeSubscription = subscriptions?.find((sub: Subscription) => ["active", "non-renewing", "past_due", "unpaid"].includes(sub.status));
 
-    const formatCurrency = (amount: number, currency: string) => {
+    const activeSubscription = subscriptions.find((sub: Subscription) => ["active", "non-renewing", "past_due", "unpaid"].includes(sub.status));
+
+    const formatCurrency = (amount: number | undefined, currency: string | undefined) => {
+        if (amount === undefined) return "—";
+        const currencyCode = currency || "NGN"; // fallback to NGN
         return new Intl.NumberFormat("en-NG", {
             style: "currency",
-            currency: currency,
+            currency: currencyCode,
         }).format(amount / 100);
     };
 
@@ -170,7 +221,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-lg">
                             <div>
                                 <p className="font-medium text-primary uppercase text-xs tracking-wider flex items-center gap-1">
-                                    <Sparkle weight="duotone" className="size-3" />
+                                    <Sparkle weight="duotone" size={12} />
                                     Active Subscription
                                 </p>
                                 <p className="text-2xl font-bold capitalize">{activeSubscription.plan}</p>
@@ -201,7 +252,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                         variant="outline"
                                         className="h-9 gap-2 text-xs"
                                     >
-                                        <ArrowRight className="size-3" />
+                                        <ArrowRight size={12} />
                                         Manage Cards
                                     </Button>
                                 )}
@@ -209,9 +260,85 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         </div>
                     )}
 
+                    {/* Billing Target Selector */}
+                    {organizations.length > 0 && !activeSubscription && (
+                        <div className="p-4 bg-muted/30 border border-dashed rounded-lg">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 rounded-lg bg-primary/10">
+                                    <Buildings weight="duotone" size={20} className="text-primary" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-sm">Bill To</p>
+                                    <p className="text-xs text-muted-foreground">Choose who will be charged for this subscription</p>
+                                </div>
+                            </div>
+                            <Select value={selectedBillingTarget} onValueChange={(val) => val && setSelectedBillingTarget(val)}>
+                                <SelectTrigger className="w-full max-w-xs">
+                                    <SelectValue placeholder="Select billing target" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="personal">
+                                        <div className="flex items-center gap-2">
+                                            <User size={16} />
+                                            <span>Personal Account</span>
+                                        </div>
+                                    </SelectItem>
+                                    {organizations.map((org) => (
+                                        <SelectItem key={org.id} value={org.id}>
+                                            <div className="flex items-center gap-2">
+                                                <Buildings size={16} />
+                                                <span>{org.name}</span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {selectedBillingTarget && selectedBillingTarget !== "personal" && (
+                                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                                    <CheckCircle weight="duotone" size={12} className="text-green-500" />
+                                    Billing to organization: {organizations.find(o => o.id === selectedBillingTarget)?.name}
+                                </p>
+                            )}
+                            
+                            {selectedBillingTarget && selectedBillingTarget !== "personal" && (
+                                <div className="mt-4 pt-4 border-t border-dashed">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-primary/10">
+                                            <User weight="duotone" size={20} className="text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm">Seats</p>
+                                            <p className="text-xs text-muted-foreground">Number of members allowed</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => setSeats(Math.max(1, seats - 1))}
+                                            disabled={seats <= 1}
+                                            className="h-8 w-8 p-0"
+                                        >
+                                            -
+                                        </Button>
+                                        <span className="text-sm font-medium w-8 text-center">{seats}</span>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => setSeats(seats + 1)}
+                                            className="h-8 w-8 p-0"
+                                        >
+                                            +
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {config.plans.map((plan) => {
-                            const isCurrentPlan = activeSubscription?.plan?.toLowerCase() === plan.name.toLowerCase();
+                            const isCurrentPlan = activeSubscription?.plan.toLowerCase() === plan.name.toLowerCase();
                             
                             return (
                                 <div 
@@ -231,18 +358,23 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     <div className="mb-4">
                                         <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{plan.name}</p>
                                         <div className="flex items-baseline gap-1">
-                                            <p className="text-3xl font-bold">{formatCurrency(plan.amount, plan.currency)}</p>
-                                            <p className="text-xs text-muted-foreground">/{plan.interval || "mo"}</p>
+                                            <p className="text-3xl font-bold">
+                                                {plan.amount ? formatCurrency(plan.amount * (selectedBillingTarget !== "personal" ? seats : 1), plan.currency) : "Custom"}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                /{plan.interval || "mo"}
+                                                {!plan.amount && <span className="ml-1">(Paystack plan)</span>}
+                                            </p>
                                         </div>
                                     </div>
                                     
                                     <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
                                         <li className="flex items-center gap-2">
-                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
                                             Full access to all features
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
                                             Priority support
                                         </li>
                                     </ul>
@@ -259,12 +391,12 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                         >
                                             {isCurrentPlan ? (
                                                 <>
-                                                    <CheckCircle weight="bold" className="size-4" />
+                                                    <CheckCircle weight="bold" size={16} />
                                                     Current Plan
                                                 </>
                                             ) : (
                                                 <>
-                                                    <CreditCard weight="duotone" className="size-4" />
+                                                    <CreditCard weight="duotone" size={16} />
                                                     {actionLoading ? "Processing..." : `Select ${plan.name}`}
                                                 </>
                                             )}
@@ -275,7 +407,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         })}
                     </div>
                     <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
-                        <ShieldCheck weight="duotone" className="size-3" />
+                        <ShieldCheck weight="duotone" size={12} />
                         Secure payments by Paystack
                     </p>
                 </CardContent>
@@ -307,7 +439,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     variant="default"
                                     className="w-full h-10 gap-2"
                                 >
-                                    <Coins weight="duotone" className="size-5" />
+                                    <Coins weight="duotone" size={20} />
                                     {actionLoading ? "Initializing..." : "Buy Now"}
                                 </Button>
                             </div>
@@ -318,7 +450,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         )}
                     </div>
                     <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
-                        <ShieldCheck weight="duotone" className="size-3" />
+                        <ShieldCheck weight="duotone" size={12} />
                         Secure payments by Paystack
                     </p>
                 </div>

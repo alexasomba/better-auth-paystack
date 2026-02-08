@@ -1,6 +1,5 @@
 import { createAuthEndpoint } from "@better-auth/core/api";
 import { defineErrorCodes } from "@better-auth/core/utils";
-import type { GenericEndpointContext } from "better-auth";
 import { HIDE_METADATA } from "better-auth";
 import {
     APIError,
@@ -226,12 +225,13 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 const initializeTransactionBodySchema = z.object({
     plan: z.string().optional(),
     product: z.string().optional(),
-    amount: z.number().optional(), // Amount in smallest currency unit (e.g., kobo)
+    amount: z.number().int().positive().optional(), // Amount in smallest currency unit (e.g., kobo)
     currency: z.string().optional(),
     email: z.string().optional(),
     metadata: z.record(z.string(), z.any()).optional(),
     referenceId: z.string().optional(),
     callbackURL: z.string().optional(),
+    quantity: z.number().int().positive().optional(),
 });
 
 export const initializeTransaction = (options: AnyPaystackOptions) => {
@@ -252,7 +252,7 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
         },
         async (ctx) => {
             const paystack = getPaystackOps(options.paystackClient);
-            const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL } = ctx.body;
+            const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity } = ctx.body;
 
             // 1. Validate Callback URL validation (same as before)
             if (callbackURL) {
@@ -330,6 +330,7 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
             let url: string | undefined;
             let reference: string | undefined;
             let accessCode: string | undefined;
+            const finalAmount = amount || plan?.amount;
 
             try {
                 // Construct Metadata
@@ -346,21 +347,39 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
                     callback_url: callbackURL,
                     metadata,
                     // If plan/product exists, use its currency; otherwise fallback to provided or default
-                    currency: finalCurrency, 
+                    currency: finalCurrency,
+                    quantity,
                 };
+
+                // Sync: If user has a Paystack code, update email to ensure consistency
+                // and prevent duplicate customer creation if email changed.
+                const paystackCustomerCode = (user as any).paystackCustomerCode;
+                if (paystackCustomerCode) {
+                    try {
+                        const ops = getPaystackOps(options.paystackClient);
+                        await ops.customerUpdate(paystackCustomerCode, { email: initBody.email });
+                    } catch (e) {
+                        // Ignore sync errors to avoid blocking payment flow
+                    }
+                }
+
 
                 if (plan) {
                     // Subscription Flow
                     initBody.plan = plan.planCode;
                     initBody.invoice_limit = plan.invoiceLimit;
-                    // If plan has no code but has amount (e.g. local plans?), Paystack usually needs amount
-                    if (!plan.planCode && plan.amount) {
-                        initBody.amount = String(plan.amount);
+                    // Paystack requires amount even when planCode is provided
+                    // The planCode overrides the amount, but the field must still be present
+                    // For planCode plans without local amount, use a placeholder (Paystack uses plan's amount)
+                    const planAmount = finalAmount ?? plan.amount ?? 50000; // 500 NGN minimum fallback
+                    initBody.amount = Math.max(Math.round(planAmount), 50000); // Ensure valid positive integer, min 500 NGN
+                    if (quantity) {
+                        initBody.amount = initBody.amount * quantity;
                     }
                 } else {
                     // One-Time Payment Flow
-                    if (!amount) throw new Error("Amount is required for one-time payments");
-                    initBody.amount = String(amount);
+                    if (!finalAmount) throw new Error("Amount is required for one-time payments");
+                    initBody.amount = Math.round(finalAmount);
                 }
 
                 const initRaw = await paystack.transactionInitialize(initBody);
@@ -393,7 +412,7 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
                     reference: reference!,
                     referenceId,
                     userId: user.id,
-                    amount: plan?.amount || amount!,
+                    amount: finalAmount!,
                     currency: plan?.currency || currency || "NGN",
                     status: "pending",
                     plan: plan?.name.toLowerCase(),
@@ -412,6 +431,7 @@ export const initializeTransaction = (options: AnyPaystackOptions) => {
                         paystackCustomerCode,
                         paystackTransactionReference: reference,
                         status: "incomplete",
+                        seats: quantity,
                     },
                 });
             }
@@ -482,6 +502,9 @@ export const verifyTransaction = (options: AnyPaystackOptions) => {
                         update: {
                             status: "success",
                             paystackId,
+                            // Update with actual amount/currency from Paystack (for planCode subscriptions)
+                            ...(data?.amount && { amount: data.amount }),
+                            ...(data?.currency && { currency: data.currency }),
                             updatedAt: new Date(),
                         },
                         where: [{ field: "reference", value: reference }],

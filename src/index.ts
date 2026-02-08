@@ -15,6 +15,8 @@ import {
     PAYSTACK_ERROR_CODES,
 } from "./routes";
 import { getSchema } from "./schema";
+import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
+import { getPlanByName } from "./utils";
 import type {
     PaystackNodeClient,
     PaystackClientLike,
@@ -49,12 +51,11 @@ export const paystack = <
         getSubscriptionManageLink: getSubscriptionManageLink(options),
     } satisfies GenericEndpoints;
 
-    type EndpointsForOptions = typeof endpoints;
 
     return {
         id: "paystack",
         endpoints,
-        init(ctx) {
+        init(_ctx) {
             return {
                 options: {
                     databaseHooks: {
@@ -112,6 +113,47 @@ export const paystack = <
                                         );
                                     }
                                 },
+                            },
+                        },
+                    },
+                    member: {
+                        create: {
+                            before: async (member: any, ctx: GenericEndpointContext | null | undefined) => {
+                                if (options.subscription?.enabled && member.organizationId && ctx) {
+                                    await checkSeatLimit(ctx, member.organizationId);
+                                }
+                            },
+                        },
+                    },
+                    invitation: {
+                        create: {
+                            before: async (invitation: any, ctx: GenericEndpointContext | null | undefined) => {
+                                if (options.subscription?.enabled && invitation.organizationId && ctx) {
+                                    // Optionally check if organization is already full before sending invitation
+                                    // Logic: if members >= seats, can't invite more (assuming invited person will join)
+                                    // We pass 0 to checkSeatLimit to just check current usage vs limit (strict check would be >=)
+                                    // But checkSeatLimit(ctx, orgId, 1) checks if adding 1 exceeds.
+                                    // If we are just inviting, we trigger this check to see if we have space for 1 more.
+                                    await checkSeatLimit(ctx, invitation.organizationId);
+                                }
+                            },
+                        },
+                    },
+                    team: {
+                        create: {
+                            before: async (team: any, ctx: GenericEndpointContext | null | undefined) => {
+                                if (options.subscription?.enabled && team.organizationId && ctx) {
+                                    const subscription = await getOrganizationSubscription(ctx, team.organizationId);
+                                    if (subscription) {
+                                        const plan = await getPlanByName(options, subscription.plan);
+                                        const limits = plan?.limits as Record<string, unknown> | undefined;
+                                        const maxTeams = limits?.teams as number | undefined;
+
+                                        if (typeof maxTeams === "number") {
+                                            await checkTeamLimit(ctx, team.organizationId, maxTeams);
+                                        }
+                                    }
+                                }
                             },
                         },
                     },

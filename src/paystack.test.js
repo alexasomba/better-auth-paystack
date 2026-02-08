@@ -518,7 +518,7 @@ describe("paystack", () => {
         expect(res.url).toBe("https://paystack.test/buy");
         expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
             body: expect.objectContaining({
-                amount: "1000",
+                amount: 1000,
                 email: "product@test.com",
             })
         }));

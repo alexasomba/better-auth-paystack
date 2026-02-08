@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/auth/authClient";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,7 +171,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-lg">
                             <div>
                                 <p className="font-medium text-primary uppercase text-xs tracking-wider flex items-center gap-1">
-                                    <Sparkle weight="duotone" className="size-3" />
+                                    <Sparkle weight="duotone" size={12} />
                                     Active Subscription
                                 </p>
                                 <p className="text-2xl font-bold capitalize">{activeSubscription.plan}</p>
@@ -202,7 +202,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                         variant="outline"
                                         className="h-9 gap-2 text-xs"
                                     >
-                                        <ArrowRight className="size-3" />
+                                        <ArrowRight size={12} />
                                         Manage Cards
                                     </Button>
                                 )}
@@ -239,11 +239,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     
                                     <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
                                         <li className="flex items-center gap-2">
-                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
                                             Full access to all features
                                         </li>
                                         <li className="flex items-center gap-2">
-                                            <CheckCircle weight="duotone" className="size-4 text-primary" />
+                                            <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
                                             Priority support
                                         </li>
                                     </ul>
@@ -260,12 +260,12 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                         >
                                             {isCurrentPlan ? (
                                                 <>
-                                                    <CheckCircle weight="bold" className="size-4" />
+                                                    <CheckCircle weight="bold" size={16} />
                                                     Current Plan
                                                 </>
                                             ) : (
                                                 <>
-                                                    <CreditCard weight="duotone" className="size-4" />
+                                                    <CreditCard weight="duotone" size={16} />
                                                     {actionLoading ? "Processing..." : `Select ${plan.name}`}
                                                 </>
                                             )}
@@ -276,7 +276,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         })}
                     </div>
                     <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
-                        <ShieldCheck weight="duotone" className="size-3" />
+                        <ShieldCheck weight="duotone" size={12} />
                         Secure payments by Paystack
                     </p>
                 </CardContent>
@@ -308,7 +308,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     variant="default"
                                     className="w-full h-10 gap-2"
                                 >
-                                    <Coins weight="duotone" className="size-5" />
+                                    <Coins weight="duotone" size={20} />
                                     {actionLoading ? "Initializing..." : "Buy Now"}
                                 </Button>
                             </div>
@@ -319,7 +319,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         )}
                     </div>
                     <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
-                        <ShieldCheck weight="duotone" className="size-3" />
+                        <ShieldCheck weight="duotone" size={12} />
                         Secure payments by Paystack
                     </p>
                 </div>

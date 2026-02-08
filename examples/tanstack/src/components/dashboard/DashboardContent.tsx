@@ -1,10 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GithubLogo, Package, User, Scroll, Clock, IdentificationCard } from "@phosphor-icons/react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Buildings, Clock, GithubLogo, IdentificationCard, Package, Scroll, User } from "@phosphor-icons/react";
 import SignOutButton from "./SignOutButton";
 import PaymentManager from "./PaymentManager";
 import TransactionsTable from "./TransactionsTable";
+import OrganizationManager from "./OrganizationManager";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DashboardContentProps {
     session: {
@@ -18,9 +19,7 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ session }: DashboardContentProps) {
-    if (!session?.user) {
-        return null;
-    }
+
 
     return (
         <div className="flex flex-col min-h-screen font-sans">
@@ -35,20 +34,24 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                         <div className="relative mb-6">
                             <TabsList className="flex items-center justify-center w-full h-12 p-1 bg-muted/50 rounded-xl overflow-hidden gap-1">
                                 <TabsTrigger value="user" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-28 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <User weight="duotone" className="size-4 shrink-0" />
+                                    <span className="shrink-0"><User weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">User Info</span>
                                 </TabsTrigger>
                                 <TabsTrigger value="subscriptions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <Scroll weight="duotone" className="size-4 shrink-0" />
+                                    <span className="shrink-0"><Scroll weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Subscriptions</span>
                                 </TabsTrigger>
                                 <TabsTrigger value="one-time" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-28 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <IdentificationCard weight="duotone" className="size-4 shrink-0" />
+                                    <span className="shrink-0"><IdentificationCard weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">One-Time</span>
                                 </TabsTrigger>
-                                <TabsTrigger value="transactions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <Clock weight="duotone" className="size-4 shrink-0" />
+                            <TabsTrigger value="transactions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                    <span className="shrink-0"><Clock weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Transactions</span>
+                                </TabsTrigger>
+                                <TabsTrigger value="organizations" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                    <span className="shrink-0"><Buildings weight="duotone" size={16} /></span>
+                                    <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Organizations</span>
                                 </TabsTrigger>
                             </TabsList>
                         </div>
@@ -61,30 +64,30 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                                 <CardContent className="space-y-4">
                                     <div className="flex items-center gap-4 mb-4">
                                         <Avatar size="lg" className="ring-2 ring-primary/10">
-                                            <AvatarImage src={session.user?.image || undefined} alt={session.user?.name || ""} />
+                                            <AvatarImage src={session.user.image || undefined} alt={session.user.name || ""} />
                                             <AvatarFallback>
-                                                <User weight="duotone" className="size-6 text-muted-foreground" />
+                                                <span className="text-muted-foreground"><User weight="duotone" size={24} /></span>
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <p className="text-lg font-semibold">
-                                                {session.user?.name || "Anonymous User"}
+                                                {session.user.name || "Anonymous User"}
                                             </p>
                                             <p className="text-sm text-muted-foreground">Logged in via better-auth</p>
                                         </div>
                                     </div>
-                                    {session.user?.email && (
+                                    {session.user.email && (
                                         <p className="text-md wrap-break-word">
                                             <strong>Email:</strong>{" "}
                                             <span className="break-all">{session.user.email}</span>
                                         </p>
                                     )}
-                                    {!session.user?.email && (
+                                    {!session.user.email && (
                                         <p className="text-md">
                                             <strong>Account Type:</strong> Anonymous
                                         </p>
                                     )}
-                                    {session.user?.id && (
+                                    {session.user.id && (
                                         <p className="text-md">
                                             <strong>User ID:</strong> {session.user.id}
                                         </p>
@@ -114,6 +117,10 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                                     <TransactionsTable />
                                 </CardContent>
                             </Card>
+                        </TabsContent>
+
+                        <TabsContent value="organizations" className="space-y-6">
+                            <OrganizationManager />
                         </TabsContent>
                     </Tabs>
                 </div>

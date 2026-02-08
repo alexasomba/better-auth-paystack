@@ -12,6 +12,7 @@ export type PaystackClientLike = {
     customer_create?: (init?: {
         body?: any;
     } | undefined) => PaystackApiResult<any>;
+    customer_update?: any;
     transaction_initialize?: (init?: {
         body?: any;
     } | undefined) => PaystackApiResult<any>;
@@ -44,6 +45,7 @@ export type PaystackClientLike = {
     }) => PaystackApiResult<any>;
     customer?: {
         create?: (params: any) => Promise<any>;
+        update?: (code: string, params: any) => Promise<any>;
     };
     transaction?: {
         initialize?: (params: any) => Promise<any>;
@@ -124,6 +126,8 @@ export interface Subscription {
     cancelAtPeriodEnd?: boolean | undefined;
     groupId?: string | undefined;
     seats?: number | undefined;
+}
+export interface InputSubscription extends Omit<Subscription, "id"> {
 }
 export type SubscriptionOptions = {
     plans: PaystackPlan[] | (() => PaystackPlan[] | Promise<PaystackPlan[]>);

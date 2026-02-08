@@ -1,4 +1,3 @@
-import type { GenericEndpointContext } from "better-auth";
 import * as z from "zod/v4";
 import type { PaystackOptions, PaystackTransaction, Subscription } from "./types";
 type AnyPaystackOptions = PaystackOptions<any>;
@@ -36,6 +35,7 @@ export declare const initializeTransaction: (options: AnyPaystackOptions) => imp
         metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
         referenceId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
+        quantity: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         context: {
@@ -63,7 +63,7 @@ export declare const initializeTransaction: (options: AnyPaystackOptions) => imp
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     url: string | undefined;
     reference: string | undefined;
@@ -101,7 +101,7 @@ export declare const verifyTransaction: (options: AnyPaystackOptions) => import(
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     status: any;
     reference: any;
@@ -138,7 +138,7 @@ export declare const listSubscriptions: (options: AnyPaystackOptions) => import(
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     subscriptions: Subscription[];
 }>;
@@ -173,7 +173,7 @@ export declare const listTransactions: (options: AnyPaystackOptions) => import("
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     transactions: PaystackTransaction[];
 }>;
@@ -210,7 +210,7 @@ export declare const disablePaystackSubscription: (options: AnyPaystackOptions) 
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     result: any;
 }>;
@@ -247,7 +247,7 @@ export declare const enablePaystackSubscription: (options: AnyPaystackOptions) =
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     result: any;
 }>;
@@ -282,7 +282,7 @@ export declare const getSubscriptionManageLink: (options: AnyPaystackOptions) =>
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     link: any;
 }>;

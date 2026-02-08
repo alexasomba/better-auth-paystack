@@ -20,6 +20,16 @@ export function getPaystackOps(paystackClient) {
             }
             return paystackClient?.customer?.create?.(params);
         },
+        customerUpdate: async (code, params) => {
+            if (paystackClient?.customer_update) {
+                // Determine if it's the flat client (OpenAPI style)
+                return paystackClient.customer_update({
+                    params: { path: { code } },
+                    body: params,
+                });
+            }
+            return paystackClient?.customer?.update?.(code, params);
+        },
         transactionInitialize: async (body) => {
             if (paystackClient?.transaction_initialize) {
                 return paystackClient.transaction_initialize({ body });

@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
 	// In a pnpm workspace, dependencies may live above this app folder.
 	// This also silences Next.js' "inferred workspace root" warning.
 	outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
+    //output: "standalone",
 };
 
 export default nextConfig;

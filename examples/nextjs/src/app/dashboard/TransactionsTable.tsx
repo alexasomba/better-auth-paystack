@@ -15,7 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/auth/authClient";
 import { CircleNotch, DotsThree, Copy, ArrowSquareOut, Eye } from "@phosphor-icons/react";
 import {
     DropdownMenu,
@@ -70,7 +70,7 @@ export default function TransactionsTable() {
                             className="p-1 hover:bg-primary/10 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                             title="Copy Reference"
                         >
-                            <Copy weight="duotone" className="size-3 text-primary" />
+                            <span className="text-primary"><Copy weight="duotone" size={12} /></span>
                         </button>
                     </div>
                 );
@@ -141,7 +141,7 @@ export default function TransactionsTable() {
                             render={
                                 <Button variant="ghost" className="h-8 w-8 p-0">
                                     <span className="sr-only">Open menu</span>
-                                    <DotsThree weight="duotone" className="h-4 w-4" />
+                                    <DotsThree weight="duotone" size={16} />
                                 </Button>
                             }
                         />
@@ -149,11 +149,11 @@ export default function TransactionsTable() {
                             <DropdownMenuGroup>
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setSelectedTransaction(transaction)}>
-                                    <Eye weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span className="mr-2 text-muted-foreground"><Eye weight="duotone" size={16} /></span>
                                     View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={copyReference}>
-                                    <Copy weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span className="mr-2 text-muted-foreground"><Copy weight="duotone" size={16} /></span>
                                     Copy Reference
                                 </DropdownMenuItem>
                             </DropdownMenuGroup>
@@ -170,7 +170,7 @@ export default function TransactionsTable() {
                                         rel="noreferrer"
                                         className="flex w-full items-center p-0"
                                     >
-                                        <ArrowSquareOut weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                        <span className="mr-2 text-muted-foreground"><ArrowSquareOut weight="duotone" size={16} /></span>
                                         View on Paystack
                                     </a>
                                 }
@@ -209,7 +209,7 @@ export default function TransactionsTable() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-10">
-                <CircleNotch weight="bold" className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div className="text-muted-foreground animate-spin"><CircleNotch weight="bold" size={32} /></div>
             </div>
         );
     }
@@ -285,7 +285,7 @@ export default function TransactionsTable() {
                                         className="h-6 w-6 shrink-0"
                                         onClick={() => navigator.clipboard.writeText(selectedTransaction.reference)}
                                     >
-                                        <Copy weight="duotone" className="h-3 w-3" />
+                                        <Copy weight="duotone" size={12} />
                                     </Button>
                                 </div>
                             </div>

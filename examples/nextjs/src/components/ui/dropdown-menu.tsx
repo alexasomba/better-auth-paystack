@@ -116,7 +116,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <CaretRightIcon weight="duotone" className="ml-auto" />
+      <span className="ml-auto"><CaretRightIcon weight="duotone" size={16} /></span>
     </MenuPrimitive.SubmenuTrigger>
   )
 }

@@ -20,6 +20,7 @@ export type PaystackApiResult<T = unknown> = Promise<T | PaystackOpenApiFetchRes
 export type PaystackClientLike = {
     // Preferred (createPaystack) flat operations
     customer_create?: (init?: { body?: any } | undefined) => PaystackApiResult<any>;
+    customer_update?: any;
     transaction_initialize?: (init?: { body?: any } | undefined) => PaystackApiResult<any>;
     transaction_verify?: (init: { params: { path: { reference: string } } }) => PaystackApiResult<any>;
     // `subscription_fetch` can accept either `{ params: { path: { code: string } } }`
@@ -35,6 +36,7 @@ export type PaystackClientLike = {
     // Legacy nested style support (kept for compatibility)
     customer?: {
         create?: (params: any) => Promise<any>;
+        update?: (code: string, params: any) => Promise<any>;
     };
     transaction?: {
         initialize?: (params: any) => Promise<any>;
@@ -138,6 +140,8 @@ export interface Subscription {
     groupId?: string | undefined;
     seats?: number | undefined;
 }
+
+export interface InputSubscription extends Omit<Subscription, "id"> { }
 
 export type SubscriptionOptions = {
     plans: PaystackPlan[] | (() => PaystackPlan[] | Promise<PaystackPlan[]>);

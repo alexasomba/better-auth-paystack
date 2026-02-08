@@ -73,6 +73,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 metadata: import("zod").ZodOptional<import("zod").ZodRecord<import("zod").ZodString, import("zod").ZodAny>>;
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
+                quantity: import("zod").ZodOptional<import("zod").ZodNumber>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 context: {
@@ -289,7 +290,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             link: any;
         }>;
     };
-    init(ctx: import("better-auth").AuthContext): {
+    init(_ctx: import("better-auth").AuthContext): {
         options: {
             databaseHooks: {
                 user: {
@@ -304,6 +305,21 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                             image?: string | null | undefined;
                         } & Record<string, unknown>, hookCtx?: GenericEndpointContext | null): Promise<void>;
                     };
+                };
+            };
+            member: {
+                create: {
+                    before: (member: any, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
+                };
+            };
+            invitation: {
+                create: {
+                    before: (invitation: any, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
+                };
+            };
+            team: {
+                create: {
+                    before: (team: any, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
                 };
             };
         };

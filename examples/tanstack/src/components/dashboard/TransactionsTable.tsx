@@ -1,10 +1,12 @@
 import * as React from "react";
 import {
-    ColumnDef,
     flexRender,
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table";
+import { ArrowSquareOut, Buildings, CircleNotch, Copy, DotsThree, Eye } from "@phosphor-icons/react";
+import type {
+    ColumnDef} from "@tanstack/react-table";
 import {
     Table,
     TableBody,
@@ -14,7 +16,6 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
-import { CircleNotch, DotsThree, Copy, ArrowSquareOut, Eye } from "@phosphor-icons/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -39,18 +40,21 @@ interface Transaction {
     currency: string;
     status: string;
     reference: string;
+    referenceId?: string;
+    userId?: string;
     paystackId?: string;
     createdAt: string | Date;
     plan?: string;
     metadata?: string;
+    _orgName?: string; // Added by frontend for org transactions display
 }
 
 export default function TransactionsTable() {
-    const [data, setData] = React.useState<Transaction[]>([]);
+    const [data, setData] = React.useState<Array<Transaction>>([]);
     const [loading, setLoading] = React.useState(true);
     const [selectedTransaction, setSelectedTransaction] = React.useState<Transaction | null>(null);
 
-    const columns: ColumnDef<Transaction>[] = [
+    const columns: Array<ColumnDef<Transaction>> = [
         {
             accessorKey: "reference",
             header: "Reference",
@@ -68,7 +72,7 @@ export default function TransactionsTable() {
                             className="p-1 hover:bg-primary/10 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                             title="Copy Reference"
                         >
-                            <Copy weight="duotone" className="size-3 text-primary" />
+                            <span className="text-primary"><Copy weight="duotone" size={12} /></span>
                         </button>
                     </div>
                 );
@@ -78,8 +82,12 @@ export default function TransactionsTable() {
             accessorKey: "amount",
             header: "Amount",
             cell: ({ row }: { row: any }) => {
-                const amount = parseFloat(row.getValue("amount") as string);
-                const currency = row.original.currency;
+                const rawAmount = row.getValue("amount");
+                const amount = parseFloat(rawAmount as string);
+                if (isNaN(amount) || rawAmount === null || rawAmount === undefined) {
+                    return <div className="font-medium text-muted-foreground">—</div>;
+                }
+                const currency = row.original.currency || "NGN"; // fallback
                 const formatted = new Intl.NumberFormat("en-NG", {
                     style: "currency",
                     currency: currency,
@@ -105,6 +113,40 @@ export default function TransactionsTable() {
                     >
                         {status}
                     </Badge>
+                );
+            },
+        },
+        {
+            accessorKey: "referenceId",
+            header: "Billed To",
+            cell: ({ row }: { row: any }) => {
+                const referenceId = row.original.referenceId;
+                const userId = row.original.userId;
+                
+                // If referenceId equals userId or is empty, it's personal billing
+                const isOrgBilling = referenceId && referenceId !== userId;
+                
+                if (isOrgBilling) {
+                    const orgName = row.original._orgName;
+                    return (
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-blue-500"><Buildings weight="duotone" size={14} /></span>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-medium text-blue-600">
+                                    {orgName || "Organization"}
+                                </span>
+                                {!orgName && (
+                                    <code className="font-mono text-[9px] text-muted-foreground truncate max-w-20" title={referenceId}>
+                                        {referenceId?.slice(0, 8)}...
+                                    </code>
+                                )}
+                            </div>
+                        </div>
+                    );
+                }
+                
+                return (
+                    <span className="text-xs text-muted-foreground">Personal</span>
                 );
             },
         },
@@ -138,18 +180,18 @@ export default function TransactionsTable() {
                         <DropdownMenuTrigger>
                             <Button variant="ghost" className="h-8 w-8 p-0">
                                 <span className="sr-only">Open menu</span>
-                                <DotsThree weight="duotone" className="h-4 w-4" />
+                                <DotsThree weight="duotone" size={16} />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuGroup>
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setSelectedTransaction(transaction)}>
-                                    <Eye weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span className="mr-2 text-muted-foreground"><Eye weight="duotone" size={16} /></span>
                                     View Details
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={copyReference}>
-                                    <Copy weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span className="mr-2 text-muted-foreground"><Copy weight="duotone" size={16} /></span>
                                     Copy Reference
                                 </DropdownMenuItem>
                             </DropdownMenuGroup>
@@ -165,7 +207,7 @@ export default function TransactionsTable() {
                                     rel="noreferrer"
                                     className="flex w-full items-center"
                                 >
-                                    <ArrowSquareOut weight="duotone" className="mr-2 h-4 w-4 text-muted-foreground" />
+                                    <span className="mr-2 text-muted-foreground"><ArrowSquareOut weight="duotone" size={16} /></span>
                                     View on Paystack
                                 </a>
                             </DropdownMenuItem>
@@ -179,13 +221,51 @@ export default function TransactionsTable() {
     React.useEffect(() => {
         async function fetchTransactions() {
             try {
-                // @ts-ignore
-                const res = await authClient.paystack.transaction.list({
+                // Fetch personal transactions
+                // @ts-ignore: Paystack plugin types are not fully inferred in client
+                const personalRes = await authClient.paystack.transaction.list({
                     query: {},
                 });
-                if (res.data?.transactions) {
-                    setData(res.data.transactions);
+                
+                let allTransactions: Array<Transaction> = [];
+                
+                if (personalRes.data?.transactions) {
+                    allTransactions = [...personalRes.data.transactions];
                 }
+                
+                // Fetch organization transactions
+                try {
+                    const orgsRes = await authClient.organization.list();
+                    if (orgsRes.data && Array.isArray(orgsRes.data)) {
+                        for (const org of orgsRes.data) {
+                            try {
+                                // @ts-ignore: Paystack plugin types are not fully inferred in client
+                                const orgRes = await authClient.paystack.transaction.list({
+                                    query: { referenceId: org.id },
+                                });
+                                if (orgRes.data?.transactions) {
+                                    // Add org name to transactions for display
+                                    const orgTransactions = orgRes.data.transactions.map((t: Transaction) => ({
+                                        ...t,
+                                        _orgName: org.name, // Internal field for display
+                                    }));
+                                    allTransactions = [...allTransactions, ...orgTransactions];
+                                }
+                            } catch (e) {
+                                console.error(`Failed to fetch transactions for org ${org.id}:`, e);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch organizations:", e);
+                }
+                
+                // Sort all transactions by date (newest first)
+                allTransactions.sort((a, b) => 
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+                
+                setData(allTransactions);
             } catch (error) {
                 console.error("Failed to fetch transactions:", error);
             } finally {
@@ -204,7 +284,7 @@ export default function TransactionsTable() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-10">
-                <CircleNotch weight="bold" className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div className="text-muted-foreground animate-spin"><CircleNotch weight="bold" size={32} /></div>
             </div>
         );
     }
@@ -230,7 +310,7 @@ export default function TransactionsTable() {
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (
+                        {table.getRowModel().rows.length ? (
                             table.getRowModel().rows.map((row: any) => (
                                 <TableRow
                                     key={row.id}
@@ -280,17 +360,19 @@ export default function TransactionsTable() {
                                         className="h-6 w-6 shrink-0"
                                         onClick={() => navigator.clipboard.writeText(selectedTransaction.reference)}
                                     >
-                                        <Copy weight="duotone" className="h-3 w-3" />
+                                        <Copy weight="duotone" size={12} />
                                     </Button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                                 <span className="text-sm font-medium text-muted-foreground">Amount</span>
                                 <span className="col-span-3 text-right font-semibold">
-                                    {new Intl.NumberFormat("en-NG", {
-                                        style: "currency",
-                                        currency: selectedTransaction.currency,
-                                    }).format(selectedTransaction.amount / 100)}
+                                    {(selectedTransaction.amount as unknown) != null && !isNaN(selectedTransaction.amount) 
+                                        ? new Intl.NumberFormat("en-NG", {
+                                            style: "currency",
+                                            currency: selectedTransaction.currency || "NGN",
+                                        }).format(selectedTransaction.amount / 100)
+                                        : "—"}
                                 </span>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
@@ -303,6 +385,26 @@ export default function TransactionsTable() {
                                     }`}>
                                         {selectedTransaction.status}
                                     </span>
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                                <span className="text-sm font-medium text-muted-foreground">Billed To</span>
+                                <span className="col-span-3 text-right">
+                                    {selectedTransaction.referenceId && selectedTransaction.referenceId !== selectedTransaction.userId ? (
+                                        <span className="inline-flex items-center gap-1 text-blue-600">
+                                            <Buildings weight="duotone" size={14} />
+                                            <span className="text-xs font-medium">
+                                                {(selectedTransaction as any)._orgName || "Organization"}
+                                            </span>
+                                            {!(selectedTransaction as any)._orgName && (
+                                                <code className="font-mono text-[9px] text-muted-foreground ml-1">
+                                                    {selectedTransaction.referenceId.slice(0, 12)}...
+                                                </code>
+                                            )}
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground">Personal Account</span>
+                                    )}
                                 </span>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">

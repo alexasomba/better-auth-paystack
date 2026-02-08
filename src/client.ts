@@ -1,6 +1,5 @@
 import type { BetterAuthClientPlugin } from "better-auth";
 import type { paystack } from "./index";
-import type { PaystackNodeClient, PaystackTransaction } from "./types";
 
 export const paystackClient = <
     O extends {
