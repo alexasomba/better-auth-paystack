@@ -262,6 +262,128 @@ const subs = await authClient.paystack.subscription.listLocal({
 
 > **Note:** If `referenceId` is omitted, the current user's ID is used as the default reference.
 
+### Organization as Customer
+
+When using Better Auth's organization plugin, you can automatically create a Paystack customer for each organization. This enables organization-level billing where the organization (not individual users) is the customer of record.
+
+#### Enabling Organization Support
+
+```ts
+import { betterAuth } from "better-auth";
+import { organization } from "better-auth/plugins";
+import { paystack } from "@alexasomba/better-auth-paystack";
+
+export const auth = betterAuth({
+  plugins: [
+    organization(),
+    paystack({
+      paystackClient,
+      paystackWebhookSecret: process.env.PAYSTACK_SECRET_KEY!,
+      organization: {
+        enabled: true,
+        // Called when a Paystack customer is created for an organization
+        onCustomerCreate: async ({ paystackCustomer, organization }) => {
+          console.log(
+            `Created Paystack customer ${paystackCustomer.customer_code} for org ${organization.id}`,
+          );
+        },
+        // Optionally provide custom parameters for customer creation
+        getCustomerCreateParams: async (org, ctx) => ({
+          metadata: { organizationId: org.id, plan: "enterprise" },
+        }),
+      },
+      subscription: {
+        enabled: true,
+        plans: [{ name: "team", planCode: "PLN_xxx" }],
+        authorizeReference: async ({ referenceId, user }) => {
+          // Check if user can bill to this organization
+          // ...
+          return true;
+        },
+      },
+    }),
+  ],
+});
+```
+
+**How it works:**
+
+1. When an organization is created, the plugin automatically creates a corresponding Paystack customer
+2. The organization's `paystackCustomerCode` field is populated with the customer code
+3. Subscriptions billed to `referenceId: "org_123"` are associated with that organization
+
+### Subscription Lifecycle Hooks
+
+The plugin provides hooks at key points in the subscription lifecycle for custom business logic.
+
+```ts
+subscription: {
+  enabled: true,
+  plans: [{ name: "pro", planCode: "PLN_pro" }],
+
+  // Called when subscription is created (via webhook)
+  onSubscriptionCreated: async ({ event, subscription, plan }, ctx) => {
+    // Send welcome email, provision resources, etc.
+    await sendWelcomeEmail(subscription.referenceId, plan.name);
+  },
+
+  // Called when subscription is canceled (via webhook)
+  onSubscriptionCancel: async ({ event, subscription }, ctx) => {
+    // Cleanup, send cancellation email, etc.
+    await sendCancellationEmail(subscription.referenceId);
+  },
+
+  // Called when transaction verification completes a subscription
+  onSubscriptionComplete: async ({ event, subscription, plan }, ctx) => {
+    // Grant access, update user permissions, etc.
+  },
+
+  // Called when subscription is updated
+  onSubscriptionUpdate: async ({ subscription }, ctx) => {
+    // Handle plan changes, seat updates, etc.
+  },
+}
+```
+
+### Trial Periods
+
+Define trial periods on your plans to let users try before they pay.
+
+```ts
+plans: [
+  {
+    name: "pro",
+    planCode: "PLN_pro",
+    freeTrial: {
+      days: 14,
+      // Called when a trial starts
+      onTrialStart: async (subscription) => {
+        await sendTrialStartEmail(subscription.referenceId);
+      },
+      // Called when trial ends and converts to paid
+      onTrialEnd: async (subscription) => {
+        await sendTrialEndEmail(subscription.referenceId);
+      },
+      // Called when trial expires without conversion
+      onTrialExpired: async (subscription) => {
+        await sendTrialExpiredEmail(subscription.referenceId);
+      },
+    },
+  },
+];
+```
+
+#### Trial Abuse Prevention
+
+The plugin automatically prevents trial abuse by checking if a `referenceId` has ever had a trial before. If a user or organization has previously used a trial, they will not receive another trial when subscribing.
+
+**How it works:**
+
+1. When initializing a transaction with a plan that has `freeTrial.days` configured
+2. The plugin checks for any previous subscriptions with the same `referenceId` that have `trialStart`, `trialEnd`, or `status: "trialing"`
+3. If found, no trial is granted—the subscription starts immediately as paid
+4. If not found, a trial is granted and `onTrialStart` is called
+
 ### Limits & Seat Management
 
 The plugin provides built-in support for enforcing limits based on the active subscription.
@@ -456,6 +578,12 @@ The plugin adds the following to your Better Auth database schema.
 | ---------------------- | -------- | -------- | ------- |
 | `paystackCustomerCode` | `string` | no       | —       |
 
+### `organization` (only when `organization.enabled: true`)
+
+| Field                  | Type     | Required | Default |
+| ---------------------- | -------- | -------- | ------- |
+| `paystackCustomerCode` | `string` | no       | —       |
+
 ### `subscription` (only when `subscription.enabled: true`)
 
 | Field                          | Type      | Required | Default        |
@@ -474,23 +602,67 @@ The plugin adds the following to your Better Auth database schema.
 | `groupId`                      | `string`  | no       | —              |
 | `seats`                        | `number`  | no       | —              |
 
+### `paystackTransaction`
+
+| Field         | Type     | Required | Default     |
+| ------------- | -------- | -------- | ----------- |
+| `reference`   | `string` | yes      | —           |
+| `referenceId` | `string` | yes      | —           |
+| `userId`      | `string` | no       | —           |
+| `amount`      | `number` | yes      | —           |
+| `currency`    | `string` | no       | `"NGN"`     |
+| `status`      | `string` | no       | `"pending"` |
+| `plan`        | `string` | no       | —           |
+| `metadata`    | `string` | no       | —           |
+| `paystackId`  | `string` | no       | —           |
+
 ## Options
 
-Main options:
+### Main Options
 
-- `paystackClient` (recommended: `createPaystack({ secretKey })`)
-- `paystackWebhookSecret`
-- `createCustomerOnSignUp?`
-- `onCustomerCreate?`, `getCustomerCreateParams?`
-- `onEvent?`
-- `schema?` (override/mapping)
+| Option                    | Type       | Description                                              |
+| ------------------------- | ---------- | -------------------------------------------------------- |
+| `paystackClient`          | `Paystack` | Paystack SDK client instance                             |
+| `paystackWebhookSecret`   | `string`   | Secret for webhook signature verification                |
+| `createCustomerOnSignUp`  | `boolean`  | Create Paystack customer when user signs up              |
+| `onCustomerCreate`        | `function` | Called after customer is created                         |
+| `getCustomerCreateParams` | `function` | Customize customer creation params                       |
+| `onEvent`                 | `function` | Called for all webhook events (after signature verified) |
+| `schema`                  | `object`   | Schema overrides for field/table names                   |
 
-Subscription options (when `subscription.enabled: true`):
+### Organization Options (`organization`)
 
-- `plans` (array or async function)
-- `requireEmailVerification?`
-- `authorizeReference?`
-- `onSubscriptionComplete?`, `onSubscriptionUpdate?`, `onSubscriptionDelete?`
+| Option                    | Type       | Description                           |
+| ------------------------- | ---------- | ------------------------------------- |
+| `enabled`                 | `boolean`  | Enable organization customer creation |
+| `onCustomerCreate`        | `function` | Called after org customer is created  |
+| `getCustomerCreateParams` | `function` | Customize org customer creation       |
+
+### Subscription Options (`subscription`)
+
+| Option                     | Type       | Description                                      |
+| -------------------------- | ---------- | ------------------------------------------------ |
+| `enabled`                  | `boolean`  | Enable subscription features                     |
+| `plans`                    | `array`    | Plan configurations (or async function)          |
+| `requireEmailVerification` | `boolean`  | Require verified email for checkout              |
+| `authorizeReference`       | `function` | Authorize billing to referenceId                 |
+| `onSubscriptionComplete`   | `function` | Called when subscription is completed via verify |
+| `onSubscriptionCreated`    | `function` | Called when subscription.create webhook fires    |
+| `onSubscriptionCancel`     | `function` | Called when subscription.disable webhook fires   |
+| `onSubscriptionUpdate`     | `function` | Called when subscription is updated              |
+| `onSubscriptionDelete`     | `function` | Called when subscription is deleted              |
+
+### Plan Configuration
+
+| Option      | Type     | Description                          |
+| ----------- | -------- | ------------------------------------ |
+| `name`      | `string` | Plan name (used in API calls)        |
+| `planCode`  | `string` | Paystack plan code (recommended)     |
+| `amount`    | `number` | Amount in smallest currency unit     |
+| `currency`  | `string` | Currency code (e.g., "NGN")          |
+| `interval`  | `string` | Billing interval (monthly, annually) |
+| `limits`    | `object` | Resource limits for the plan         |
+| `freeTrial` | `object` | Trial configuration with hooks       |
 
 ## Troubleshooting
 

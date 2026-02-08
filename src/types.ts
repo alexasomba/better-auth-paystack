@@ -5,7 +5,7 @@ import type {
     User,
 } from "better-auth";
 import type { createPaystack } from "@alexasomba/paystack-node";
-import type { subscriptions, user } from "./schema";
+import type { organization, subscriptions, user } from "./schema";
 
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
 
@@ -85,6 +85,9 @@ export type PaystackPlan = {
     freeTrial?:
     | {
         days: number;
+        onTrialStart?: (subscription: Subscription) => Promise<void>;
+        onTrialEnd?: (data: { subscription: Subscription }, ctx: GenericEndpointContext) => Promise<void>;
+        onTrialExpired?: (subscription: Subscription, ctx: GenericEndpointContext) => Promise<void>;
     }
     | undefined;
 };
@@ -183,6 +186,25 @@ export type SubscriptionOptions = {
         ctx: GenericEndpointContext,
     ) => Promise<void>)
     | undefined;
+    onSubscriptionCreated?:
+    | ((
+        data: {
+            event: any;
+            subscription: Subscription;
+            plan: PaystackPlan;
+        },
+        ctx: GenericEndpointContext,
+    ) => Promise<void>)
+    | undefined;
+    onSubscriptionCancel?:
+    | ((
+        data: {
+            event: any;
+            subscription: Subscription;
+        },
+        ctx: GenericEndpointContext,
+    ) => Promise<void>)
+    | undefined;
     onSubscriptionDelete?:
     | ((
         data: {
@@ -196,6 +218,22 @@ export type SubscriptionOptions = {
 
 export type ProductOptions = {
     products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
+};
+
+export type OrganizationOptions = {
+    enabled: boolean;
+    onCustomerCreate?:
+    | ((
+        data: {
+            paystackCustomer: any;
+            organization: any & { paystackCustomerCode: string };
+        },
+        ctx: GenericEndpointContext,
+    ) => Promise<void>)
+    | undefined;
+    getCustomerCreateParams?:
+    | ((organization: any, ctx: GenericEndpointContext) => Promise<Record<string, any>>)
+    | undefined;
 };
 
 export interface PaystackOptions<
@@ -230,8 +268,9 @@ export interface PaystackOptions<
     )
     | undefined;
     products?: ProductOptions | undefined;
+    organization?: OrganizationOptions | undefined;
     onEvent?: ((event: any) => Promise<void>) | undefined;
-    schema?: InferOptionSchema<typeof subscriptions & typeof user> | undefined;
+    schema?: InferOptionSchema<typeof subscriptions & typeof user & typeof organization> | undefined;
 }
 
 export interface InputSubscription extends Omit<Subscription, "id"> { }

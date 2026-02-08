@@ -70,7 +70,7 @@
     "@arethetypeswrong/cli": "^0.18.2",
     "@better-auth/core": "^1.4.18",
     "@rollup/rollup-linux-x64-gnu": "^4.57.1",
-    "@types/node": "^22.19.9",
+    "@types/node": "^22.19.10",
     "@vitest/coverage-v8": "^4.0.18",
     "better-auth": "^1.4.18",
     "husky": "^9.1.7",

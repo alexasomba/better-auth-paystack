@@ -115,6 +115,60 @@ export const paystack = <
                                 },
                             },
                         },
+                        organization: options.organization?.enabled
+                            ? {
+                                create: {
+                                    async after(org: any, hookCtx?: GenericEndpointContext | null) {
+                                        if (!hookCtx) return;
+
+                                        try {
+                                            const extraCreateParams = options.organization?.getCustomerCreateParams
+                                                ? await options.organization.getCustomerCreateParams(org, hookCtx as any)
+                                                : {};
+
+                                            const params = defu(
+                                                {
+                                                    email: org.email || `billing+${org.id}@example.com`,
+                                                    first_name: org.name,
+                                                    metadata: { organizationId: org.id },
+                                                },
+                                                extraCreateParams,
+                                            );
+                                            const paystack = getPaystackOps(options.paystackClient);
+                                            const raw = await paystack.customerCreate(params);
+                                            const res = unwrapSdkResult<any>(raw);
+                                            const paystackCustomer =
+                                                res && typeof res === "object" && "status" in res && "data" in res
+                                                    ? (res as any).data
+                                                    : res?.data ?? res;
+                                            const customerCode = paystackCustomer?.customer_code;
+
+                                            if (!customerCode) return;
+
+                                            await (hookCtx as any).context.internalAdapter.updateOrganization(org.id, {
+                                                paystackCustomerCode: customerCode,
+                                            });
+
+                                            await options.organization?.onCustomerCreate?.(
+                                                {
+                                                    paystackCustomer,
+                                                    organization: {
+                                                        ...org,
+                                                        paystackCustomerCode: customerCode,
+                                                    },
+                                                },
+                                                hookCtx as any,
+                                            );
+                                        } catch (e: any) {
+                                            (hookCtx as any).context.logger.error(
+                                                `Failed to create Paystack customer for organization: ${e?.message || "Unknown error"}`,
+                                                e,
+                                            );
+                                        }
+                                    },
+                                },
+                            }
+                            : undefined,
                     },
                     member: {
                         create: {
