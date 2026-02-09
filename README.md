@@ -20,7 +20,10 @@ A TypeScript-first plugin that integrates Paystack into Better Auth, enabling se
 [x] Support for one-time payment products (e.g., credit packs, top-ups)
 [x] Explicit billing interval support for plans (monthly, annually, etc.)
 [x] Dynamic configuration sharing via `/paystack/get-config`
+[x] **Subscription Lifecycle Hooks**: `onSubscriptionCreated`, `onSubscriptionCancel`, `onSubscriptionComplete`, etc.
+[x] **Trial Periods & Abuse Prevention**: Configurable trials with hooks and automatic per-account enforcement.
 [x] **Organization/Team Billing**: Bill to organizations instead of individual users via `referenceId` + `authorizeReference`
+[x] **Organization as Customer**: Automatically create Paystack customers for organizations for cleaner org-level billing.
 [x] Complete implementation demo on Tanstack Start example
 [ ] Complete implementation demo on Next.js example (85% ready)
 [ ] Complete implementation demo on Hono example
@@ -219,7 +222,7 @@ export const auth = betterAuth({
           },
         ],
         // Authorization callback: return true if user can bill to this referenceId
-        authorizeReference: async ({ referenceId, user }) => {
+        authorizeReference: async ({ referenceId, user, action }) => {
           // Check if user is owner/admin of the organization
           const membership = await db.query.member.findFirst({
             where: and(
@@ -228,6 +231,12 @@ export const auth = betterAuth({
               inArray(member.role, ["owner", "admin"]),
             ),
           });
+
+          // Optional: allow any action if membership exists, or restrict specific actions
+          if (action === "list-subscriptions" && membership) {
+            return true;
+          }
+
           return !!membership;
         },
       },
@@ -700,7 +709,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Future features planned for upcoming versions:
 
-### v0.3.0 - Manual Recurring Subscriptions
+### v0.4.0 - Manual Recurring Subscriptions
 
 - [ ] **Stored Authorization Codes**: Securely store Paystack authorization codes from verified transactions
 - [ ] **Card Management UI**: Let users view/delete saved payment methods (masked card data only)

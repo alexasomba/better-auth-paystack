@@ -222,7 +222,6 @@ export default function TransactionsTable() {
         async function fetchTransactions() {
             try {
                 // Fetch personal transactions
-                // @ts-ignore: Paystack plugin types are not fully inferred in client
                 const personalRes = await authClient.paystack.transaction.list({
                     query: {},
                 });
@@ -239,7 +238,6 @@ export default function TransactionsTable() {
                     if (orgsRes.data && Array.isArray(orgsRes.data)) {
                         for (const org of orgsRes.data) {
                             try {
-                                // @ts-ignore: Paystack plugin types are not fully inferred in client
                                 const orgRes = await authClient.paystack.transaction.list({
                                     query: { referenceId: org.id },
                                 });

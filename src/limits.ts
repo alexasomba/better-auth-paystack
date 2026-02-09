@@ -1,5 +1,6 @@
 
 import type { GenericEndpointContext } from "better-auth";
+
 import type { Subscription } from "./types";
 
 export const getOrganizationSubscription = async (

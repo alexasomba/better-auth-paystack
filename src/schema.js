@@ -125,6 +125,10 @@ export const organization = {
                 type: "string",
                 required: false,
             },
+            email: {
+                type: "string",
+                required: false,
+            },
         },
     },
 };

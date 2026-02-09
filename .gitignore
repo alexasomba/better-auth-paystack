@@ -24,3 +24,8 @@ vitest.config.d.ts.map
 .tmp
 tmp
 docs/
+test_output.txt
+test_output*
+
+typecheck_output*
+GEMINI.md

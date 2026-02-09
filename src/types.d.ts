@@ -1,4 +1,5 @@
 import type { GenericEndpointContext, InferOptionSchema, Session, User } from "better-auth";
+export type { GenericEndpointContext, InferOptionSchema, Session, User, };
 import type { createPaystack } from "@alexasomba/paystack-node";
 import type { organization, subscriptions, user } from "./schema";
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
@@ -8,55 +9,60 @@ export type PaystackOpenApiFetchResponse<T = unknown> = {
     response?: Response;
 };
 export type PaystackApiResult<T = unknown> = Promise<T | PaystackOpenApiFetchResponse<T>>;
-export type PaystackClientLike = {
-    customer_create?: (init?: {
-        body?: any;
-    } | undefined) => PaystackApiResult<any>;
-    customer_update?: any;
-    transaction_initialize?: (init?: {
-        body?: any;
-    } | undefined) => PaystackApiResult<any>;
-    transaction_verify?: (init: {
-        params: {
-            path: {
-                reference: string;
-            };
-        };
-    }) => PaystackApiResult<any>;
-    subscription_fetch?: (init: any) => PaystackApiResult<any>;
-    subscription_disable?: (init?: {
-        body?: {
+type NonNullableInit<T> = Exclude<T, undefined>;
+type ExtractBody<T> = T extends {
+    body?: infer B;
+} ? B : never;
+type WithMetadataStringOrObject<T> = T extends object ? Omit<T, "metadata"> & {
+    metadata?: string | Record<string, unknown>;
+} : T;
+type WithMetadataObject<T> = T extends object ? Omit<T, "metadata"> & {
+    metadata?: Record<string, unknown>;
+} : T;
+type WithEmail<T> = T extends object ? Omit<T, "email"> & {
+    email?: string;
+} : T;
+type CustomerCreateInit = NonNullableInit<Parameters<PaystackNodeClient["customer_create"]>[0]>;
+type CustomerUpdateInit = NonNullableInit<Parameters<PaystackNodeClient["customer_update"]>[0]>;
+type TransactionInitializeInit = NonNullableInit<Parameters<PaystackNodeClient["transaction_initialize"]>[0]>;
+type SubscriptionCreateInit = NonNullableInit<Parameters<PaystackNodeClient["subscription_create"]>[0]>;
+type SubscriptionToggleInit = NonNullableInit<Parameters<PaystackNodeClient["subscription_disable"]>[0]>;
+export type PaystackCustomerCreateInput = WithMetadataStringOrObject<ExtractBody<CustomerCreateInit>>;
+export type PaystackCustomerUpdateInput = WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
+export type PaystackTransactionInitializeInput = WithMetadataObject<ExtractBody<TransactionInitializeInit>>;
+export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;
+export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit>;
+export type PaystackSubscriptionFetchInit = {
+    params: {
+        path: {
             code: string;
-            token: string;
         };
-    } | undefined) => PaystackApiResult<any>;
-    subscription_enable?: (init?: {
-        body?: {
-            code: string;
-            token: string;
+    };
+} | {
+    params: {
+        path: {
+            id_or_code: string;
         };
-    } | undefined) => PaystackApiResult<any>;
-    subscription_manage_link?: (init: {
-        params: {
-            path: {
-                code: string;
-            };
-        };
-    }) => PaystackApiResult<any>;
+    };
+};
+export type PaystackClientLike = Partial<PaystackNodeClient> & {
+    subscription_manage_link?: PaystackNodeClient["subscription_manageLink"];
     customer?: {
-        create?: (params: any) => Promise<any>;
-        update?: (code: string, params: any) => Promise<any>;
+        create?: (params: PaystackCustomerCreateInput) => Promise<unknown>;
+        update?: (code: string, params: PaystackCustomerUpdateInput) => Promise<unknown>;
     };
     transaction?: {
-        initialize?: (params: any) => Promise<any>;
-        verify?: (reference: string) => Promise<any>;
+        initialize?: (params: PaystackTransactionInitializeInput) => Promise<unknown>;
+        verify?: (reference: string) => Promise<unknown>;
     };
     subscription?: {
-        fetch?: (idOrCode: string) => Promise<any>;
-        disable?: (params: any) => Promise<any>;
-        enable?: (params: any) => Promise<any>;
+        fetch?: (idOrCode: string) => Promise<unknown>;
+        create?: (params: PaystackSubscriptionCreateInput) => Promise<unknown>;
+        disable?: (params: PaystackSubscriptionToggleInput) => Promise<unknown>;
+        enable?: (params: PaystackSubscriptionToggleInput) => Promise<unknown>;
         manage?: {
-            link?: (code: string) => Promise<any>;
+            link?: (code: string) => Promise<unknown>;
+            email?: (code: string, email: string) => Promise<unknown>;
         };
     };
 };
@@ -76,6 +82,10 @@ export type PaystackPlan = {
     currency?: string | undefined;
     /** Paystack interval keyword (when using Paystack plans). */
     interval?: "daily" | "weekly" | "monthly" | "quarterly" | "biannually" | "annually" | undefined;
+    /** Optional description of the plan. */
+    description?: string | undefined;
+    /** Optional list of features for the plan. */
+    features?: string[] | undefined;
     /** Optional invoice limit; Paystack uses `invoice_limit` during init. */
     invoiceLimit?: number | undefined;
     /** Arbitrary limits (stored/consumed by your app). */
@@ -99,6 +109,10 @@ export interface PaystackProduct {
     currency: string;
     /** Optional metadata to include with the transaction. */
     metadata?: Record<string, unknown> | undefined;
+    /** Optional description of the product. */
+    description?: string | undefined;
+    /** Optional list of features for the product. */
+    features?: string[] | undefined;
 }
 export interface PaystackTransaction {
     id: string;
@@ -171,6 +185,7 @@ export type ProductOptions = {
 };
 export type OrganizationOptions = {
     enabled: boolean;
+    createCustomerOnOrganizationCreate?: boolean | undefined;
     onCustomerCreate?: ((data: {
         paystackCustomer: any;
         organization: any & {
@@ -205,5 +220,24 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
 }
 export interface InputSubscription extends Omit<Subscription, "id"> {
 }
-export {};
+export interface Organization {
+    id: string;
+    name: string;
+    slug: string;
+    paystackCustomerCode?: string | undefined;
+    email?: string | undefined;
+    createdAt: Date;
+    updatedAt: Date;
+    metadata?: any;
+    [key: string]: any;
+}
+export interface Member {
+    id: string;
+    organizationId: string;
+    userId: string;
+    role: string;
+    createdAt: Date;
+    updatedAt: Date;
+    [key: string]: any;
+}
 //# sourceMappingURL=types.d.ts.map

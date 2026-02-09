@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Buildings, CheckCircle, Coins, CreditCard, ShieldCheck, Sparkle, User } from "@phosphor-icons/react";
+import { ArrowRight, Buildings, CheckCircle, Clock, Coins, CreditCard, ShieldCheck, Sparkle, User } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,9 @@ interface Subscription {
   plan: string;
   status: string;
   paystackSubscriptionCode?: string;
+  trialStart?: string;
+  trialEnd?: string;
+  cancelAtPeriodEnd?: boolean;
 }
 
 interface PaystackPlan {
@@ -24,6 +27,8 @@ interface PaystackPlan {
     amount: number;
     currency: string;
     interval?: string;
+    description?: string;
+    features?: Array<string>;
 }
 
 interface PaystackProduct {
@@ -31,6 +36,8 @@ interface PaystackProduct {
     amount: number;
     currency: string;
     metadata?: Record<string, unknown>;
+    description?: string;
+    features?: Array<string>;
 }
 
 interface Organization {
@@ -38,6 +45,7 @@ interface Organization {
     name: string;
     slug: string;
 }
+
 
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
     const [subscriptions, setSubscriptions] = useState<Array<Subscription>>([]);
@@ -50,22 +58,23 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
     useEffect(() => {
         async function fetchData() {
+            setIsLoading(true);
             try {
-                // @ts-ignore: Paystack plugin types are not fully inferred in client
+                const query = selectedBillingTarget === "personal" ? {} : { referenceId: selectedBillingTarget };
                 const [subRes, configRes] = await Promise.all([
-                    authClient.paystack.subscription.listLocal({ query: {} }),
+                    authClient.paystack.subscription.listLocal({ query }),
                     authClient.paystack.getConfig(),
                 ]);
 
                 if (subRes.data) {
-                    const data = subRes.data as unknown as { subscriptions: Array<Subscription> } | Array<Subscription>;
+                    const data = subRes.data;
                     if (Array.isArray(data)) {
-                        setSubscriptions(data);
-                    } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
-                         setSubscriptions(data.subscriptions);
+                        setSubscriptions(data as Array<Subscription>);
+                    } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
+                         setSubscriptions(data.subscriptions as Array<Subscription>);
                     }
                 }
-                
+
                 if (configRes.data) {
                     const data = configRes.data as { plans: Array<PaystackPlan>, products: Array<PaystackProduct> };
                     setConfig(data);
@@ -77,7 +86,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             }
         }
         fetchData();
-    }, []);
+    }, [selectedBillingTarget]);
 
     // Fetch organizations for billing target selection
     useEffect(() => {
@@ -105,8 +114,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             if (selectedBillingTarget && selectedBillingTarget !== "personal") {
                 initPayload.referenceId = selectedBillingTarget;
                 if (seats > 1) {
-                    // @ts-ignore: Quantity is not yet in the client type definition
-                    initPayload.quantity = seats;
+                    (initPayload as any).quantity = seats;
                 }
             }
             const res = await authClient.paystack.transaction.initialize(initPayload);
@@ -151,7 +159,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         setActionLoading(true);
         try {
             const res = await authClient.paystack.subscription.manageLink({
-                query: { subscriptionCode },
+                subscriptionCode,
             });
             if (res.data?.link) {
                 window.location.href = res.data.link;
@@ -176,11 +184,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             });
             const res = await authClient.paystack.subscription.listLocal({ query: {} });
             if (res.data) {
-                const data = res.data as unknown as { subscriptions: Array<Subscription> } | Array<Subscription>;
+                const data = res.data;
                 if (Array.isArray(data)) {
-                    setSubscriptions(data);
-                } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
-                     setSubscriptions(data.subscriptions);
+                    setSubscriptions(data as Array<Subscription>);
+                } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
+                     setSubscriptions(data.subscriptions as Array<Subscription>);
                 }
             }
         } catch (e: unknown) {
@@ -193,12 +201,37 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         }
     };
 
+    const handleResumeSubscription = async (subscriptionCode: string) => {
+        setActionLoading(true);
+        try {
+            await authClient.paystack.subscription.restore({
+                subscriptionCode,
+            });
+            const res = await authClient.paystack.subscription.listLocal({ query: {} });
+            if (res.data) {
+                const data = res.data;
+                if (Array.isArray(data)) {
+                    setSubscriptions(data as Array<Subscription>);
+                } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
+                     setSubscriptions(data.subscriptions as Array<Subscription>);
+                }
+            }
+        } catch (e: unknown) {
+            console.error(e);
+            if (e instanceof Error) {
+                alert(e.message || "Failed to resume subscription");
+            }
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     if (isLoading) {
         return <div className="text-center py-8 text-muted-foreground animate-pulse">Loading billing details...</div>;
     }
 
 
-    const activeSubscription = subscriptions.find((sub: Subscription) => ["active", "non-renewing", "past_due", "unpaid"].includes(sub.status));
+    const activeSubscription = subscriptions.find((sub: Subscription) => ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status));
 
     const formatCurrency = (amount: number | undefined, currency: string | undefined) => {
         if (amount === undefined) return "—";
@@ -229,16 +262,35 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     <span className="flex items-center gap-1">
                                         Status: <span className="text-green-600 font-medium lowercase">{activeSubscription.status}</span>
                                     </span>
+                                    {activeSubscription.trialEnd && new Date(activeSubscription.trialEnd) > new Date() && (
+                                        <>
+                                            <span className="text-muted-foreground/30">•</span>
+                                            <span className="flex items-center gap-1 text-amber-600">
+                                                <Clock size={12} weight="duotone" />
+                                                Trial: {Math.ceil((new Date(activeSubscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days left
+                                            </span>
+                                        </>
+                                    )}
                                     {activeSubscription.paystackSubscriptionCode && (
                                         <>
                                             <span className="text-muted-foreground/30">•</span>
-                                            <button 
-                                                onClick={() => handleManageSubscription(activeSubscription.paystackSubscriptionCode!)}
-                                                className="text-xs text-red-500 hover:text-red-600 hover:underline transition-all"
-                                                disabled={actionLoading}
-                                            >
-                                                Cancel
-                                            </button>
+                                            {activeSubscription.status === "non-renewing" ? (
+                                                <button 
+                                                    onClick={() => handleResumeSubscription(activeSubscription.paystackSubscriptionCode!)}
+                                                    className="text-xs text-primary hover:text-primary/80 hover:underline transition-all font-medium"
+                                                    disabled={actionLoading}
+                                                >
+                                                    Resume Subscription
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => handleManageSubscription(activeSubscription.paystackSubscriptionCode!)}
+                                                    className="text-xs text-red-500 hover:text-red-600 hover:underline transition-all"
+                                                    disabled={actionLoading}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
                                         </>
                                     )}
                                 </p>
@@ -261,7 +313,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                     )}
 
                     {/* Billing Target Selector */}
-                    {organizations.length > 0 && !activeSubscription && (
+                    {organizations.length > 0 && (
                         <div className="p-4 bg-muted/30 border border-dashed rounded-lg">
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="p-2 rounded-lg bg-primary/10">

@@ -81,6 +81,25 @@ export const paystackWebhook = (options) => {
                         });
                     }
                 }
+                if (eventName === "charge.failure") {
+                    const reference = data?.reference;
+                    if (reference) {
+                        try {
+                            await ctx.context.adapter.update({
+                                model: "paystackTransaction",
+                                update: {
+                                    status: "failed",
+                                    updatedAt: new Date(),
+                                },
+                                where: [{ field: "reference", value: reference }],
+                            });
+                        }
+                        catch (e) {
+                            // Transaction might not exist or other error, log and ignore
+                            ctx.context.logger.warn("Failed to update transaction status for charge.failure", e);
+                        }
+                    }
+                }
                 if (eventName === "subscription.create") {
                     const subscriptionCode = data?.subscription_code ??
                         data?.subscription?.subscription_code ??
@@ -194,15 +213,15 @@ const initializeTransactionBodySchema = z.object({
     callbackURL: z.string().optional(),
     quantity: z.number().int().positive().optional(),
 });
-export const initializeTransaction = (options) => {
+export const initializeTransaction = (options, path = "/paystack/initialize-transaction") => {
     const subscriptionOptions = options.subscription;
     // If subscriptions are enabled, use full middleware stack; otherwise just basics.
     // However, for one-time payments, we might not strictly need subscription middleware
     // checking for existing subs, but let's keep it consistent for now.
     const useMiddlewares = subscriptionOptions?.enabled
-        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "initialize-transaction")]
+        ? [sessionMiddleware, originCheck, referenceMiddleware(options, "initialize-transaction")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/transaction/initialize", {
+    return createAuthEndpoint(path, {
         method: "POST",
         body: initializeTransactionBodySchema,
         use: useMiddlewares,
@@ -260,6 +279,7 @@ export const initializeTransaction = (options) => {
                 throw new APIError("BAD_REQUEST", {
                     code: "SUBSCRIPTION_PLAN_NOT_FOUND",
                     message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
+                    status: 400
                 });
             }
         }
@@ -268,60 +288,144 @@ export const initializeTransaction = (options) => {
             if (!product) {
                 throw new APIError("BAD_REQUEST", {
                     message: `Product '${productName}' not found.`,
+                    status: 400
                 });
             }
         }
         else if (!bodyAmount) {
             throw new APIError("BAD_REQUEST", {
                 message: "Either 'plan', 'product', or 'amount' is required to initialize a transaction.",
+                status: 400
             });
         }
         const amount = bodyAmount || product?.amount;
         const finalCurrency = currency || product?.currency || plan?.currency || "NGN";
-        // 5. Prepare Payload
-        const referenceIdFromCtx = ctx.context.referenceId;
-        const referenceId = ctx.body.referenceId || referenceIdFromCtx || session.user.id;
         let url;
         let reference;
         let accessCode;
-        const finalAmount = amount || plan?.amount;
+        // 5. Prepare Payload
+        const referenceIdFromCtx = ctx.context.referenceId;
+        const referenceId = ctx.body.referenceId || referenceIdFromCtx || session.user.id;
+        console.log("DEBUG ROUTES REF:", {
+            referenceId,
+            referenceIdFromCtx,
+            bodyRef: ctx.body.referenceId,
+            userId: session.user.id,
+            orgEnabled: options.organization?.enabled,
+            contextKeys: Object.keys(ctx.context || {}),
+            fullContext: ctx.context
+        });
+        // Check trial eligibility - prevent trial abuse
+        let trialStart;
+        let trialEnd;
+        if (plan && plan.freeTrial?.days && plan.freeTrial.days > 0) {
+            // Check if user/referenceId has ever had a trial
+            const previousTrials = await ctx.context.adapter.findMany({
+                model: "subscription",
+                where: [{ field: "referenceId", value: referenceId }],
+            });
+            const hadTrial = previousTrials?.some((sub) => sub.trialStart || sub.trialEnd || sub.status === "trialing");
+            if (!hadTrial) {
+                trialStart = new Date();
+                trialEnd = new Date();
+                trialEnd.setDate(trialEnd.getDate() + plan.freeTrial.days);
+            }
+        }
         try {
+            // Determine Customer Email & Code (Organization support)
+            let targetEmail = email || user.email;
+            let paystackCustomerCode = user.paystackCustomerCode;
+            if (options.organization?.enabled && referenceId && referenceId !== user.id) {
+                const org = await ctx.context.adapter.findOne({
+                    model: "organization",
+                    where: [{ field: "id", value: referenceId }],
+                });
+                if (org) {
+                    // Prefer organization's existing Paystack customer code
+                    if (org.paystackCustomerCode) {
+                        paystackCustomerCode = org.paystackCustomerCode;
+                    }
+                    if (org.email) {
+                        targetEmail = org.email;
+                    }
+                    else {
+                        // Fallback: Use Organization Owner Email
+                        const ownerMember = await ctx.context.adapter.findOne({
+                            model: "member",
+                            where: [
+                                { field: "organizationId", value: referenceId },
+                                { field: "role", value: "owner" }
+                            ]
+                        });
+                        console.error("[DEBUG] Fallback Owner Lookup:", {
+                            referenceId,
+                            foundMember: !!ownerMember,
+                            memberId: ownerMember?.id,
+                            userId: ownerMember?.userId
+                        });
+                        if (ownerMember) {
+                            const ownerUser = await ctx.context.adapter.findOne({
+                                model: "user",
+                                where: [{ field: "id", value: ownerMember.userId }]
+                            });
+                            console.error("[DEBUG] Fallback User Lookup:", {
+                                userId: ownerMember.userId,
+                                foundUser: !!ownerUser,
+                                email: ownerUser?.email
+                            });
+                            if (ownerUser?.email) {
+                                targetEmail = ownerUser.email;
+                            }
+                        }
+                    }
+                }
+            }
             // Construct Metadata
             const metadata = JSON.stringify({
                 referenceId,
                 userId: user.id,
                 plan: plan?.name.toLowerCase(), // Undefined for one-time
                 product: product?.name.toLowerCase(),
+                isTrial: !!trialStart,
+                trialEnd: trialEnd?.toISOString(),
                 ...extraMetadata,
             });
             const initBody = {
-                email: email || user.email,
+                email: targetEmail,
                 callback_url: callbackURL,
                 metadata,
                 // If plan/product exists, use its currency; otherwise fallback to provided or default
                 currency: finalCurrency,
                 quantity,
             };
-            // Sync: If user has a Paystack code, update email to ensure consistency
-            // and prevent duplicate customer creation if email changed.
-            const paystackCustomerCode = user.paystackCustomerCode;
+            // Sync/Update Customer: ensure email matches if code exists
             if (paystackCustomerCode) {
                 try {
                     const ops = getPaystackOps(options.paystackClient);
-                    await ops.customerUpdate(paystackCustomerCode, { email: initBody.email });
+                    // Only update if email is present
+                    if (initBody.email) {
+                        await ops.customerUpdate(paystackCustomerCode, { email: initBody.email });
+                    }
                 }
                 catch (e) {
-                    // Ignore sync errors to avoid blocking payment flow
+                    // Ignore sync errors
                 }
             }
             if (plan) {
                 // Subscription Flow
-                initBody.plan = plan.planCode;
-                initBody.invoice_limit = plan.invoiceLimit;
-                // Only include amount if NO planCode is set (local amount plans)
-                // When planCode is set, Paystack uses the plan's stored amount
-                if (!plan.planCode && finalAmount) {
-                    initBody.amount = Math.round(finalAmount);
+                if (trialStart) {
+                    // Trial Flow: Authorize card with minimum amount, don't start sub yet
+                    initBody.amount = 5000; // 50 NGN (minimum allowed)
+                    // Do NOT set initBody.plan
+                }
+                else {
+                    // Standard Flow
+                    initBody.plan = plan.planCode;
+                    initBody.invoice_limit = plan.invoiceLimit;
+                    // Paystack requires amount even with planCode (it uses plan's stored amount)
+                    // For local plans without planCode, use finalAmount; for planCode plans, use plan.amount or minimum
+                    const planAmount = amount ?? plan.amount ?? 50000; // 500 NGN minimum fallback
+                    initBody.amount = Math.max(Math.round(planAmount), 50000);
                     if (quantity) {
                         initBody.amount = initBody.amount * quantity;
                     }
@@ -329,9 +433,9 @@ export const initializeTransaction = (options) => {
             }
             else {
                 // One-Time Payment Flow
-                if (!finalAmount)
+                if (!amount)
                     throw new Error("Amount is required for one-time payments");
-                initBody.amount = Math.round(finalAmount);
+                initBody.amount = Math.round(amount);
             }
             const initRaw = await paystack.transactionInitialize(initBody);
             const initRes = unwrapSdkResult(initRaw);
@@ -353,14 +457,13 @@ export const initializeTransaction = (options) => {
             });
         }
         // 6. Record Transaction & Subscription
-        const paystackCustomerCode = user.paystackCustomerCode;
         await ctx.context.adapter.create({
             model: "paystackTransaction",
             data: {
                 reference: reference,
                 referenceId,
                 userId: user.id,
-                amount: finalAmount,
+                amount: amount,
                 currency: plan?.currency || currency || "NGN",
                 status: "pending",
                 plan: plan?.name.toLowerCase(),
@@ -370,20 +473,16 @@ export const initializeTransaction = (options) => {
             },
         });
         if (plan) {
-            // Check trial eligibility - prevent trial abuse
-            let trialStart;
-            let trialEnd;
-            if (plan.freeTrial?.days && plan.freeTrial.days > 0) {
-                // Check if user/referenceId has ever had a trial
-                const previousTrials = await ctx.context.adapter.findMany({
-                    model: "subscription",
-                    where: [{ field: "referenceId", value: referenceId }],
+            // Re-fetch customer code if it wasn't available before (though we didn't force-create it here)
+            // For now, use what we have (user's or org's)
+            let storedCustomerCode = user.paystackCustomerCode;
+            if (options.organization?.enabled && referenceId !== user.id) {
+                const org = await ctx.context.adapter.findOne({
+                    model: "organization",
+                    where: [{ field: "id", value: referenceId }],
                 });
-                const hadTrial = previousTrials?.some((sub) => sub.trialStart || sub.trialEnd || sub.status === "trialing");
-                if (!hadTrial) {
-                    trialStart = new Date();
-                    trialEnd = new Date();
-                    trialEnd.setDate(trialEnd.getDate() + plan.freeTrial.days);
+                if (org?.paystackCustomerCode) {
+                    storedCustomerCode = org.paystackCustomerCode;
                 }
             }
             const newSubscription = await ctx.context.adapter.create({
@@ -391,7 +490,7 @@ export const initializeTransaction = (options) => {
                 data: {
                     plan: plan.name.toLowerCase(),
                     referenceId,
-                    paystackCustomerCode,
+                    paystackCustomerCode: storedCustomerCode,
                     paystackTransactionReference: reference,
                     status: trialStart ? "trialing" : "incomplete",
                     seats: quantity,
@@ -412,15 +511,26 @@ export const initializeTransaction = (options) => {
         });
     });
 };
-export const verifyTransaction = (options) => {
+// Aliases for Client DX Parity
+export const createSubscription = (options) => initializeTransaction(options, "/paystack/create-subscription");
+export const upgradeSubscription = (options) => initializeTransaction(options, "/paystack/upgrade-subscription");
+export const restoreSubscription = (options) => {
+    // Alias for enable
+    return enablePaystackSubscription(options, "/paystack/restore-subscription");
+};
+export const cancelSubscription = (options) => {
+    // Alias for disable
+    return disablePaystackSubscription(options, "/paystack/cancel-subscription");
+};
+export const verifyTransaction = (options, path = "/paystack/verify-transaction") => {
     const verifyBodySchema = z.object({
         reference: z.string(),
     });
     const subscriptionOptions = options.subscription;
     const useMiddlewares = subscriptionOptions?.enabled
-        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "verify-transaction")]
+        ? [sessionMiddleware, originCheck, referenceMiddleware(options, "verify-transaction")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/transaction/verify", {
+    return createAuthEndpoint(path, {
         method: "POST",
         body: verifyBodySchema,
         use: useMiddlewares,
@@ -464,18 +574,81 @@ export const verifyTransaction = (options) => {
                     },
                     where: [{ field: "reference", value: reference }],
                 });
-                await ctx.context.adapter.update({
+                // Sync Customer Code back to User or Org if missing
+                const paystackCustomerCodeFromPaystack = data?.customer?.customer_code;
+                if (paystackCustomerCodeFromPaystack && referenceId) {
+                    const isOrg = options.organization?.enabled && (referenceId.startsWith("org_") || (await ctx.context.adapter.findOne({ model: "organization", where: [{ field: "id", value: referenceId }] })));
+                    if (isOrg) {
+                        await ctx.context.adapter.update({
+                            model: "organization",
+                            update: { paystackCustomerCode: paystackCustomerCodeFromPaystack },
+                            where: [{ field: "id", value: referenceId }],
+                        });
+                    }
+                    else {
+                        await ctx.context.adapter.update({
+                            model: "user",
+                            update: { paystackCustomerCode: paystackCustomerCodeFromPaystack },
+                            where: [{ field: "id", value: referenceId }],
+                        });
+                    }
+                }
+                // Check for trial activation
+                let isTrial = false;
+                let trialEnd;
+                let targetPlan;
+                if (data?.metadata) {
+                    const meta = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata;
+                    isTrial = !!meta.isTrial;
+                    trialEnd = meta.trialEnd;
+                    targetPlan = meta.plan;
+                }
+                let paystackSubscriptionCode;
+                if (isTrial && targetPlan && trialEnd) {
+                    // Trial Flow: Create subscription with future start date using auth code
+                    const authorizationCode = data?.authorization?.authorization_code;
+                    const email = data?.customer?.email;
+                    // We need the planCode. We have the plan NAME in metadata (lowercased).
+                    const plans = await getPlans(subscriptionOptions);
+                    const planConfig = plans.find(p => p.name.toLowerCase() === targetPlan?.toLowerCase());
+                    if (authorizationCode && email && planConfig?.planCode) {
+                        const subRes = await paystack.subscriptionCreate({
+                            customer: email,
+                            plan: planConfig.planCode,
+                            authorization: authorizationCode,
+                            start_date: trialEnd
+                        });
+                        const subData = unwrapSdkResult(subRes);
+                        const cleanSubData = subData.data || subData;
+                        console.log("Trial Subscription Created:", JSON.stringify(cleanSubData, null, 2));
+                        paystackSubscriptionCode = cleanSubData?.subscription_code;
+                    }
+                }
+                const updatedSubscription = await ctx.context.adapter.update({
                     model: "subscription",
                     update: {
-                        status: "active",
+                        status: isTrial ? "trialing" : "active",
                         periodStart: new Date(),
                         updatedAt: new Date(),
+                        ...(paystackSubscriptionCode && { paystackSubscriptionCode }),
                     },
                     where: [
                         { field: "paystackTransactionReference", value: reference },
                         ...(referenceId ? [{ field: "referenceId", value: referenceId }] : []),
                     ],
                 });
+                if (updatedSubscription && subscriptionOptions?.enabled && subscriptionOptions.onSubscriptionComplete) {
+                    const subOpts = subscriptionOptions;
+                    const plans = await getPlans(subOpts);
+                    const plan = plans.find(p => p.name.toLowerCase() === updatedSubscription.plan.toLowerCase());
+                    if (plan) {
+                        await subOpts.onSubscriptionComplete({
+                            event: data,
+                            subscription: updatedSubscription,
+                            plan
+                        }, ctx);
+                    }
+                }
             }
             catch (e) {
                 ctx.context.logger.error("Failed to update transaction/subscription after verification", e);
@@ -509,9 +682,9 @@ export const listSubscriptions = (options) => {
     });
     const subscriptionOptions = options.subscription;
     const useMiddlewares = subscriptionOptions?.enabled
-        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "list-subscriptions")]
+        ? [sessionMiddleware, originCheck, referenceMiddleware(options, "list-subscriptions")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/subscription/list-local", {
+    return createAuthEndpoint("/paystack/list-subscriptions", {
         method: "GET",
         query: listQuerySchema,
         use: useMiddlewares,
@@ -534,15 +707,15 @@ export const listSubscriptions = (options) => {
         return ctx.json({ subscriptions: res });
     });
 };
-export const listTransactions = (options) => {
+export const listTransactions = (options, path = "/paystack/list-transactions") => {
     const listQuerySchema = z.object({
         referenceId: z.string().optional(),
     });
     const subscriptionOptions = options.subscription;
     const useMiddlewares = subscriptionOptions?.enabled
-        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "list-transactions")]
+        ? [sessionMiddleware, originCheck, referenceMiddleware(options, "list-transactions")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/transaction/list", {
+    return createAuthEndpoint(path, {
         method: "GET",
         query: listQuerySchema,
         use: useMiddlewares,
@@ -576,7 +749,6 @@ function decodeBase64UrlToString(value) {
         return globalThis.atob(padded);
     }
     // Node fallback
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return Buffer.from(padded, "base64").toString("utf8");
 }
 function tryGetEmailTokenFromSubscriptionManageLink(link) {
@@ -596,12 +768,12 @@ function tryGetEmailTokenFromSubscriptionManageLink(link) {
         return undefined;
     }
 }
-export const disablePaystackSubscription = (options) => {
+export const disablePaystackSubscription = (options, path = "/paystack/disable-subscription") => {
     const subscriptionOptions = options.subscription;
     const useMiddlewares = subscriptionOptions?.enabled
-        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "disable-subscription")]
+        ? [sessionMiddleware, originCheck, referenceMiddleware(options, "disable-subscription")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/subscription/disable", { method: "POST", body: enableDisableBodySchema, use: useMiddlewares }, async (ctx) => {
+    return createAuthEndpoint(path, { method: "POST", body: enableDisableBodySchema, use: useMiddlewares }, async (ctx) => {
         const { subscriptionCode } = ctx.body;
         const paystack = getPaystackOps(options.paystackClient);
         try {
@@ -626,8 +798,11 @@ export const disablePaystackSubscription = (options) => {
                     const data = linkRes && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
                         ? linkRes.data
                         : linkRes?.data ?? linkRes;
-                    const link = data?.link;
-                    if (typeof link === "string") {
+                    // data might be string (link) or object with link?
+                    // SDK says it returns string usually? 
+                    // Actually the SDK wrapper returns the response object.
+                    const link = typeof data === "string" ? data : data?.link;
+                    if (link) {
                         emailToken = tryGetEmailTokenFromSubscriptionManageLink(link);
                     }
                 }
@@ -636,19 +811,24 @@ export const disablePaystackSubscription = (options) => {
                 }
             }
             if (!emailToken) {
-                throw new APIError("BAD_REQUEST", {
-                    message: "Missing emailToken. Provide it explicitly or ensure your server can fetch it from Paystack using the subscription code.",
-                });
+                // One last try: send email to owner? No, that's async.
+                // If we still don't have emailToken, we can't disable.
+                throw new Error("Could not retrieve email_token for subscription disable.");
             }
-            const raw = await paystack.subscriptionDisable({
-                code: subscriptionCode,
-                token: emailToken,
+            await paystack.subscriptionDisable({ code: subscriptionCode, token: emailToken });
+            // Update local status immediately
+            await ctx.context.adapter.update({
+                model: "subscription",
+                update: {
+                    status: "canceled",
+                    updatedAt: new Date(),
+                },
+                where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
             });
-            const result = unwrapSdkResult(raw);
-            return ctx.json({ result });
+            return ctx.json({ status: "success" });
         }
         catch (error) {
-            ctx.context.logger.error("Failed to disable Paystack subscription", error);
+            ctx.context.logger.error("Failed to disable subscription", error);
             throw new APIError("BAD_REQUEST", {
                 code: "FAILED_TO_DISABLE_SUBSCRIPTION",
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_DISABLE_SUBSCRIPTION,
@@ -656,12 +836,12 @@ export const disablePaystackSubscription = (options) => {
         }
     });
 };
-export const enablePaystackSubscription = (options) => {
+export const enablePaystackSubscription = (options, path = "/paystack/enable-subscription") => {
     const subscriptionOptions = options.subscription;
     const useMiddlewares = subscriptionOptions?.enabled
-        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "enable-subscription")]
+        ? [sessionMiddleware, originCheck, referenceMiddleware(options, "enable-subscription")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/subscription/enable", { method: "POST", body: enableDisableBodySchema, use: useMiddlewares }, async (ctx) => {
+    return createAuthEndpoint(path, { method: "POST", body: enableDisableBodySchema, use: useMiddlewares }, async (ctx) => {
         const { subscriptionCode } = ctx.body;
         const paystack = getPaystackOps(options.paystackClient);
         try {
@@ -676,7 +856,6 @@ export const enablePaystackSubscription = (options) => {
                     emailToken = data?.email_token;
                 }
                 catch {
-                    // ignore; try manage-link fallback below
                 }
             }
             if (!emailToken) {
@@ -686,29 +865,31 @@ export const enablePaystackSubscription = (options) => {
                     const data = linkRes && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
                         ? linkRes.data
                         : linkRes?.data ?? linkRes;
-                    const link = data?.link;
-                    if (typeof link === "string") {
+                    const link = typeof data === "string" ? data : data?.link;
+                    if (link) {
                         emailToken = tryGetEmailTokenFromSubscriptionManageLink(link);
                     }
                 }
                 catch {
-                    // ignore
                 }
             }
             if (!emailToken) {
-                throw new APIError("BAD_REQUEST", {
-                    message: "Missing emailToken. Provide it explicitly or ensure your server can fetch it from Paystack using the subscription code.",
-                });
+                throw new Error("Could not retrieve email_token for subscription enable.");
             }
-            const raw = await paystack.subscriptionEnable({
-                code: subscriptionCode,
-                token: emailToken,
+            await paystack.subscriptionEnable({ code: subscriptionCode, token: emailToken });
+            // Update local status immediately
+            await ctx.context.adapter.update({
+                model: "subscription",
+                update: {
+                    status: "active",
+                    updatedAt: new Date(),
+                },
+                where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
             });
-            const result = unwrapSdkResult(raw);
-            return ctx.json({ result });
+            return ctx.json({ status: "success" });
         }
         catch (error) {
-            ctx.context.logger.error("Failed to enable Paystack subscription", error);
+            ctx.context.logger.error("Failed to enable subscription", error);
             throw new APIError("BAD_REQUEST", {
                 code: "FAILED_TO_ENABLE_SUBSCRIPTION",
                 message: error?.message || PAYSTACK_ERROR_CODES.FAILED_TO_ENABLE_SUBSCRIPTION,
@@ -716,33 +897,35 @@ export const enablePaystackSubscription = (options) => {
         }
     });
 };
-const subscriptionCodeSchema = z.object({
-    subscriptionCode: z.string(),
-});
 export const getSubscriptionManageLink = (options) => {
+    const manageLinkQuerySchema = z.object({
+        subscriptionCode: z.string(),
+    });
     const subscriptionOptions = options.subscription;
     const useMiddlewares = subscriptionOptions?.enabled
-        ? [sessionMiddleware, originCheck, referenceMiddleware(subscriptionOptions, "get-subscription-manage-link")]
+        ? [sessionMiddleware, originCheck, referenceMiddleware(options, "get-subscription-manage-link")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/subscription/manage-link", {
+    return createAuthEndpoint("/paystack/get-subscription-manage-link", {
         method: "GET",
-        query: subscriptionCodeSchema,
-        use: useMiddlewares
+        query: manageLinkQuerySchema,
+        use: useMiddlewares,
     }, async (ctx) => {
         const { subscriptionCode } = ctx.query;
         const paystack = getPaystackOps(options.paystackClient);
         try {
             const raw = await paystack.subscriptionManageLink(subscriptionCode);
-            const linkRes = unwrapSdkResult(raw);
-            const data = linkRes && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
-                ? linkRes.data
-                : linkRes?.data ?? linkRes;
-            return ctx.json({ link: data?.link });
+            const res = unwrapSdkResult(raw);
+            const data = res && typeof res === "object" && "status" in res && "data" in res
+                ? res.data
+                : res?.data ?? res;
+            // data might be string or object with link
+            const link = typeof data === "string" ? data : data?.link;
+            return ctx.json({ link });
         }
         catch (error) {
-            ctx.context.logger.error("Failed to get Paystack subscription manage link", error);
+            ctx.context.logger.error("Failed to get subscription manage link", error);
             throw new APIError("BAD_REQUEST", {
-                message: error?.message || "Failed to fetch subscription management link",
+                message: error?.message || "Failed to get subscription manage link",
             });
         }
     });
@@ -756,11 +939,14 @@ export const getConfig = (options) => {
             },
         },
     }, async (ctx) => {
-        const [plans, products] = await Promise.all([
-            options.subscription?.enabled ? getPlans(options.subscription) : Promise.resolve([]),
-            getProducts(options.products),
-        ]);
-        return ctx.json({ plans, products });
+        const plans = options.subscription?.enabled
+            ? await getPlans(options.subscription)
+            : [];
+        const products = await getProducts(options.products);
+        return ctx.json({
+            plans,
+            products,
+        });
     });
 };
 export { PAYSTACK_ERROR_CODES };

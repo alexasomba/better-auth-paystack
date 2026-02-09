@@ -1,5 +1,6 @@
 import type { BetterAuthPluginDBSchema } from "@better-auth/core/db";
 import { mergeSchema } from "better-auth/db";
+
 import type { PaystackOptions } from "./types";
 
 export const transactions = {
@@ -128,6 +129,10 @@ export const organization = {
     organization: {
         fields: {
             paystackCustomerCode: {
+                type: "string",
+                required: false,
+            },
+            email: {
                 type: "string",
                 required: false,
             },

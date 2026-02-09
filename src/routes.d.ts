@@ -24,7 +24,7 @@ export declare const paystackWebhook: (options: AnyPaystackOptions) => import("b
 }, {
     received: boolean;
 }>;
-export declare const initializeTransaction: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/transaction/initialize", {
+export declare const initializeTransaction: <P extends string = "/paystack/initialize-transaction">(options: AnyPaystackOptions, path?: P) => import("better-call").StrictEndpoint<P, {
     method: "POST";
     body: z.ZodObject<{
         plan: z.ZodOptional<z.ZodString>;
@@ -38,9 +38,7 @@ export declare const initializeTransaction: (options: AnyPaystackOptions) => imp
         quantity: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        context: {
-            referenceId: any;
-        };
+        referenceId: any;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -70,15 +68,171 @@ export declare const initializeTransaction: (options: AnyPaystackOptions) => imp
     accessCode: string | undefined;
     redirect: boolean;
 }>;
-export declare const verifyTransaction: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/transaction/verify", {
+export declare const createSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/create-subscription", {
+    method: "POST";
+    body: z.ZodObject<{
+        plan: z.ZodOptional<z.ZodString>;
+        product: z.ZodOptional<z.ZodString>;
+        amount: z.ZodOptional<z.ZodNumber>;
+        currency: z.ZodOptional<z.ZodString>;
+        email: z.ZodOptional<z.ZodString>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+        referenceId: z.ZodOptional<z.ZodString>;
+        callbackURL: z.ZodOptional<z.ZodString>;
+        quantity: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>;
+    use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+        referenceId: any;
+    }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+        session: {
+            session: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                userId: string;
+                expiresAt: Date;
+                token: string;
+                ipAddress?: string | null | undefined;
+                userAgent?: string | null | undefined;
+            };
+            user: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        };
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+}, {
+    url: string | undefined;
+    reference: string | undefined;
+    accessCode: string | undefined;
+    redirect: boolean;
+}>;
+export declare const upgradeSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/upgrade-subscription", {
+    method: "POST";
+    body: z.ZodObject<{
+        plan: z.ZodOptional<z.ZodString>;
+        product: z.ZodOptional<z.ZodString>;
+        amount: z.ZodOptional<z.ZodNumber>;
+        currency: z.ZodOptional<z.ZodString>;
+        email: z.ZodOptional<z.ZodString>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+        referenceId: z.ZodOptional<z.ZodString>;
+        callbackURL: z.ZodOptional<z.ZodString>;
+        quantity: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>;
+    use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+        referenceId: any;
+    }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+        session: {
+            session: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                userId: string;
+                expiresAt: Date;
+                token: string;
+                ipAddress?: string | null | undefined;
+                userAgent?: string | null | undefined;
+            };
+            user: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        };
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+}, {
+    url: string | undefined;
+    reference: string | undefined;
+    accessCode: string | undefined;
+    redirect: boolean;
+}>;
+export declare const restoreSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/restore-subscription", {
+    method: "POST";
+    body: z.ZodObject<{
+        referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionCode: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+        referenceId: any;
+    }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+        session: {
+            session: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                userId: string;
+                expiresAt: Date;
+                token: string;
+                ipAddress?: string | null | undefined;
+                userAgent?: string | null | undefined;
+            };
+            user: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        };
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+}, {
+    status: string;
+}>;
+export declare const cancelSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/cancel-subscription", {
+    method: "POST";
+    body: z.ZodObject<{
+        referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionCode: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
+        referenceId: any;
+    }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+        session: {
+            session: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                userId: string;
+                expiresAt: Date;
+                token: string;
+                ipAddress?: string | null | undefined;
+                userAgent?: string | null | undefined;
+            };
+            user: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        };
+    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+}, {
+    status: string;
+}>;
+export declare const verifyTransaction: <P extends string = "/paystack/verify-transaction">(options: AnyPaystackOptions, path?: P) => import("better-call").StrictEndpoint<P, {
     method: "POST";
     body: z.ZodObject<{
         reference: z.ZodString;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        context: {
-            referenceId: any;
-        };
+        referenceId: any;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -107,15 +261,13 @@ export declare const verifyTransaction: (options: AnyPaystackOptions) => import(
     reference: any;
     data: any;
 }>;
-export declare const listSubscriptions: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/subscription/list-local", {
+export declare const listSubscriptions: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/list-subscriptions", {
     method: "GET";
     query: z.ZodObject<{
         referenceId: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        context: {
-            referenceId: any;
-        };
+        referenceId: any;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -142,15 +294,13 @@ export declare const listSubscriptions: (options: AnyPaystackOptions) => import(
 }, {
     subscriptions: Subscription[];
 }>;
-export declare const listTransactions: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/transaction/list", {
+export declare const listTransactions: <P extends string = "/paystack/list-transactions">(options: AnyPaystackOptions, path?: P) => import("better-call").StrictEndpoint<P, {
     method: "GET";
     query: z.ZodObject<{
         referenceId: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        context: {
-            referenceId: any;
-        };
+        referenceId: any;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -177,7 +327,7 @@ export declare const listTransactions: (options: AnyPaystackOptions) => import("
 }, {
     transactions: PaystackTransaction[];
 }>;
-export declare const disablePaystackSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/subscription/disable", {
+export declare const disablePaystackSubscription: <P extends string = "/paystack/disable-subscription">(options: AnyPaystackOptions, path?: P) => import("better-call").StrictEndpoint<P, {
     method: "POST";
     body: z.ZodObject<{
         referenceId: z.ZodOptional<z.ZodString>;
@@ -185,9 +335,7 @@ export declare const disablePaystackSubscription: (options: AnyPaystackOptions) 
         emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        context: {
-            referenceId: any;
-        };
+        referenceId: any;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -212,9 +360,9 @@ export declare const disablePaystackSubscription: (options: AnyPaystackOptions) 
         };
     }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
-    result: any;
+    status: string;
 }>;
-export declare const enablePaystackSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/subscription/enable", {
+export declare const enablePaystackSubscription: <P extends string = "/paystack/enable-subscription">(options: AnyPaystackOptions, path?: P) => import("better-call").StrictEndpoint<P, {
     method: "POST";
     body: z.ZodObject<{
         referenceId: z.ZodOptional<z.ZodString>;
@@ -222,9 +370,7 @@ export declare const enablePaystackSubscription: (options: AnyPaystackOptions) =
         emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        context: {
-            referenceId: any;
-        };
+        referenceId: any;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -249,17 +395,15 @@ export declare const enablePaystackSubscription: (options: AnyPaystackOptions) =
         };
     }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
-    result: any;
+    status: string;
 }>;
-export declare const getSubscriptionManageLink: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/subscription/manage-link", {
+export declare const getSubscriptionManageLink: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/get-subscription-manage-link", {
     method: "GET";
     query: z.ZodObject<{
         subscriptionCode: z.ZodString;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        context: {
-            referenceId: any;
-        };
+        referenceId: any;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Buildings, Check, Copy, Crown, Plus, Trash, UserCircle, Users } from "@phosphor-icons/react";
+import { Buildings, Check, Copy, CreditCard, Crown, Plus, Trash, UserCircle, Users } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ interface Organization {
     slug: string;
     createdAt: Date;
     metadata?: Record<string, unknown>;
+    paystackCustomerCode?: string; // v0.3.0: Paystack customer code for org billing
 }
 
 interface Member {
@@ -280,6 +281,15 @@ export default function OrganizationManager() {
                                             {org.id}
                                         </code>
                                     </div>
+                                    {org.paystackCustomerCode && (
+                                        <div className="flex items-center gap-2 text-green-600">
+                                            <CreditCard size={12} weight="duotone" />
+                                            <span className="font-medium">Paystack:</span>
+                                            <code className="bg-green-50 px-1 rounded text-[10px]">
+                                                {org.paystackCustomerCode}
+                                            </code>
+                                        </div>
+                                    )}
                                     <p className="text-[10px] text-muted-foreground/70">
                                         Use this ID as <code className="bg-muted px-1 rounded">referenceId</code> for org billing
                                     </p>

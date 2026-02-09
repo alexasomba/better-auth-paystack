@@ -21,7 +21,7 @@ function CallbackPage() {
 
     const verify = async () => {
       try {
-        await (authClient.paystack.transaction as any).verify({ reference });
+        await authClient.paystack.transaction.verify({ reference });
         setStatus("success");
         setTimeout(() => {
           router.navigate({ to: "/dashboard" });

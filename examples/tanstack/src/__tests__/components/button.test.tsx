@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Button } from '@/components/ui/button'
 
@@ -19,7 +19,7 @@ describe('Button component', () => {
     expect(screen.getByRole('button', { name: 'Ghost' })).toBeInTheDocument()
   })
 
-  it('should handle click events', async () => {
+  it('should handle click events', () => {
     const handleClick = vi.fn()
     render(<Button onClick={handleClick}>Click</Button>)
     
@@ -34,11 +34,9 @@ describe('Button component', () => {
     expect(screen.getByRole('button', { name: 'Disabled' })).toBeDisabled()
   })
 
-  it('should render as child component with asChild', () => {
+  it('should render as child component with render prop', () => {
     render(
-      <Button asChild>
-        <a href="/test">Link Button</a>
-      </Button>
+      <Button render={<a href="/test">Link Button</a>} />
     )
     expect(screen.getByRole('link', { name: 'Link Button' })).toBeInTheDocument()
   })

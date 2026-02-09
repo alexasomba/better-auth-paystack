@@ -1,19 +1,15 @@
-import type { PaystackClientLike } from "./types";
-export declare function unwrapSdkResult<T = any>(result: any): T;
-export declare function getPaystackOps(paystackClient: PaystackClientLike | any): {
-    customerCreate: (params: any) => Promise<any>;
-    customerUpdate: (code: string, params: any) => Promise<any>;
-    transactionInitialize: (body: any) => Promise<any>;
-    transactionVerify: (reference: string) => Promise<any>;
-    subscriptionDisable: (body: {
-        code: string;
-        token: string;
-    }) => Promise<any>;
-    subscriptionEnable: (body: {
-        code: string;
-        token: string;
-    }) => Promise<any>;
-    subscriptionFetch: (idOrCode: string) => Promise<any>;
-    subscriptionManageLink: (code: string) => Promise<any>;
+import type { PaystackClientLike, PaystackCustomerCreateInput, PaystackCustomerUpdateInput, PaystackSubscriptionCreateInput, PaystackSubscriptionToggleInput, PaystackTransactionInitializeInput } from "./types";
+export declare function unwrapSdkResult<T = unknown>(result: unknown): T;
+export declare function getPaystackOps(paystackClient: PaystackClientLike | null | undefined): {
+    customerCreate: (params: PaystackCustomerCreateInput) => Promise<unknown>;
+    customerUpdate: (code: string, params: PaystackCustomerUpdateInput) => Promise<unknown>;
+    transactionInitialize: (body: PaystackTransactionInitializeInput) => Promise<unknown>;
+    transactionVerify: (reference: string) => Promise<unknown>;
+    subscriptionCreate: (body: PaystackSubscriptionCreateInput) => Promise<unknown>;
+    subscriptionDisable: (body: PaystackSubscriptionToggleInput) => Promise<unknown>;
+    subscriptionEnable: (body: PaystackSubscriptionToggleInput) => Promise<unknown>;
+    subscriptionFetch: (idOrCode: string) => Promise<unknown>;
+    subscriptionManageLink: (code: string) => Promise<unknown>;
+    subscriptionManageEmail: (code: string, email: string) => Promise<unknown>;
 };
 //# sourceMappingURL=paystack-sdk.d.ts.map

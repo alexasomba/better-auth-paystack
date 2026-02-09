@@ -46,46 +46,90 @@ export const auth = betterAuth({
             paystack({
                 paystackClient,
                 paystackWebhookSecret: webhookSecret,
+                
+                organization: {
+                    enabled: true,
+                    onCustomerCreate: async ({ organization: org, paystackCustomer }) => {
+                        await Promise.resolve(); // satisfying require-await
+                        console.log(`🏢 Paystack customer created for org "${org.name}": ${paystackCustomer.customer_code}`);
+                    },
+                },
+                
                 subscription: {
                     enabled: true,
+                    
+                    // v0.3.0: Subscription lifecycle hooks
+                    onSubscriptionCreated: async ({ subscription, plan }) => {
+                        await Promise.resolve();
+                        console.log(`🎉 Subscription created: ${plan.name} plan - Status: ${subscription.status}`);
+                        if (subscription.trialStart) {
+                            console.log(`   ⏰ Trial active until ${subscription.trialEnd}`);
+                        }
+                    },
+                    onSubscriptionCancel: async ({ subscription }) => {
+                        await Promise.resolve();
+                        console.log(`❌ Subscription cancelled: ${subscription.plan}`);
+                    },
+                    
                     plans: [
                         // ========================================
                         // Plans WITH planCode (Paystack-managed)
                         // ========================================
-                        // When planCode is provided, Paystack uses its stored
-                        // plan configuration (amount, currency, interval).
-                        // Replace these with your actual Paystack plan codes.
                         {
                             name: "starter",
+                            amount: 500000, // 5000 NGN
+                            currency: "NGN",
                             planCode: "PLN_jm9wgvkqykajlp7", // Replace with your Paystack plan code
-                            // amount/currency/interval optional - Paystack uses its stored values
+                            // v0.3.0: Trial period with abuse prevention (user can only get trial once)
+                            freeTrial: {
+                                days: 7,
+                                onTrialStart: async (subscription) => {
+                                    await Promise.resolve();
+                                    console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
+                                },
+                                onTrialEnd: async ({ subscription }) => {
+                                    await Promise.resolve();
+                                    console.log(`✅ Trial ended, now active: ${subscription.referenceId}`);
+                                },
+                                onTrialExpired: async (subscription) => {
+                                    await Promise.resolve();
+                                    console.log(`⚠️ Trial expired without conversion: ${subscription.referenceId}`);
+                                },
+                            },
+                             description: "Perfect for testing the waters",
+                             features: ["Basic analytics", "Up to 5 projects", "Community support"],
                         },
                         {
                             name: "pro",
+                            amount: 1000000, // 10000 NGN
+                            currency: "NGN",
                             planCode: "PLN_6ikzoaxnunttb5e", // Replace with your Paystack plan code
+                            description: "For serious professionals",
+                            features: ["Advanced analytics", "Unlimited projects", "Priority support", "Custom domain"],
                         },
                         
                         // ========================================
                         // Plans WITHOUT planCode (Local/Custom)
                         // ========================================
-                        // When planCode is NOT provided, you define the amount locally.
-                        // Useful for org/team billing with referenceId.
                         {
                             name: "team",
                             amount: 2500000, // 25,000 NGN
                             currency: "NGN",
                             interval: "monthly",
+                            description: "Best for growing teams",
+                            features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
                         },
                         {
                             name: "enterprise",
                             amount: 10000000, // 100,000 NGN
                             currency: "NGN",
                             interval: "annually",
+                            description: "For large scale organizations",
+                            features: ["Everything in Team", "Dedicated account manager", "SLA", "On-premise deployment"],
                         },
                     ],
                     
                     // Authorize referenceId for organization billing
-                    // This callback determines if a user can bill against a referenceId
                     authorizeReference: async ({ user, session: _session, referenceId, action: _action }, ctx) => {
                         // If no referenceId provided, allow (defaults to user.id)
                         if (!referenceId || referenceId === user.id) {

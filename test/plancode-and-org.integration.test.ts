@@ -121,8 +121,9 @@ describe("planCode and organization referenceId tests", () => {
             expect(paystackSdk.transaction_initialize).toHaveBeenCalledTimes(1);
             const callArgs = paystackSdk.transaction_initialize.mock.calls[0][0];
             expect(callArgs.body.plan).toBe("PLN_jm9wgvkqykajlp7");
-            // When planCode is set, amount should NOT be in the body (Paystack uses its stored value)
-            expect(callArgs.body.amount).toBeUndefined();
+            // Paystack API requires amount even with planCode (it uses plan's stored amount)
+            // For plans without local amount, we send minimum 50000 kobo (500 NGN)
+            expect(callArgs.body.amount).toBe(50000);
         });
 
         it("should initialize transaction with local amount when no planCode", async () => {

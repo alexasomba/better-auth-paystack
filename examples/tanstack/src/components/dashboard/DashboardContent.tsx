@@ -37,6 +37,10 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                                     <span className="shrink-0"><User weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">User Info</span>
                                 </TabsTrigger>
+                                <TabsTrigger value="organizations" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                    <span className="shrink-0"><Buildings weight="duotone" size={16} /></span>
+                                    <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Organizations</span>
+                                </TabsTrigger>
                                 <TabsTrigger value="subscriptions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
                                     <span className="shrink-0"><Scroll weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Subscriptions</span>
@@ -45,13 +49,9 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                                     <span className="shrink-0"><IdentificationCard weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">One-Time</span>
                                 </TabsTrigger>
-                            <TabsTrigger value="transactions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
+                                <TabsTrigger value="transactions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
                                     <span className="shrink-0"><Clock weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Transactions</span>
-                                </TabsTrigger>
-                                <TabsTrigger value="organizations" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <span className="shrink-0"><Buildings weight="duotone" size={16} /></span>
-                                    <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Organizations</span>
                                 </TabsTrigger>
                             </TabsList>
                         </div>
@@ -97,6 +97,10 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                             </Card>
                         </TabsContent>
 
+                        <TabsContent value="organizations" className="space-y-6">
+                            <OrganizationManager />
+                        </TabsContent>
+
                         <TabsContent value="subscriptions" className="space-y-6">
                             <PaymentManager activeTab="subscriptions" />
                         </TabsContent>
@@ -117,10 +121,6 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                                     <TransactionsTable />
                                 </CardContent>
                             </Card>
-                        </TabsContent>
-
-                        <TabsContent value="organizations" className="space-y-6">
-                            <OrganizationManager />
                         </TabsContent>
                     </Tabs>
                 </div>
