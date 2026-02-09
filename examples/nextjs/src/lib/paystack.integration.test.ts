@@ -15,7 +15,7 @@ describe("Paystack Integration (Next.js)", () => {
     });
 
     it("should initialize a one-time transaction with string amount", async () => {
-        const { auth } = await import("./auth");
+        const { auth } = await import("@/auth");
         
         // We mock the internal API behavior if possible, or we check validation.
         // Since we don't have a real Paystack client, we expect this to fail downstream 
@@ -41,7 +41,7 @@ describe("Paystack Integration (Next.js)", () => {
     });
 
     it("should handle subscription initialization", async () => {
-        const { auth } = await import("./auth");
+        const { auth } = await import("@/auth");
         try {
              await auth.api.initializeTransaction({
                 body: {

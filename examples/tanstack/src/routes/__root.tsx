@@ -42,7 +42,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   }),
 
   shellComponent: RootDocument,
-  errorComponent: ({ error }) => {
+  errorComponent: ({ error }: any) => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
         <h1 className="text-4xl font-bold mb-4">Something went wrong</h1>

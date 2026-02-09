@@ -15,19 +15,19 @@ describe("Next.js Auth Configuration", () => {
     });
 
     it("should provide an auth instance", async () => {
-        const { auth } = await import("./auth");
+        const { auth } = await import("@/auth");
         expect(auth).toBeDefined();
         expect(auth.api).toBeDefined();
     });
 
     it("should have Paystack plugin registered", async () => {
-         const { auth } = await import("./auth");
+         const { auth } = await import("@/auth");
          expect(auth).toBeTruthy();
          expect(auth.api.paystackWebhook).toBeDefined();
     });
 
     it("should expose subscription management endpoints", async () => {
-        const { auth } = await import("./auth");
+        const { auth } = await import("@/auth");
         // Verify that the server-side auth instance has the plugin API methods attached
         expect(auth.api.listLocalSubscriptions).toBeDefined();
         expect(auth.api.getConfig).toBeDefined();

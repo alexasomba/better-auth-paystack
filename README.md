@@ -1,52 +1,48 @@
 # Better Auth Paystack Plugin
 
-A TypeScript-first plugin that integrates Paystack into Better Auth, enabling seamless customer creation, secure checkout, webhook verification, and native subscription flows. Designed for modern frameworks like Tanstack Start, Next.js, Hono, and Cloudflare Workers, it provides typed APIs, subscription management, and end-to-end payment integration with Paystack.
+A TypeScript-first plugin that integrates Paystack into [Better Auth](https://www.better-auth.com), providing a production-ready billing system with support for subscriptions (native & local), one-time payments, trials, organization billing, and secure webhooks.
 
-[**Live Demo (Tanstack Start)**](https://better-auth-paystack.gittech.workers.dev)
-- Hosted on Cloudflre Workers
-- Better-Auth Anonymous Login (for demo purpose)
-- Session stored in Memory, no DB (for demo purpose)
-- Please note that due to rate-limit on Paystack Secrete Test API, you might get Error "Failed to get redirect URL from Paystack" during the demo if your IP is rate limited.
+[**Live Demo (Tanstack Start)**](https://better-auth-paystack.gittech.workers.dev) | [**Source Code**](https://github.com/alexasomba/better-auth-paystack/tree/main/examples/tanstack)
 
 ## Features
 
-- Optional Paystack customer creation on sign up (`createCustomerOnSignUp`)
-- Paystack checkout via transaction initialize + verify (redirect-first)
-- Paystack webhook signature verification (`x-paystack-signature`, HMAC-SHA512)
-- Local subscription records stored in your Better Auth database
-- Subscription management via Paystack-hosted pages (`/subscription/manage-link`)
-- Subscription activation/deactivation endpoints (`/subscription/enable` + `/subscription/disable`)
-- Support for one-time payment products (e.g., credit packs, top-ups)
-- Explicit billing interval support for plans (monthly, annually, etc.)
-- Dynamic configuration sharing via `/paystack/get-config`
-- Reference ID support (user by default; org/team via `referenceId` + `authorizeReference`)
-
-## Installation
-
-### Install packages
-
-```bash
-npm install better-auth @alexasomba/better-auth-paystack
-```
-
-## 🔑 Environment Variables
-
-To use this plugin, you'll need to configure the following in your `.env`:
-
-```env
-PAYSTACK_SECRET_KEY=sk_test_...
-PAYSTACK_WEBHOOK_SECRET=sk_test_... # Usually the same as SECRET_KEY
-BETTER_AUTH_SECRET=...
-BETTER_AUTH_URL=http://localhost:3000
-```
+[x] **Billing Patterns**: Support for Paystack-native plans, local-managed subscriptions, and one-time payments (products/amounts).
+[x] **Auto Customer Creation**: Optional Paystack customer creation on user sign up or organization creation.
+[x] **Trial Management**: Configurable trial periods with built-in abuse prevention logic.
+[x] **Organization Billing**: Associate subscriptions with organizations and authorize access via roles.
+[x] **Enforced Limits**: Automatic enforcement of seat limits (members) and resource limits (teams).
+[x] **Popup Modal Flow**: Optional support for Paystack's inline checkout experience via `@alexasomba/paystack-browser`.
+[x] **Webhook Security**: Pre-configured signature verification (HMAC-SHA512).
+[x] **Transaction History**: Built-in support for listing and viewing local transaction records.
 
 ---
 
-## ⚙️ Configuration
+## Quick Start
 
-### 1. Server Plugin
+### 1. Install Plugin & SDKs
 
-```ts
+```bash
+npm install better-auth @alexasomba/better-auth-paystack @alexasomba/paystack-node
+```
+
+#### Optional: Browser SDK (for Popup Modals)
+
+```bash
+npm install @alexasomba/paystack-browser
+```
+
+### 2. Configure Environment Variables
+
+```env
+PAYSTACK_SECRET_KEY=sk_test_...
+PAYSTACK_WEBHOOK_SECRET=sk_test_... # Usually same as your paystack secret key
+BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=http://localhost:8787
+```
+
+### 3. Setup Server Plugin
+
+```ts title="auth.ts"
 import { betterAuth } from "better-auth";
 import { paystack } from "@alexasomba/better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
@@ -59,28 +55,36 @@ export const auth = betterAuth({
   plugins: [
     paystack({
       paystackClient,
-      // Paystack signs webhooks with an HMAC SHA-512 using your Paystack secret key.
-      paystackWebhookSecret: process.env.PAYSTACK_SECRET_KEY!,
+      paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
       createCustomerOnSignUp: true,
       subscription: {
         enabled: true,
         plans: [
           {
             name: "pro",
-            amount: 500000,
+            planCode: "PLN_pro_123", // Native: Managed by Paystack
+            freeTrial: { days: 14 },
+            limits: { teams: 5, seats: 10 }, // Custom resource & member limits
+          },
+          {
+            name: "starter",
+            amount: 50000, // Local: Managed by your app (500 NGN)
             currency: "NGN",
             interval: "monthly",
           },
         ],
+      },
+      products: {
+        products: [{ name: "credits_50", amount: 200000, currency: "NGN" }],
       },
     }),
   ],
 });
 ```
 
-### Configure the client plugin
+### 4. Configure Client Plugin
 
-```ts
+```ts title="client.ts"
 import { createAuthClient } from "better-auth/client";
 import { paystackClient } from "@alexasomba/better-auth-paystack/client";
 
@@ -89,224 +93,322 @@ export const client = createAuthClient({
 });
 ```
 
-### Migrate / generate schema
+### 5. Migrate Database Schema
 
-The plugin adds fields/tables to your Better Auth database. Run the Better Auth CLI migration/generate step you already use in your project.
-
-## Webhooks
-
-### Endpoint URL
-
-The plugin exposes a webhook endpoint at:
-
-```
-{AUTH_BASE}/paystack/webhook
+```bash
+npx better-auth migrate
 ```
 
-Where `{AUTH_BASE}` is your Better Auth server base path (commonly `/api/auth`).
+---
 
-### Signature verification
+## Billing Patterns
 
-Paystack sends `x-paystack-signature` which is an HMAC-SHA512 of the raw payload signed with your secret key. The plugin verifies this using `paystackWebhookSecret`.
+### 1. Subscriptions
 
-### Recommended events
+#### Native (Recommended)
 
-At minimum, enable the events your app depends on. For subscription flows, Paystack documents these as relevant:
-
-- `charge.success`
-- `subscription.create`
-- `subscription.disable`
-- `subscription.not_renew`
-
-The plugin forwards all webhook payloads to `onEvent` (if provided) after signature verification.
-
-## Usage
-
-### Defining plans
-
-Plans are referenced by their `name` (stored lowercased). For Paystack-native subscriptions you can either:
-
-- Use `planCode` (Paystack plan code). When `planCode` is provided, Paystack invalidates `amount` during transaction initialization.
-- Or use `amount` (smallest currency unit) for simple payments.
-
-### Frontend checkout (redirect)
-
-This flow matches Paystack’s transaction initialize/verify APIs:
-
-1. Call `POST {AUTH_BASE}/paystack/transaction/initialize`
-2. Redirect the user to the returned Paystack `url`
-3. On your callback route/page, call `POST {AUTH_BASE}/paystack/transaction/verify` (this updates local subscription state)
-
-#### Example (typed via Better Auth client plugin):
+Use `planCode` from your Paystack Dashboard. Paystack handles the recurring logic and emails.
 
 ```ts
-import { createAuthClient } from "better-auth/client";
-import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+{ name: "pro", planCode: "PLN_xxx" }
+```
 
-const plugins = [paystackClient({ subscription: true })];
+#### Local
 
-const authClient = createAuthClient({
-  // Your Better Auth base URL (commonly "/api/auth" in Next.js)
-  baseURL: "/api/auth",
-  plugins,
-});
+Use `amount` and `interval`. The plugin stores the status locally, allowing you to manage custom recurring logic or one-off "access periods".
 
-// Start checkout
-const init = await authClient.paystack.transaction.initialize(
-  {
-    plan: "starter",
-    callbackURL: `${window.location.origin}/billing/paystack/callback`,
-    // Optional for org/team billing (requires authorizeReference)
-    // referenceId: "org_123",
-  },
-  { throw: true },
-);
-// { url, reference, accessCode, redirect: true }
-if (init?.url) window.location.href = init.url;
+```ts
+{ name: "starter", amount: 50000, interval: "monthly" }
+```
 
-// 2. Manage / Upgrade / Downgrade (via Paystack-hosted management page)
-const manage = await authClient.paystack.getSubscriptionManageLink({
-  query: { subscriptionCode: "SUB_..." },
-});
-if (manage.data?.link) window.location.href = manage.data.link;
+### 2. One-Time Payments
 
-// 3. Purchase a One-Time Product
+#### Fixed Products
+
+Define pre-configured products in your server settings and purchase them by name.
+
+```ts
 await authClient.paystack.transaction.initialize({
-  amount: 250000,
+  product: "credits_50",
+});
+```
+
+#### Ad-hoc Amounts
+
+Charge dynamic amounts for top-ups, tips, or custom invoices.
+
+```ts
+await authClient.paystack.transaction.initialize({
+  amount: 100000, // 1000 NGN
   currency: "NGN",
-  metadata: { type: "credits", quantity: 50 },
-  callbackURL: `${window.location.origin}/billing/paystack/callback`,
+  metadata: { type: "donation" },
 });
+```
 
-// 4. On your callback page/route
-const reference = new URLSearchParams(window.location.search).get("reference");
-if (reference) {
-  await authClient.paystack.transaction.verify({ reference }, { throw: true });
+---
+
+## Limits & Seat Management
+
+The plugin automatically enforces limits based on the active subscription.
+
+### Member Seat Limits
+
+Purchased seats are stored in the `subscription.seats` field. The plugin hooks into `member.create` and `invitation.create` to block additions once the limit is reached.
+
+### Resource Limits (e.g., Teams)
+
+Define limits in your plan config, and they will be checked during resource creation:
+
+```ts
+plans: [{ name: "pro", limits: { teams: 5, seats: 10 } }];
+```
+
+The plugin natively checks the `teams` limit if using the Better Auth Organization plugin.
+
+---
+
+## Advanced Usage
+
+### Organization Billing
+
+Enable `organization.enabled` to bill organizations instead of users.
+
+- **Auto Customer**: Organizations get their own `paystackCustomerCode`.
+- **Authorization**: Use `authorizeReference` to control who can manage billing (e.g., Owners/Admins).
+
+### Inline Popup Modal
+
+Use `@alexasomba/paystack-browser` for a seamless UI.
+
+```ts
+const { data } = await authClient.subscription.upgrade({ plan: "pro" });
+if (data?.accessCode) {
+  const paystack = createPaystack({ publicKey: "pk_test_..." });
+  paystack.checkout({
+    accessCode: data.accessCode,
+    onSuccess: (res) =>
+      authClient.paystack.transaction.verify({ reference: res.reference }),
+  });
 }
 ```
 
-### Dynamic Configuration
+### Trial Abuse Prevention
 
-The plugin exposes an endpoint to share your configured plans and products with the client, reducing hard-coding in your components:
+The plugin checks the `referenceId` history. If a trial was ever used (active, expired, or trialing), it will not be granted again, preventing resubscribe-abuse.
 
-`GET {AUTH_BASE}/paystack/get-config`
+### Lifecycle Hooks
 
-Returns: `{ plans: PaystackPlan[], products: PaystackProduct[] }`
+React to billing events on the server by providing callbacks in your configuration:
 
-Server-side (no HTTP fetch needed):
+#### Subscription Hooks (`subscription.*`)
+
+- `onSubscriptionComplete`: Called after successful transaction verification (Native or Local).
+- `onSubscriptionCreated`: Called when a subscription record is first initialized in the DB.
+- `onSubscriptionUpdate`: Called whenever a subscription's status or period is updated.
+- `onSubscriptionCancel`: Called when a user or organization cancels their subscription.
+- `onSubscriptionDelete`: Called when a subscription record is deleted.
+
+#### Customer Hooks (`top-level` or `organization.*`)
+
+- `onCustomerCreate`: Called after the plugin successfully creates a Paystack customer.
+- `getCustomerCreateParams`: Return a custom object to override/extend the data sent to Paystack during customer creation.
+
+#### Trial Hooks (`subscription.plans[].freeTrial.*`)
+
+- `onTrialStart`: Called when a new trial period begins.
+- `onTrialEnd`: Called when a trial period ends naturally or via manual upgrade.
+
+#### Global Hook
+
+- `onEvent`: Receives every webhook event payload sent from Paystack for custom processing.
+
+### Authorization & Security
+
+#### `authorizeReference`
+
+Control who can manage billing for specific references (Users or Organizations).
 
 ```ts
-// On the server you can call the endpoints directly:
-// const init = await auth.api.initializeTransaction({ headers: req.headers, body: { plan: "starter" } })
-// const verify = await auth.api.verifyTransaction({ headers: req.headers, body: { reference } })
-```
-
-#### Example (framework-agnostic):
-
-On your callback route/page, call `GET {AUTH_BASE}/paystack/transaction/verify?reference=...`
-
-```ts
-// Start checkout
-const initRes = await fetch("/api/auth/paystack/transaction/initialize", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    plan: "starter",
-    callbackURL: `${window.location.origin}/billing/paystack/callback`,
-    // Optional for org/team billing (requires authorizeReference)
-    // referenceId: "org_123",
-  }),
+paystack({
+  subscription: {
+    authorizeReference: async ({ user, referenceId, action }) => {
+      // Example: Only allow Org Admins to initialize transactions
+      if (referenceId.startsWith("org_")) {
+        const member = await db.findOne({
+          model: "member",
+          where: [
+            { field: "organizationId", value: referenceId },
+            { field: "userId", value: user.id },
+          ],
+        });
+        return member?.role === "admin";
+      }
+      return user.id === referenceId;
+    },
+  },
 });
-
-const init = await initRes.json();
-// { url, reference, accessCode, redirect: true }
-if (init?.url) window.location.href = init.url;
-
-// On your callback page/route
-const reference = new URLSearchParams(window.location.search).get("reference");
-if (reference) {
-  await fetch(
-    `/api/auth/paystack/transaction/verify?reference=${encodeURIComponent(reference)}`,
-  );
-}
 ```
 
-### Inline modal checkout (optional)
+---
 
-If you prefer an inline checkout experience, initialize the transaction the same way and use `@alexasomba/paystack-browser` in your UI. This plugin does not render UI — it only provides server endpoints.
+## Client SDK Reference
 
-### Listing local subscriptions
+The client plugin exposes fully typed methods under `authClient.paystack` and `authClient.subscription`.
 
-List subscription rows stored by this plugin:
+### `authClient.subscription.upgrade` / `create`
 
-`GET {AUTH_BASE}/paystack/subscription/list-local`
+Initializes a transaction to create or upgrade a subscription.
 
-You can optionally pass `referenceId` as a query param (requires `authorizeReference` when it’s not the current user):
+```ts
+type upgradeSubscription = {
+  /**
+   * The name of the plan to subscribe to.
+   */
+  plan: string;
+  /**
+   * The email of the subscriber. Defaults to the current user's email.
+   */
+  email?: string;
+  /**
+   * Amount to charge (if not using a Paystack Plan Code).
+   */
+  amount?: number;
+  /**
+   * Currency code (e.g., "NGN").
+   */
+  currency?: string;
+  /**
+   * The callback URL to redirect to after payment.
+   */
+  callbackURL?: string;
+  /**
+   * Additional metadata to store with the transaction.
+   */
+  metadata?: Record<string, any>;
+  /**
+   * Reference ID for the subscription owner (User ID or Org ID).
+   * Defaults to the current user's ID.
+   */
+  referenceId?: string;
+  /**
+   * Number of seats to purchase (for team plans).
+   */
+  quantity?: number;
+};
+```
 
-`GET {AUTH_BASE}/paystack/subscription/list-local?referenceId=org_123`
+### `authClient.paystack.transaction.initialize`
 
-### Enabling / disabling a subscription
+Same as `upgrade`, but can also be used for one-time payments by omitting `plan` and providing `amount` or `product`.
 
-Paystack requires both the subscription code and the email token.
+```ts
+type initializeTransaction = {
+  /**
+   * Plan name (for subscriptions).
+   */
+  plan?: string;
+  /**
+   * Product name (for one-time purchases).
+   */
+  product?: string;
+  /**
+   * Amount to charge (if sending raw amount).
+   */
+  amount?: number;
+  // ... same as upgradeSubscription
+};
+```
 
-For convenience, the plugin lets you omit `emailToken` and will attempt to fetch it from Paystack using the subscription code (via Subscription fetch, with a fallback to Manage Link).
+### `authClient.subscription.list`
 
-- `POST {AUTH_BASE}/paystack/subscription/enable` with `{ subscriptionCode, emailToken? }`
-- `POST {AUTH_BASE}/paystack/subscription/disable` with `{ subscriptionCode, emailToken? }`
+List subscriptions for a user or organization.
 
-Paystack documents these as `code` + `token`. If the server cannot fetch `emailToken`, you can still provide it explicitly (e.g., from the Subscription API or your Paystack dashboard).
+```ts
+type listSubscriptions = {
+  query?: {
+    /**
+     * Filter by reference ID (User ID or Org ID).
+     */
+    referenceId?: string;
+  };
+};
+```
 
-## Schema
+### `authClient.subscription.cancel` / `restore`
 
-The plugin adds the following to your Better Auth database schema.
+Cancel or restore a subscription.
+
+```ts
+type cancelSubscription = {
+  /**
+   * The Paystack subscription code (e.g. SUB_...)
+   */
+  subscriptionCode: string;
+  /**
+   * The email token required by Paystack to manage the subscription.
+   * Optional: The server will try to fetch it if omitted.
+   */
+  emailToken?: string;
+};
+```
+
+## Schema Reference
+
+The plugin extends your database with the following fields and tables.
 
 ### `user`
 
-| Field                  | Type     | Required | Default |
-| ---------------------- | -------- | -------- | ------- |
-| `paystackCustomerCode` | `string` | no       | —       |
+| Field                  | Type     | Description                                   |
+| :--------------------- | :------- | :-------------------------------------------- |
+| `paystackCustomerCode` | `string` | The unique customer identifier from Paystack. |
 
-### `subscription` (only when `subscription.enabled: true`)
+### `organization`
 
-| Field                          | Type      | Required | Default        |
-| ------------------------------ | --------- | -------- | -------------- |
-| `plan`                         | `string`  | yes      | —              |
-| `referenceId`                  | `string`  | yes      | —              |
-| `paystackCustomerCode`         | `string`  | no       | —              |
-| `paystackSubscriptionCode`     | `string`  | no       | —              |
-| `paystackTransactionReference` | `string`  | no       | —              |
-| `status`                       | `string`  | no       | `"incomplete"` |
-| `periodStart`                  | `date`    | no       | —              |
-| `periodEnd`                    | `date`    | no       | —              |
-| `trialStart`                   | `date`    | no       | —              |
-| `trialEnd`                     | `date`    | no       | —              |
-| `cancelAtPeriodEnd`            | `boolean` | no       | `false`        |
-| `groupId`                      | `string`  | no       | —              |
-| `seats`                        | `number`  | no       | —              |
+| Field                  | Type     | Description                                                                                |
+| :--------------------- | :------- | :----------------------------------------------------------------------------------------- |
+| `paystackCustomerCode` | `string` | The unique customer identifier for the organization.                                       |
+| `email`                | `string` | The billing email for the organization. fallsback to organization owner's email if absent. |
 
-## Options
+### `subscription`
 
-Main options:
+| Field                          | Type      | Description                                                     |
+| :----------------------------- | :-------- | :-------------------------------------------------------------- |
+| `plan`                         | `string`  | Lowercased name of the active plan.                             |
+| `referenceId`                  | `string`  | Associated User ID or Organization ID.                          |
+| `paystackCustomerCode`         | `string`  | The Paystack customer code for this subscription.               |
+| `paystackSubscriptionCode`     | `string`  | The unique code for the subscription (e.g., `SUB_...`).         |
+| `paystackTransactionReference` | `string`  | The reference of the transaction that started the subscription. |
+| `status`                       | `string`  | `active`, `trialing`, `canceled`, `incomplete`.                 |
+| `periodStart`                  | `Date`    | Start date of the current billing period.                       |
+| `periodEnd`                    | `Date`    | End date of the current billing period.                         |
+| `trialStart`                   | `Date`    | Start date of the trial period.                                 |
+| `trialEnd`                     | `Date`    | End date of the trial period.                                   |
+| `cancelAtPeriodEnd`            | `boolean` | Whether to cancel at the end of the current period.             |
+| `seats`                        | `number`  | Purchased seat count for team billing.                          |
 
-- `paystackClient` (recommended: `createPaystack({ secretKey })`)
-- `paystackWebhookSecret`
-- `createCustomerOnSignUp?`
-- `onCustomerCreate?`, `getCustomerCreateParams?`
-- `onEvent?`
-- `schema?` (override/mapping)
+### `paystackTransaction`
 
-Subscription options (when `subscription.enabled: true`):
+| Field         | Type     | Description                                       |
+| :------------ | :------- | :------------------------------------------------ |
+| `reference`   | `string` | Unique transaction reference.                     |
+| `referenceId` | `string` | Associated User ID or Organization ID.            |
+| `userId`      | `string` | The ID of the user who initiated the transaction. |
+| `amount`      | `number` | Transaction amount in smallest currency unit.     |
+| `currency`    | `string` | Currency code (e.g., "NGN").                      |
+| `status`      | `string` | `success`, `pending`, `failed`, `abandoned`.      |
+| `plan`        | `string` | Name of the plan associated with the transaction. |
+| `metadata`    | `string` | JSON string of extra transaction metadata.        |
+| `paystackId`  | `string` | The internal Paystack ID for the transaction.     |
 
-- `plans` (array or async function)
-- `requireEmailVerification?`
-- `authorizeReference?`
-- `onSubscriptionComplete?`, `onSubscriptionUpdate?`, `onSubscriptionDelete?`
+---
 
 ## Troubleshooting
 
-- Webhook signature mismatch: ensure your server receives the raw body, and `PAYSTACK_WEBHOOK_SECRET` matches the secret key used by Paystack to sign events.
-- Subscription list returns empty: verify you’re passing the correct `referenceId`, and that `authorizeReference` allows it.
-- Transaction initializes but verify doesn’t update: ensure you call the verify endpoint after redirect, and confirm Paystack returns `status: "success"` for the reference.
+- **Webhook Signature**: Ensure `PAYSTACK_WEBHOOK_SECRET` is correct matches your Paystack Dashboard's secret key.
+- **Email Verification**: Use `requireEmailVerification: true` to prevent unverified checkouts.
+- **Redirect Failures**: Check your browser console; Paystack often returns 429 errors if you're hitting the test API too frequently.
+- **Reference mismatches**: Ensure `referenceId` is passed correctly for Organization billing.
+- **Authorization Denied**: Verify your `authorizeReference` logic is correctly checking user roles or organization memberships.
 
 ---
 
@@ -328,12 +430,40 @@ pnpm --filter nextjs-better-auth-paystack dev
 pnpm --filter tanstack-start-better-auth-paystack dev
 ```
 
+Contributions are welcome! Please open an issue or pull request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Roadmap
+
+Future features planned for upcoming versions:
+
+### v1.1.0 - Manual Recurring Subscriptions
+
+- [ ] **Stored Authorization Codes**: Securely store Paystack authorization codes from verified transactions
+- [ ] **Card Management UI**: Let users view/delete saved payment methods (masked card data only)
+- [ ] **Charge Authorization Endpoint**: Server-side endpoint to charge stored cards for renewals
+- [ ] **Renewal Scheduler Integration**: Documentation for integrating with Cloudflare Workers Cron, Vercel Cron, etc.
+
+> **Note**: For automatic recurring subscriptions today, use Paystack-managed plans via `planCode`. Manual recurring (storing authorization codes) is planned for a future release.
+
+### Future Considerations
+
+- [ ] Multi-currency support improvements
+- [ ] Proration for plan upgrades/downgrades
+- [ ] Invoice generation
+- [ ] Payment retry logic for failed renewals
+
 ## Links
 
 - GitHub Repository: [alexasomba/better-auth-paystack](https://github.com/alexasomba/better-auth-paystack)
-- Comprehensive Paystack Node SDK: [alexasomba/paystack-node](https://github.com/alexasomba/paystack-node)
-- Comprehensive Paystack Browser SDK: [alexasomba/better-auth-paystack](https://github.com/alexasomba/paystack-browser)
+- Comprehensive and up-to-date Paystack Node SDK: [alexasomba/paystack-node](https://github.com/alexasomba/paystack-node)
+- Comprehensive and up-to-date Paystack Browser SDK: [alexasomba/paystack-browser](https://github.com/alexasomba/paystack-browser)
+- [TanStack Start Example Implementation](https://github.com/alexasomba/better-auth-paystack/tree/main/examples/tanstack)
 - Paystack Webhooks: https://paystack.com/docs/payments/webhooks/
 - Paystack Transaction API: https://paystack.com/docs/api/transaction/
 - Paystack Subscription API: https://paystack.com/docs/api/subscription/
 - Paystack Plan API: https://paystack.com/docs/api/plan/
+- [Better Auth Documentation](https://www.better-auth.com/docs)

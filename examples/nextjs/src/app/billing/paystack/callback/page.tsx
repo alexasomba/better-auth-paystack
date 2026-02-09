@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/auth/authClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function CallbackContent() {

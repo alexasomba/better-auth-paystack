@@ -8,6 +8,24 @@ dist/
 .env.*.local
 .github/copilot-instructions.md
 ci-artifacts/
+coverage/
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Auto-generated config files (from .ts sources)
+tsdown.config.js
+tsdown.config.d.ts
+tsdown.config.d.ts.map
+vitest.config.js
+vitest.config.d.ts
+vitest.config.d.ts.map
 
 .tmp
 tmp
+docs/
+test_output.txt
+test_output*
+
+typecheck_output*
+GEMINI.md

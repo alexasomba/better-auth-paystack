@@ -118,6 +118,20 @@ export const user = {
         },
     },
 };
+export const organization = {
+    organization: {
+        fields: {
+            paystackCustomerCode: {
+                type: "string",
+                required: false,
+            },
+            email: {
+                type: "string",
+                required: false,
+            },
+        },
+    },
+};
 export const getSchema = (options) => {
     let baseSchema;
     if (options.subscription?.enabled) {
@@ -131,6 +145,13 @@ export const getSchema = (options) => {
         baseSchema = {
             ...user,
             ...transactions,
+        };
+    }
+    // Add organization schema if organization support is enabled
+    if (options.organization?.enabled) {
+        baseSchema = {
+            ...baseSchema,
+            ...organization,
         };
     }
     if (options.schema &&

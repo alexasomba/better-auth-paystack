@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -21,7 +21,7 @@ function CallbackPage() {
 
     const verify = async () => {
       try {
-        await (authClient.paystack.transaction as any).verify({ reference });
+        await authClient.paystack.transaction.verify({ reference });
         setStatus("success");
         setTimeout(() => {
           router.navigate({ to: "/dashboard" });

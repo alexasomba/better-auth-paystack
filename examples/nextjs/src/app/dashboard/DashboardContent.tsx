@@ -33,19 +33,19 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                         <div className="relative mb-6">
                             <TabsList className="flex items-center justify-center w-full h-12 p-1 bg-muted/50 rounded-xl overflow-hidden gap-1">
                                 <TabsTrigger value="user" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-28 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <User weight="duotone" className="size-4 shrink-0" />
+                                    <span className="shrink-0"><User weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">User Info</span>
                                 </TabsTrigger>
                                 <TabsTrigger value="subscriptions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <Scroll weight="duotone" className="size-4 shrink-0" />
+                                    <span className="shrink-0"><Scroll weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Subscriptions</span>
                                 </TabsTrigger>
                                 <TabsTrigger value="one-time" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-28 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <IdentificationCard weight="duotone" className="size-4 shrink-0" />
+                                    <span className="shrink-0"><IdentificationCard weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">One-Time</span>
                                 </TabsTrigger>
                                 <TabsTrigger value="transactions" className="group flex-none w-12 sm:flex-1 sm:w-auto data-active:flex-1 data-active:min-w-32 gap-2 rounded-lg data-active:bg-background data-active:shadow-sm transition-all duration-300 py-2 px-2">
-                                    <Clock weight="duotone" className="size-4 shrink-0" />
+                                    <span className="shrink-0"><Clock weight="duotone" size={16} /></span>
                                     <span className="text-xs sm:text-sm font-medium hidden group-data-active:inline sm:inline">Transactions</span>
                                 </TabsTrigger>
                             </TabsList>
@@ -61,7 +61,7 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                                         <Avatar size="lg" className="ring-2 ring-primary/10">
                                             <AvatarImage src={session.user?.image || undefined} alt={session.user?.name || ""} />
                                             <AvatarFallback>
-                                                <User weight="duotone" className="size-6 text-muted-foreground" />
+                                                <span className="text-muted-foreground"><User weight="duotone" size={24} /></span>
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>

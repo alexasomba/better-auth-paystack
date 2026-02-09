@@ -1,9 +1,9 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { Fingerprint, GithubLogo, Package, RocketLaunch, ShieldCheck, Sparkle } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { GithubLogo, Package, Sparkle, Fingerprint, ShieldCheck, RocketLaunch } from "@phosphor-icons/react";
-import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -48,7 +48,7 @@ function Home() {
             <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="text-center space-y-2">
                     <div className="inline-flex items-center justify-center p-2 bg-primary/5 rounded-2xl mb-2">
-                        <RocketLaunch weight="duotone" className="size-8 text-primary" />
+                        <span className="text-primary"><RocketLaunch weight="duotone" size={32} /></span>
                     </div>
                     <h1 className="text-4xl font-extrabold tracking-tight">Better Auth + Paystack SDK = ♥</h1>
                     <p className="text-muted-foreground">The ultimate Paystack plugin for Better Auth.</p>
@@ -57,7 +57,7 @@ function Home() {
                 <Card className="border-border/50 shadow-xl shadow-primary/5 backdrop-blur-sm bg-background/80">
                     <CardHeader className="text-center pb-2">
                         <CardTitle className="text-xl flex items-center justify-center gap-2">
-                            <Fingerprint weight="duotone" className="size-5 text-primary" />
+                            <span className="text-primary"><Fingerprint weight="duotone" size={20} /></span>
                             Anonymous Login
                         </CardTitle>
                         <CardDescription>Experience seamless payments with one click, powered by better-auth-paystack.</CardDescription>
@@ -65,7 +65,7 @@ function Home() {
                     <CardContent className="space-y-4 py-4">
                         <div className="grid grid-cols-1 gap-3 py-2">
                             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border border-transparent hover:border-primary/10 transition-colors">
-                                <ShieldCheck weight="duotone" className="size-5 text-primary shrink-0 mt-0.5" />
+                                <span className="text-primary shrink-0 mt-0.5"><ShieldCheck weight="duotone" size={20} /></span>
                                 <div className="space-y-1">
                                     <p className="text-xs font-medium">Secure Checkout</p>
                                     <p className="text-[10px] text-muted-foreground leading-relaxed">Enterprise-grade security for every transaction.</p>
@@ -83,7 +83,7 @@ function Home() {
                                 "Logging In..."
                             ) : (
                                 <>
-                                    <Sparkle weight="duotone" className="size-4 group-hover:animate-pulse" />
+                                    <span className="group-hover:animate-pulse"><Sparkle weight="duotone" size={16} /></span>
                                     Login Anonymously
                                 </>
                             )}
