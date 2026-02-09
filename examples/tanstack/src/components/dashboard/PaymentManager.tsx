@@ -56,6 +56,23 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     const [selectedBillingTarget, setSelectedBillingTarget] = useState<string>("personal"); // "personal" or org.id
     const [seats, setSeats] = useState<number>(1);
 
+    const fetchSubscriptions = async (target: string) => {
+        try {
+            const query = target === "personal" ? {} : { referenceId: target };
+            const subRes = await authClient.paystack.subscription.listLocal({ query });
+            if (subRes.data) {
+                const data = subRes.data;
+                if (Array.isArray(data)) {
+                    setSubscriptions(data as Array<Subscription>);
+                } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
+                     setSubscriptions(data.subscriptions as Array<Subscription>);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch subscriptions", e);
+        }
+    };
+
     useEffect(() => {
         async function fetchData() {
             setIsLoading(true);
@@ -182,15 +199,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             await authClient.paystack.subscription.disable({
                 subscriptionCode,
             });
-            const res = await authClient.paystack.subscription.listLocal({ query: {} });
-            if (res.data) {
-                const data = res.data;
-                if (Array.isArray(data)) {
-                    setSubscriptions(data as Array<Subscription>);
-                } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
-                     setSubscriptions(data.subscriptions as Array<Subscription>);
-                }
-            }
+            await fetchSubscriptions(selectedBillingTarget);
         } catch (e: unknown) {
             console.error(e);
             if (e instanceof Error) {
@@ -207,15 +216,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             await authClient.paystack.subscription.restore({
                 subscriptionCode,
             });
-            const res = await authClient.paystack.subscription.listLocal({ query: {} });
-            if (res.data) {
-                const data = res.data;
-                if (Array.isArray(data)) {
-                    setSubscriptions(data as Array<Subscription>);
-                } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
-                     setSubscriptions(data.subscriptions as Array<Subscription>);
-                }
-            }
+            await fetchSubscriptions(selectedBillingTarget);
         } catch (e: unknown) {
             console.error(e);
             if (e instanceof Error) {

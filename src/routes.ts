@@ -429,25 +429,14 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
                                        { field: "role", value: "owner" }
                                    ]
                                });
-                               console.error("[DEBUG] Fallback Owner Lookup:", {
-                                   referenceId,
-                                   foundMember: !!ownerMember,
-                                   memberId: ownerMember?.id,
-                                   userId: ownerMember?.userId
-                               });
 
-                               if (ownerMember) {
-                                   const ownerUser = await ctx.context.adapter.findOne<User>({
-                                       model: "user",
-                                       where: [{ field: "id", value: ownerMember.userId }]
-                                   });
-                                   console.error("[DEBUG] Fallback User Lookup:", {
-                                       userId: ownerMember.userId,
-                                       foundUser: !!ownerUser,
-                                       email: ownerUser?.email
-                                   });
+                                if (ownerMember) {
+                                    const ownerUser = await ctx.context.adapter.findOne<User>({
+                                        model: "user",
+                                        where: [{ field: "id", value: ownerMember.userId }]
+                                    });
 
-                                   if (ownerUser?.email) {
+                                    if (ownerUser?.email) {
                                        targetEmail = ownerUser.email;
                                    }
                                }
@@ -535,7 +524,6 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
             }
 
             // 6. Record Transaction & Subscription
-            
             await ctx.context.adapter.create<InputPaystackTransaction, PaystackTransaction>({
                 model: "paystackTransaction",
                 data: {
@@ -657,10 +645,42 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
             if (status === "success") {
                 try {
                     const session = await getSessionFromCtx(ctx);
-                    const referenceIdFromCtx = (ctx.context as any).referenceId as
-                        | string
-                        | undefined;
-                    const referenceId = referenceIdFromCtx ?? (session?.user as any)?.id;
+                    
+                    // Get the local transaction record to know the intended referenceId (Org or User)
+                    const txRecord = await ctx.context.adapter.findOne<any>({
+                        model: "paystackTransaction",
+                        where: [{ field: "reference", value: reference }],
+                    });
+                    
+                    // Trust the referenceId from the record, fallback to session user if missing
+                    const referenceId = txRecord?.referenceId ?? (session?.user as any)?.id;
+
+                     // Authorization check: ensure the current user has access to this referenceId
+                     if (session && referenceId !== session.user.id) {
+                          const authRef = (subscriptionOptions as any)?.authorizeReference;
+                          let authorized = false;
+                          if (authRef) {
+                              authorized = await authRef({
+                                  user: session.user,
+                                  session,
+                                  referenceId,
+                                  action: "verify-transaction"
+                              }, ctx);
+                          } else if (options.organization?.enabled) {
+                               const member = await ctx.context.adapter.findOne({
+                                   model: "member",
+                                   where: [
+                                       { field: "userId", value: session.user.id },
+                                       { field: "organizationId", value: referenceId }
+                                   ]
+                               });
+                               if (member) authorized = true;
+                          }
+                          
+                          if (!authorized) {
+                              throw new APIError("UNAUTHORIZED");
+                          }
+                     }
 
                     await ctx.context.adapter.update({
                         model: "paystackTransaction",
