@@ -1,6 +1,6 @@
 {
   "name": "@alexasomba/better-auth-paystack",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0-rc.3",
   "description": "Community Better Auth plugin for Paystack (by alexasomba)",
   "license": "MIT",
   "author": "alexasomba",
