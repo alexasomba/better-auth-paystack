@@ -6,14 +6,14 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 
 ## Features
 
-[x] **Billing Patterns**: Support for Paystack-native plans, local-managed subscriptions, and one-time payments (products/amounts).
-[x] **Auto Customer Creation**: Optional Paystack customer creation on user sign up or organization creation.
-[x] **Trial Management**: Configurable trial periods with built-in abuse prevention logic.
-[x] **Organization Billing**: Associate subscriptions with organizations and authorize access via roles.
-[x] **Enforced Limits**: Automatic enforcement of seat limits (members) and resource limits (teams).
-[x] **Popup Modal Flow**: Optional support for Paystack's inline checkout experience via `@alexasomba/paystack-browser`.
-[x] **Webhook Security**: Pre-configured signature verification (HMAC-SHA512).
-[x] **Transaction History**: Built-in support for listing and viewing local transaction records.
+- [x] **Billing Patterns**: Support for Paystack-native plans, local-managed subscriptions, and one-time payments (products/amounts).
+- [x] **Auto Customer Creation**: Optional Paystack customer creation on user sign up or organization creation.
+- [x] **Trial Management**: Configurable trial periods with built-in abuse prevention logic.
+- [x] **Organization Billing**: Associate subscriptions with organizations and authorize access via roles.
+- [x] **Enforced Limits**: Automatic enforcement of seat limits (members) and resource limits (teams).
+- [x] **Popup Modal Flow**: Optional support for Paystack's inline checkout experience via `@alexasomba/paystack-browser`.
+- [x] **Webhook Security**: Pre-configured signature verification (HMAC-SHA512).
+- [x] **Transaction History**: Built-in support for listing and viewing local transaction records.
 
 ---
 
