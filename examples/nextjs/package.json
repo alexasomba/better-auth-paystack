@@ -29,6 +29,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@eslint/compat": "^2.0.2",
     "@eslint/eslintrc": "^3.3.3",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.19.10",
@@ -36,7 +37,7 @@
     "@types/react-dom": "^19.2.3",
     "dotenv": "^16.6.1",
     "drizzle-kit": "^0.31.8",
-    "eslint": "^9",
+    "eslint": "^9.39.2",
     "eslint-config-next": "~16.1.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",

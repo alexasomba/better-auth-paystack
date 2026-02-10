@@ -1,6 +1,8 @@
 import * as z from "zod/v4";
-import type { PaystackOptions, PaystackTransaction, Subscription } from "./types";
-type AnyPaystackOptions = PaystackOptions<any>;
+import type { GenericEndpointContext } from "better-auth";
+import type { PaystackOptions, PaystackTransaction, Subscription, PaystackClientLike } from "./types";
+import type { PaystackPlan, PaystackProduct } from "./types";
+type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
 declare const PAYSTACK_ERROR_CODES: {
     readonly SUBSCRIPTION_NOT_FOUND: "Subscription not found";
     readonly SUBSCRIPTION_PLAN_NOT_FOUND: "Subscription plan not found";
@@ -32,13 +34,13 @@ export declare const initializeTransaction: <P extends string = "/paystack/initi
         amount: z.ZodOptional<z.ZodNumber>;
         currency: z.ZodOptional<z.ZodString>;
         email: z.ZodOptional<z.ZodString>;
-        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         referenceId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
         quantity: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -61,7 +63,7 @@ export declare const initializeTransaction: <P extends string = "/paystack/initi
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     url: string | undefined;
     reference: string | undefined;
@@ -76,13 +78,13 @@ export declare const createSubscription: (options: AnyPaystackOptions) => import
         amount: z.ZodOptional<z.ZodNumber>;
         currency: z.ZodOptional<z.ZodString>;
         email: z.ZodOptional<z.ZodString>;
-        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         referenceId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
         quantity: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -105,7 +107,7 @@ export declare const createSubscription: (options: AnyPaystackOptions) => import
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     url: string | undefined;
     reference: string | undefined;
@@ -120,13 +122,13 @@ export declare const upgradeSubscription: (options: AnyPaystackOptions) => impor
         amount: z.ZodOptional<z.ZodNumber>;
         currency: z.ZodOptional<z.ZodString>;
         email: z.ZodOptional<z.ZodString>;
-        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         referenceId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
         quantity: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -149,7 +151,7 @@ export declare const upgradeSubscription: (options: AnyPaystackOptions) => impor
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     url: string | undefined;
     reference: string | undefined;
@@ -164,7 +166,7 @@ export declare const restoreSubscription: (options: AnyPaystackOptions) => impor
         emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -187,7 +189,7 @@ export declare const restoreSubscription: (options: AnyPaystackOptions) => impor
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     status: string;
 }>;
@@ -199,7 +201,7 @@ export declare const cancelSubscription: (options: AnyPaystackOptions) => import
         emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -222,7 +224,7 @@ export declare const cancelSubscription: (options: AnyPaystackOptions) => import
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     status: string;
 }>;
@@ -232,7 +234,7 @@ export declare const verifyTransaction: <P extends string = "/paystack/verify-tr
         reference: z.ZodString;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -255,11 +257,11 @@ export declare const verifyTransaction: <P extends string = "/paystack/verify-tr
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
-    status: any;
-    reference: any;
-    data: any;
+    status: string | undefined;
+    reference: string;
+    data: unknown;
 }>;
 export declare const listSubscriptions: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/list-subscriptions", {
     method: "GET";
@@ -267,7 +269,7 @@ export declare const listSubscriptions: (options: AnyPaystackOptions) => import(
         referenceId: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -290,7 +292,7 @@ export declare const listSubscriptions: (options: AnyPaystackOptions) => import(
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     subscriptions: Subscription[];
 }>;
@@ -300,7 +302,7 @@ export declare const listTransactions: <P extends string = "/paystack/list-trans
         referenceId: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -323,7 +325,7 @@ export declare const listTransactions: <P extends string = "/paystack/list-trans
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     transactions: PaystackTransaction[];
 }>;
@@ -335,7 +337,7 @@ export declare const disablePaystackSubscription: <P extends string = "/paystack
         emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -358,7 +360,7 @@ export declare const disablePaystackSubscription: <P extends string = "/paystack
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     status: string;
 }>;
@@ -370,7 +372,7 @@ export declare const enablePaystackSubscription: <P extends string = "/paystack/
         emailToken: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -393,7 +395,7 @@ export declare const enablePaystackSubscription: <P extends string = "/paystack/
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
     status: string;
 }>;
@@ -403,7 +405,7 @@ export declare const getSubscriptionManageLink: (options: AnyPaystackOptions) =>
         subscriptionCode: z.ZodString;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
-        referenceId: any;
+        referenceId: string;
     }>) | ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
         session: {
             session: Record<string, any> & {
@@ -426,9 +428,9 @@ export declare const getSubscriptionManageLink: (options: AnyPaystackOptions) =>
                 image?: string | null | undefined;
             };
         };
-    }>) | ((getValue: (ctx: import("better-auth").GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
 }, {
-    link: any;
+    link: unknown;
 }>;
 export declare const getConfig: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/get-config", {
     method: "GET";
@@ -438,8 +440,8 @@ export declare const getConfig: (options: AnyPaystackOptions) => import("better-
         };
     };
 }, {
-    plans: import("./types").PaystackPlan[];
-    products: import("./types").PaystackProduct[];
+    plans: PaystackPlan[];
+    products: PaystackProduct[];
 }>;
 export { PAYSTACK_ERROR_CODES };
 //# sourceMappingURL=routes.d.ts.map

@@ -1,12 +1,12 @@
-import type { BetterFetchResponse } from "@better-fetch/fetch";
+import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
 import type { PaystackTransaction, Subscription } from "./types";
 import type { paystack } from "./index";
 export declare const paystackClient: <O extends {
     subscription: boolean;
-}>(_options?: O | undefined) => {
+}>(_options?: O) => {
     id: "paystack";
-    $InferServerPlugin: ReturnType<typeof paystack<any, any>>;
-    getActions: ($fetch: import("@better-fetch/fetch").BetterFetch) => {
+    $InferServerPlugin: ReturnType<typeof paystack>;
+    getActions: ($fetch: BetterFetch) => {
         subscription: {
             /**
              * Initialize a transaction to upgrade or creating a subscription.
@@ -16,14 +16,14 @@ export declare const paystackClient: <O extends {
                 email?: string;
                 amount?: number;
                 reference?: string;
-                metadata?: Record<string, any>;
+                metadata?: Record<string, unknown>;
                 callbackUrl?: string;
                 callbackURL?: string;
                 currency?: string;
                 quantity?: number;
                 referenceId?: string;
                 product?: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;
                 accessCode: string;
@@ -37,14 +37,14 @@ export declare const paystackClient: <O extends {
                 email?: string;
                 amount?: number;
                 reference?: string;
-                metadata?: Record<string, any>;
+                metadata?: Record<string, unknown>;
                 callbackUrl?: string;
                 callbackURL?: string;
                 currency?: string;
                 quantity?: number;
                 referenceId?: string;
                 product?: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;
                 accessCode: string;
@@ -56,7 +56,7 @@ export declare const paystackClient: <O extends {
             cancel: (data: {
                 subscriptionCode: string;
                 emailToken?: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 status: string;
             }>>;
             /**
@@ -65,13 +65,15 @@ export declare const paystackClient: <O extends {
             restore: (data: {
                 subscriptionCode: string;
                 emailToken?: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 status: string;
             }>>;
             /**
              * List subscriptions for the user.
              */
-            list: (data?: any, options?: RequestInit) => Promise<BetterFetchResponse<{
+            list: (data?: {
+                query?: Record<string, unknown>;
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 subscriptions: Subscription[];
             }>>;
             /**
@@ -79,30 +81,32 @@ export declare const paystackClient: <O extends {
              */
             billingPortal: (data: {
                 subscriptionCode: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 link: string;
             }>>;
             /**
              * Aliases for legacy/demo usage.
              */
-            listLocal: (data?: any, options?: RequestInit) => Promise<BetterFetchResponse<{
+            listLocal: (data?: {
+                query?: Record<string, unknown>;
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 subscriptions: Subscription[];
             }>>;
             manageLink: (data: {
                 subscriptionCode: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 link: string;
             }>>;
             disable: (data: {
                 subscriptionCode: string;
                 emailToken?: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 status: string;
             }>>;
             enable: (data: {
                 subscriptionCode: string;
                 emailToken?: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 status: string;
             }>>;
         };
@@ -113,14 +117,14 @@ export declare const paystackClient: <O extends {
                     email?: string;
                     amount?: number;
                     reference?: string;
-                    metadata?: Record<string, any>;
+                    metadata?: Record<string, unknown>;
                     callbackUrl?: string;
                     callbackURL?: string;
                     currency?: string;
                     quantity?: number;
                     referenceId?: string;
                     product?: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
                     accessCode: string;
@@ -128,12 +132,14 @@ export declare const paystackClient: <O extends {
                 }>>;
                 verify: (data: {
                     reference: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     status: string;
                     reference: string;
-                    data: any;
+                    data: unknown;
                 }>>;
-                list: (data?: any, options?: RequestInit) => Promise<BetterFetchResponse<{
+                list: (data?: {
+                    query?: Record<string, unknown>;
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     transactions: PaystackTransaction[];
                 }>>;
             };
@@ -143,14 +149,14 @@ export declare const paystackClient: <O extends {
                     email?: string;
                     amount?: number;
                     reference?: string;
-                    metadata?: Record<string, any>;
+                    metadata?: Record<string, unknown>;
                     callbackUrl?: string;
                     callbackURL?: string;
                     currency?: string;
                     quantity?: number;
                     referenceId?: string;
                     product?: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
                     accessCode: string;
@@ -161,14 +167,14 @@ export declare const paystackClient: <O extends {
                     email?: string;
                     amount?: number;
                     reference?: string;
-                    metadata?: Record<string, any>;
+                    metadata?: Record<string, unknown>;
                     callbackUrl?: string;
                     callbackURL?: string;
                     currency?: string;
                     quantity?: number;
                     referenceId?: string;
                     product?: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
                     accessCode: string;
@@ -177,41 +183,45 @@ export declare const paystackClient: <O extends {
                 cancel: (data: {
                     subscriptionCode: string;
                     emailToken?: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     status: string;
                 }>>;
                 restore: (data: {
                     subscriptionCode: string;
                     emailToken?: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     status: string;
                 }>>;
-                list: (data?: any, options?: RequestInit) => Promise<BetterFetchResponse<{
+                list: (data?: {
+                    query?: Record<string, unknown>;
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     subscriptions: Subscription[];
                 }>>;
                 billingPortal: (data: {
                     subscriptionCode: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     link: string;
                 }>>;
-                listLocal: (data?: any, options?: RequestInit) => Promise<BetterFetchResponse<{
+                listLocal: (data?: {
+                    query?: Record<string, unknown>;
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     subscriptions: Subscription[];
                 }>>;
                 manageLink: (data: {
                     subscriptionCode: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     link: string;
                 }>>;
                 disable: (data: {
                     subscriptionCode: string;
                     emailToken?: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     status: string;
                 }>>;
                 enable: (data: {
                     subscriptionCode: string;
                     emailToken?: string;
-                }, options?: RequestInit) => Promise<BetterFetchResponse<{
+                }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     status: string;
                 }>>;
             };
@@ -220,14 +230,14 @@ export declare const paystackClient: <O extends {
                 email?: string;
                 amount?: number;
                 reference?: string;
-                metadata?: Record<string, any>;
+                metadata?: Record<string, unknown>;
                 callbackUrl?: string;
                 callbackURL?: string;
                 currency?: string;
                 quantity?: number;
                 referenceId?: string;
                 product?: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;
                 accessCode: string;
@@ -235,23 +245,27 @@ export declare const paystackClient: <O extends {
             }>>;
             verifyTransaction: (data: {
                 reference: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 status: string;
                 reference: string;
-                data: any;
+                data: unknown;
             }>>;
-            listTransactions: (data?: any, options?: RequestInit) => Promise<BetterFetchResponse<{
+            listTransactions: (data?: {
+                query?: Record<string, unknown>;
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 transactions: PaystackTransaction[];
             }>>;
-            listSubscriptions: (data?: any, options?: RequestInit) => Promise<BetterFetchResponse<{
+            listSubscriptions: (data?: {
+                query?: Record<string, unknown>;
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 subscriptions: Subscription[];
             }>>;
             getSubscriptionManageLink: (data: {
                 subscriptionCode: string;
-            }, options?: RequestInit) => Promise<BetterFetchResponse<{
+            }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 link: string;
             }>>;
-            getConfig: () => Promise<BetterFetchResponse<any>>;
+            getConfig: () => Promise<BetterFetchResponse<Record<string, unknown>>>;
         };
     };
 };

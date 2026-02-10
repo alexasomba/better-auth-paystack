@@ -20,14 +20,14 @@ export const paystackClient = (_options) => {
             const listTransactions = async (data = {}, options) => {
                 return $fetch("paystack/list-transactions", {
                     method: "GET",
-                    query: data?.query,
+                    query: data.query,
                     ...options,
                 });
             };
             const listSubscriptions = async (data = {}, options) => {
                 return $fetch("paystack/list-subscriptions", {
                     method: "GET",
-                    query: data?.query,
+                    query: data.query,
                     ...options,
                 });
             };

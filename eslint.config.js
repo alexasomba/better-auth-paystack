@@ -1,8 +1,10 @@
-import tsPlugin from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
+import tseslint from "typescript-eslint";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
-import importPlugin from "eslint-plugin-import";
+import importXPlugin from "eslint-plugin-import-x";
+import promisePlugin from "eslint-plugin-promise";
+import unicornPlugin from "eslint-plugin-unicorn";
 import js from "@eslint/js";
+import { fixupPluginRules } from "@eslint/compat";
 
 export default [
   {
@@ -10,21 +12,19 @@ export default [
       "**/*.js",
       "**/*.cjs",
       "**/*.mjs",
-      "node_modules",
-      "dist",
-      "coverage",
-      "build",
-      ".next",
-      ".turbo",
-      ".cache",
-      "docs",
-      "examples",
-      "scripts",
-      "test",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/coverage/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/.turbo/**",
+      "**/.cache/**",
+      "docs/**",
+      "scripts/**",
+      "examples/**/eslint.config.*",
       "vitest.config.ts",
       "vitest.config.js",
       "vitest.workspace.ts",
-      "test",
       "**/paystack-test.ts",
       "**/paystack-test.js",
       "**/*.d.ts",
@@ -36,36 +36,153 @@ export default [
     ],
   },
   js.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  ...tseslint.configs.stylisticTypeChecked,
   {
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
-        project: "./tsconfig.json", // Required for type-aware linting
+        project: "./tsconfig.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },
     plugins: {
-      "@typescript-eslint": tsPlugin,
-      "react-hooks": reactHooksPlugin,
-      import: importPlugin,
+      "react-hooks": fixupPluginRules(reactHooksPlugin),
+      import: importXPlugin,
+      promise: fixupPluginRules(promisePlugin),
+      unicorn: unicornPlugin,
     },
     rules: {
-      // --- TypeScript & Type Safety (Crucial for Better Auth) ---
-      "@typescript-eslint/no-floating-promises": "error", // Ensure auth actions are awaited
+      // --- Biome-style Adjustments ---
+      "indent": ["error", "tab"], // Biome indentStyle: tab
+      "prefer-const": "error", // Biome useConst: error
+      "no-debugger": "error", // Biome noDebugger: error
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "UnaryExpression[operator='delete']",
+          message: "Performance: Using 'delete' on object properties is discouraged. Set properties to undefined instead.", // Biome performance.noDelete: error
+        },
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "Date",
+          property: "getTime",
+          message: "Complexity: Use 'Date.now()' instead of 'new Date().getTime()'.", // Biome complexity.useDateNow: error
+        },
+      ],
+      
+      // --- TypeScript & Type Safety ---
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        {
+          checksVoidReturn: false,
+        },
+      ],
       "@typescript-eslint/await-thenable": "error",
-      "@typescript-eslint/no-explicit-any": "warn", // Avoid 'any' in auth schemas
-      "@typescript-eslint/strict-boolean-expressions": "error", // Safe null checks
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/strict-boolean-expressions": "warn",
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        { "ts-ignore": "allow-with-description" } // Biome noTsIgnore: error (but allowing desc is safer)
+      ],
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/consistent-generic-constructors": "off", // WORKAROUND: Crashes on ESLint 10 with isolatedDeclarations error
 
-      // --- React Hooks (For Better Auth Client) ---
+      // --- Import & Export Style ---
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "separate-type-imports", // Biome useImportType: separatedType
+        },
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "zod",
+              importNames: ["z"],
+              message: "Use `import * as z from \"zod\"` instead of `import { z }`.",
+            },
+          ],
+        },
+      ],
+
+      // --- Node.js Best Practices ---
+      "unicorn/prefer-node-protocol": "error", // Biome useNodejsImportProtocol: error
+
+      // --- React Hooks ---
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
 
+      // --- Unused Variables ---
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+
       // --- Best Practices ---
       "no-console": "warn",
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "off",
       "import/order": ["error", { "newlines-between": "always" }],
+      "promise/always-return": "warn",
+      "promise/catch-or-return": "warn",
+    },
+  },
+  {
+    // Packages source restriction for Buffer
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-restricted-types": [
+        "error",
+        {
+          types: {
+            Buffer: {
+              message: "Buffer is deprecated. Use `Uint8Array` instead.",
+              fixWith: "Uint8Array",
+            },
+          },
+        },
+      ],
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "Buffer",
+          message: "Buffer is deprecated. Use `Uint8Array` instead.",
+        },
+      ],
+    },
+  },
+  {
+    // Test & Example overrides
+    files: [
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/test/**",
+      "**/__tests__/**",
+      "src/paystack.test.ts",
+      "examples/**",
+    ],
+    rules: {
+      "no-restricted-globals": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-restricted-types": "off",
     },
   },
 ];

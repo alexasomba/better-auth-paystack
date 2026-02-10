@@ -134,7 +134,7 @@ export const organization = {
 };
 export const getSchema = (options) => {
     let baseSchema;
-    if (options.subscription?.enabled) {
+    if (options.subscription?.enabled === true) {
         baseSchema = {
             ...subscriptions,
             ...transactions,
@@ -148,17 +148,19 @@ export const getSchema = (options) => {
         };
     }
     // Add organization schema if organization support is enabled
-    if (options.organization?.enabled) {
+    if (options.organization?.enabled === true) {
         baseSchema = {
             ...baseSchema,
             ...organization,
         };
     }
-    if (options.schema &&
-        !options.subscription?.enabled &&
+    if (options.schema !== undefined &&
+        options.subscription?.enabled !== true &&
         "subscription" in options.schema) {
         const { subscription: _subscription, ...restSchema } = options.schema;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return mergeSchema(baseSchema, restSchema);
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return mergeSchema(baseSchema, options.schema);
 };

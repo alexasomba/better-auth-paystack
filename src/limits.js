@@ -11,7 +11,7 @@ export const checkSeatLimit = async (ctx, organizationId, seatsToAdd = 1) => {
     // For this implementation, let's say if no seats defined, it is unlimited or strictly limited 
     // depending on requirement. Usually unlimited if not specified, OR 1.
     // Let's assume if 'seats' is present, it's the limit.
-    if (!subscription || !subscription.seats) {
+    if (subscription?.seats === undefined || subscription.seats === null) {
         return true; // No explicit seat limit found
     }
     const members = await ctx.context.adapter.findMany({
