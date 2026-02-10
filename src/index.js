@@ -12,44 +12,44 @@ export const paystack = (options) => {
     const res = {
         id: "paystack",
         endpoints: {
-            "initialize-transaction": initializeTransaction(options),
-            "verify-transaction": verifyTransaction(options),
-            "list-subscriptions": listSubscriptions(options),
-            "paystack-webhook": paystackWebhook(options),
-            "list-transactions": listTransactions(options),
-            "get-config": getConfig(options),
-            "disable-subscription": disablePaystackSubscription(options),
-            "enable-subscription": enablePaystackSubscription(options),
-            "get-subscription-manage-link": getSubscriptionManageLink(options),
-            "create-subscription": createSubscription(options),
-            "upgrade-subscription": upgradeSubscription(options),
-            "cancel-subscription": cancelSubscription(options),
-            "restore-subscription": restoreSubscription(options),
+            initializeTransaction: initializeTransaction(options),
+            verifyTransaction: verifyTransaction(options),
+            listSubscriptions: listSubscriptions(options),
+            paystackWebhook: paystackWebhook(options),
+            listTransactions: listTransactions(options),
+            getConfig: getConfig(options),
+            disableSubscription: disablePaystackSubscription(options),
+            enableSubscription: enablePaystackSubscription(options),
+            getSubscriptionManageLink: getSubscriptionManageLink(options),
+            createSubscription: createSubscription(options),
+            upgradeSubscription: upgradeSubscription(options),
+            cancelSubscription: cancelSubscription(options),
+            restoreSubscription: restoreSubscription(options),
         },
         schema: getSchema(options),
-        init: async (ctx) => {
+        init: (ctx) => {
             return {
                 options: {
                     databaseHooks: {
                         user: {
                             create: {
                                 async after(user, hookCtx) {
-                                    if (!hookCtx || !options.createCustomerOnSignUp)
+                                    if (hookCtx === undefined || hookCtx === null || options.createCustomerOnSignUp !== true)
                                         return;
                                     const paystackOps = getPaystackOps(options.paystackClient);
                                     const raw = await paystackOps.customerCreate({
                                         email: user.email,
-                                        first_name: user.name || undefined,
+                                        first_name: user.name ?? undefined,
                                         metadata: {
                                             userId: user.id,
                                         },
                                     });
                                     const data = unwrapSdkResult(raw);
-                                    const customerCode = data?.customer_code || data?.data?.customer_code;
-                                    if (!customerCode) {
+                                    const customerCode = data?.customer_code ?? data?.data?.customer_code;
+                                    if (customerCode === undefined || customerCode === null) {
                                         return;
                                     }
-                                    await hookCtx.context.adapter.update({
+                                    await ctx.adapter.update({
                                         model: "user",
                                         where: [{ field: "id", value: user.id }],
                                         update: {
@@ -59,7 +59,7 @@ export const paystack = (options) => {
                                 },
                             },
                         },
-                        organization: options.organization?.enabled
+                        organization: options.organization?.enabled === true
                             ? {
                                 create: {
                                     async after(org, hookCtx) {
@@ -68,43 +68,44 @@ export const paystack = (options) => {
                                                 ? await options.organization.getCustomerCreateParams(org, hookCtx)
                                                 : {};
                                             let targetEmail = org.email;
-                                            if (!targetEmail) {
-                                                const ownerMember = await hookCtx.context.adapter.findOne({
+                                            if (targetEmail === undefined || targetEmail === null) {
+                                                const ownerMember = await ctx.adapter.findOne({
                                                     model: "member",
                                                     where: [
                                                         { field: "organizationId", value: org.id },
                                                         { field: "role", value: "owner" }
                                                     ]
                                                 });
-                                                if (ownerMember) {
-                                                    const ownerUser = await hookCtx.context.adapter.findOne({
+                                                if (ownerMember !== null && ownerMember !== undefined) {
+                                                    const ownerUser = await ctx.adapter.findOne({
                                                         model: "user",
                                                         where: [{ field: "id", value: ownerMember.userId }]
                                                     });
                                                     targetEmail = ownerUser?.email;
                                                 }
                                             }
-                                            if (!targetEmail)
+                                            if (targetEmail === undefined || targetEmail === null)
                                                 return;
                                             const params = defu({
                                                 email: targetEmail,
                                                 first_name: org.name,
                                                 metadata: { organizationId: org.id },
                                             }, extraCreateParams);
-                                            const paystack = getPaystackOps(options.paystackClient);
-                                            const raw = await paystack.customerCreate(params);
+                                            const paystackOps = getPaystackOps(options.paystackClient);
+                                            const raw = await paystackOps.customerCreate(params);
                                             const sdkRes = unwrapSdkResult(raw);
-                                            const paystackCustomer = sdkRes && typeof sdkRes === "object" && "status" in sdkRes && "data" in sdkRes
+                                            const paystackCustomer = sdkRes !== null && typeof sdkRes === "object" && "status" in sdkRes && "data" in sdkRes
                                                 ? sdkRes.data
                                                 : sdkRes?.data ?? sdkRes;
                                             const customerCode = paystackCustomer?.customer_code;
-                                            if (!customerCode)
+                                            if (customerCode === undefined || customerCode === null)
                                                 return;
-                                            await hookCtx.context.internalAdapter.updateOrganization(org.id, {
+                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                            await ctx.internalAdapter.updateOrganization(org.id, {
                                                 paystackCustomerCode: customerCode,
                                             });
                                             await options.organization?.onCustomerCreate?.({
-                                                paystackCustomer,
+                                                paystackCustomer: paystackCustomer,
                                                 organization: {
                                                     ...org,
                                                     paystackCustomerCode: customerCode,
@@ -112,7 +113,7 @@ export const paystack = (options) => {
                                             }, hookCtx);
                                         }
                                         catch (error) {
-                                            ctx.context.logger.error("Failed to create Paystack customer for organization", error);
+                                            ctx.logger.error("Failed to create Paystack customer for organization", error);
                                         }
                                     },
                                 },
@@ -122,7 +123,7 @@ export const paystack = (options) => {
                     member: {
                         create: {
                             before: async (member, ctx) => {
-                                if (options.subscription?.enabled && member.organizationId && ctx) {
+                                if (options.subscription?.enabled === true && member.organizationId && ctx !== null && ctx !== undefined) {
                                     await checkSeatLimit(ctx, member.organizationId);
                                 }
                             },
@@ -131,7 +132,7 @@ export const paystack = (options) => {
                     invitation: {
                         create: {
                             before: async (invitation, ctx) => {
-                                if (options.subscription?.enabled && invitation.organizationId && ctx) {
+                                if (options.subscription?.enabled === true && invitation.organizationId && ctx !== null && ctx !== undefined) {
                                     await checkSeatLimit(ctx, invitation.organizationId);
                                 }
                             },
@@ -140,9 +141,9 @@ export const paystack = (options) => {
                     team: {
                         create: {
                             before: async (team, ctx) => {
-                                if (options.subscription?.enabled && team.organizationId && ctx) {
+                                if (options.subscription?.enabled === true && team.organizationId && ctx !== null && ctx !== undefined) {
                                     const subscription = await getOrganizationSubscription(ctx, team.organizationId);
-                                    if (subscription) {
+                                    if (subscription !== null && subscription !== undefined) {
                                         const plan = await getPlanByName(options, subscription.plan);
                                         const limits = plan?.limits;
                                         const maxTeams = limits?.teams;

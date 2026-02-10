@@ -1,13 +1,13 @@
 import type { GenericEndpointContext, InferOptionSchema, Session, User } from "better-auth";
-export type { GenericEndpointContext, InferOptionSchema, Session, User, };
 import type { createPaystack } from "@alexasomba/paystack-node";
 import type { organization, subscriptions, user } from "./schema";
+export type { GenericEndpointContext, InferOptionSchema, Session, User, };
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
-export type PaystackOpenApiFetchResponse<T = unknown> = {
+export interface PaystackOpenApiFetchResponse<T = unknown> {
     data?: T;
     error?: unknown;
     response?: Response;
-};
+}
 export type PaystackApiResult<T = unknown> = Promise<T | PaystackOpenApiFetchResponse<T>>;
 type NonNullableInit<T> = Exclude<T, undefined>;
 type ExtractBody<T> = T extends {
@@ -66,12 +66,12 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
         };
     };
 };
-type NoInfer<T> = [T][T extends any ? 0 : never];
+type NoInfer<T> = [T][T extends unknown ? 0 : never];
 export type AuthSession = {
     user: User;
     session: Session;
-} & Record<string, any>;
-export type PaystackPlan = {
+} & Record<string, unknown>;
+export interface PaystackPlan {
     /** Human name stored in DB (lowercased). */
     name: string;
     /** Paystack plan code (if you use Paystack plans). */
@@ -99,7 +99,7 @@ export type PaystackPlan = {
         }, ctx: GenericEndpointContext) => Promise<void>;
         onTrialExpired?: (subscription: Subscription, ctx: GenericEndpointContext) => Promise<void>;
     } | undefined;
-};
+}
 export interface PaystackProduct {
     /** Human-readable name of the product. */
     name: string;
@@ -148,52 +148,53 @@ export interface Subscription {
 }
 export interface InputSubscription extends Omit<Subscription, "id"> {
 }
-export type SubscriptionOptions = {
+export interface SubscriptionOptions {
     plans: PaystackPlan[] | (() => PaystackPlan[] | Promise<PaystackPlan[]>);
     requireEmailVerification?: boolean | undefined;
     authorizeReference?: ((data: {
         user: User;
-        session: AuthSession;
+        session: Session;
         referenceId: string;
         action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "list-transactions" | "disable-subscription" | "enable-subscription" | "get-subscription-manage-link";
     }, ctx: GenericEndpointContext) => Promise<boolean>) | undefined;
     onSubscriptionComplete?: ((data: {
-        event: any;
+        event: unknown;
         subscription: Subscription;
         plan: PaystackPlan;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionUpdate?: ((data: {
-        event: any;
+        event: unknown;
         subscription: Subscription;
+        plan?: PaystackPlan;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionCreated?: ((data: {
-        event: any;
+        event: unknown;
         subscription: Subscription;
         plan: PaystackPlan;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionCancel?: ((data: {
-        event: any;
+        event: unknown;
         subscription: Subscription;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionDelete?: ((data: {
-        event: any;
+        event: unknown;
         subscription: Subscription;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
-};
-export type ProductOptions = {
+}
+export interface ProductOptions {
     products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
-};
-export type OrganizationOptions = {
+}
+export interface OrganizationOptions {
     enabled: boolean;
     createCustomerOnOrganizationCreate?: boolean | undefined;
     onCustomerCreate?: ((data: {
-        paystackCustomer: any;
-        organization: any & {
+        paystackCustomer: Record<string, unknown>;
+        organization: Record<string, unknown> & {
             paystackCustomerCode: string;
         };
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
-    getCustomerCreateParams?: ((organization: any, ctx: GenericEndpointContext) => Promise<Record<string, any>>) | undefined;
-};
+    getCustomerCreateParams?: ((organization: unknown, ctx: GenericEndpointContext) => Promise<Record<string, unknown>>) | undefined;
+}
 export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackNodeClient> {
     /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
     paystackClient: NoInfer<TPaystackClient>;
@@ -202,12 +203,12 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
     /** Enable customer creation on Better Auth sign up. */
     createCustomerOnSignUp?: boolean | undefined;
     onCustomerCreate?: ((data: {
-        paystackCustomer: any;
+        paystackCustomer: Record<string, unknown>;
         user: User & {
             paystackCustomerCode: string;
         };
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
-    getCustomerCreateParams?: ((user: User, ctx: GenericEndpointContext) => Promise<Record<string, any>>) | undefined;
+    getCustomerCreateParams?: ((user: User, ctx: GenericEndpointContext) => Promise<Record<string, unknown>>) | undefined;
     subscription?: ({
         enabled: false;
     } | ({
@@ -215,10 +216,8 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
     } & SubscriptionOptions)) | undefined;
     products?: ProductOptions | undefined;
     organization?: OrganizationOptions | undefined;
-    onEvent?: ((event: any) => Promise<void>) | undefined;
+    onEvent?: ((event: unknown) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user & typeof organization> | undefined;
-}
-export interface InputSubscription extends Omit<Subscription, "id"> {
 }
 export interface Organization {
     id: string;
@@ -228,8 +227,8 @@ export interface Organization {
     email?: string | undefined;
     createdAt: Date;
     updatedAt: Date;
-    metadata?: any;
-    [key: string]: any;
+    metadata?: unknown;
+    [key: string]: unknown;
 }
 export interface Member {
     id: string;
@@ -238,6 +237,6 @@ export interface Member {
     role: string;
     createdAt: Date;
     updatedAt: Date;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 //# sourceMappingURL=types.d.ts.map

@@ -64,7 +64,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 const data = subRes.data;
                 if (Array.isArray(data)) {
                     setSubscriptions(data as Array<Subscription>);
-                } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
+                } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
                      setSubscriptions(data.subscriptions as Array<Subscription>);
                 }
             }
@@ -87,7 +87,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                     const data = subRes.data;
                     if (Array.isArray(data)) {
                         setSubscriptions(data as Array<Subscription>);
-                    } else if (data && "subscriptions" in data && Array.isArray(data.subscriptions)) {
+                    } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
                          setSubscriptions(data.subscriptions as Array<Subscription>);
                     }
                 }

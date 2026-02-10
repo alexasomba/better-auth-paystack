@@ -3,10 +3,12 @@ import { logger } from "better-auth";
 import { APIError } from "better-auth/api";
 export const referenceMiddleware = (options, action) => createAuthMiddleware(async (ctx) => {
     const session = ctx.context.session;
-    if (!session) {
+    if (session === null || session === undefined) {
         throw new APIError("UNAUTHORIZED");
     }
-    const referenceId = ctx.body?.referenceId || ctx.query?.referenceId || session.user.id;
+    const body = (ctx.body ?? {});
+    const query = (ctx.query ?? {});
+    const referenceId = body.referenceId ?? query.referenceId ?? session.user.id;
     const subscriptionOptions = options.subscription;
     if (referenceId === session.user.id) {
         return {
@@ -14,14 +16,14 @@ export const referenceMiddleware = (options, action) => createAuthMiddleware(asy
         };
     }
     // 1. Try custom authorization first if provided
-    if (subscriptionOptions?.enabled && 'authorizeReference' in subscriptionOptions && subscriptionOptions.authorizeReference) {
+    if (subscriptionOptions?.enabled === true && 'authorizeReference' in subscriptionOptions && subscriptionOptions.authorizeReference) {
         const authorized = await subscriptionOptions.authorizeReference({
             user: session.user,
-            session,
+            session: session.session,
             referenceId,
             action,
         }, ctx);
-        if (authorized) {
+        if (authorized === true) {
             return {
                 referenceId,
             };
@@ -32,7 +34,7 @@ export const referenceMiddleware = (options, action) => createAuthMiddleware(asy
         throw new APIError("UNAUTHORIZED");
     }
     // 2. Fallback: Organization Check
-    if (options.organization?.enabled) {
+    if (options.organization?.enabled === true) {
         // Check if referenceId indicates an organization the user is a member of
         const member = await ctx.context.adapter.findOne({
             model: "member",
@@ -41,8 +43,8 @@ export const referenceMiddleware = (options, action) => createAuthMiddleware(asy
                 { field: "organizationId", value: referenceId }
             ]
         });
-        if (member) {
-            console.log("DEBUG MIDDLEWARE MEMBER FOUND:", member);
+        if (member !== null && member !== undefined) {
+            logger.debug("DEBUG MIDDLEWARE MEMBER FOUND:", member);
             // User is a member of the organization.
             // We could check roles here, but for now allow any member.
             return {

@@ -1,5 +1,5 @@
 import type { BetterAuthPluginDBSchema } from "@better-auth/core/db";
-import type { PaystackOptions } from "./types";
+import type { PaystackClientLike, PaystackOptions } from "./types";
 export declare const transactions: {
     paystackTransaction: {
         fields: {
@@ -133,5 +133,5 @@ export declare const organization: {
         };
     };
 };
-export declare const getSchema: (options: PaystackOptions<any>) => BetterAuthPluginDBSchema;
+export declare const getSchema: (options: PaystackOptions<PaystackClientLike>) => BetterAuthPluginDBSchema;
 //# sourceMappingURL=schema.d.ts.map

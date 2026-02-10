@@ -1,27 +1,27 @@
 import type {
-    GenericEndpointContext,
-    InferOptionSchema,
-    Session,
-    User,
+	GenericEndpointContext,
+	InferOptionSchema,
+	Session,
+	User,
 } from "better-auth";
-
-export type {
-    GenericEndpointContext,
-    InferOptionSchema,
-    Session,
-    User,
-};
 import type { createPaystack } from "@alexasomba/paystack-node";
 
 import type { organization, subscriptions, user } from "./schema";
 
+export type {
+	GenericEndpointContext,
+	InferOptionSchema,
+	Session,
+	User,
+};
+
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
 
-export type PaystackOpenApiFetchResponse<T = unknown> = {
+export interface PaystackOpenApiFetchResponse<T = unknown> {
     data?: T;
     error?: unknown;
     response?: Response;
-};
+}
 
 export type PaystackApiResult<T = unknown> = Promise<T | PaystackOpenApiFetchResponse<T>>;
 
@@ -91,14 +91,14 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
     };
 };
 
-type NoInfer<T> = [T][T extends any ? 0 : never];
+type NoInfer<T> = [T][T extends unknown ? 0 : never];
 
 export type AuthSession = {
     user: User;
     session: Session;
-} & Record<string, any>;
+} & Record<string, unknown>;
 
-export type PaystackPlan = {
+export interface PaystackPlan {
     /** Human name stored in DB (lowercased). */
     name: string;
     /** Paystack plan code (if you use Paystack plans). */
@@ -133,7 +133,7 @@ export type PaystackPlan = {
         onTrialExpired?: (subscription: Subscription, ctx: GenericEndpointContext) => Promise<void>;
     }
     | undefined;
-};
+}
 
 export interface PaystackProduct {
     /** Human-readable name of the product. */
@@ -193,14 +193,14 @@ export interface Subscription {
 
 export interface InputSubscription extends Omit<Subscription, "id"> { }
 
-export type SubscriptionOptions = {
+export interface SubscriptionOptions {
     plans: PaystackPlan[] | (() => PaystackPlan[] | Promise<PaystackPlan[]>);
     requireEmailVerification?: boolean | undefined;
     authorizeReference?:
     | ((
         data: {
             user: User;
-            session: AuthSession;
+            session: Session;
             referenceId: string;
             action:
             | "initialize-transaction"
@@ -217,7 +217,7 @@ export type SubscriptionOptions = {
     onSubscriptionComplete?:
     | ((
         data: {
-            event: any;
+            event: unknown;
             subscription: Subscription;
             plan: PaystackPlan;
         },
@@ -227,8 +227,9 @@ export type SubscriptionOptions = {
     onSubscriptionUpdate?:
     | ((
         data: {
-            event: any;
+            event: unknown;
             subscription: Subscription;
+            plan?: PaystackPlan;
         },
         ctx: GenericEndpointContext,
     ) => Promise<void>)
@@ -236,7 +237,7 @@ export type SubscriptionOptions = {
     onSubscriptionCreated?:
     | ((
         data: {
-            event: any;
+            event: unknown;
             subscription: Subscription;
             plan: PaystackPlan;
         },
@@ -246,7 +247,7 @@ export type SubscriptionOptions = {
     onSubscriptionCancel?:
     | ((
         data: {
-            event: any;
+            event: unknown;
             subscription: Subscription;
         },
         ctx: GenericEndpointContext,
@@ -255,34 +256,34 @@ export type SubscriptionOptions = {
     onSubscriptionDelete?:
     | ((
         data: {
-            event: any;
+            event: unknown;
             subscription: Subscription;
         },
         ctx: GenericEndpointContext,
     ) => Promise<void>)
     | undefined;
-};
+}
 
-export type ProductOptions = {
+export interface ProductOptions {
     products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
-};
+}
 
-export type OrganizationOptions = {
+export interface OrganizationOptions {
     enabled: boolean;
     createCustomerOnOrganizationCreate?: boolean | undefined;
     onCustomerCreate?:
     | ((
         data: {
-            paystackCustomer: any;
-            organization: any & { paystackCustomerCode: string };
+            paystackCustomer: Record<string, unknown>;
+            organization: Record<string, unknown> & { paystackCustomerCode: string };
         },
         ctx: GenericEndpointContext,
     ) => Promise<void>)
     | undefined;
     getCustomerCreateParams?:
-    | ((organization: any, ctx: GenericEndpointContext) => Promise<Record<string, any>>)
+    | ((organization: unknown, ctx: GenericEndpointContext) => Promise<Record<string, unknown>>)
     | undefined;
-};
+}
 
 export interface PaystackOptions<
     TPaystackClient extends PaystackClientLike = PaystackNodeClient,
@@ -296,14 +297,14 @@ export interface PaystackOptions<
     onCustomerCreate?:
     | ((
         data: {
-            paystackCustomer: any;
+            paystackCustomer: Record<string, unknown>;
             user: User & { paystackCustomerCode: string };
         },
         ctx: GenericEndpointContext,
     ) => Promise<void>)
     | undefined;
     getCustomerCreateParams?:
-    | ((user: User, ctx: GenericEndpointContext) => Promise<Record<string, any>>)
+    | ((user: User, ctx: GenericEndpointContext) => Promise<Record<string, unknown>>)
     | undefined;
     subscription?:
     | (
@@ -317,11 +318,9 @@ export interface PaystackOptions<
     | undefined;
     products?: ProductOptions | undefined;
     organization?: OrganizationOptions | undefined;
-    onEvent?: ((event: any) => Promise<void>) | undefined;
+    onEvent?: ((event: unknown) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user & typeof organization> | undefined;
 }
-
-export interface InputSubscription extends Omit<Subscription, "id"> { }
 
 export interface Organization {
     id: string;
@@ -331,8 +330,8 @@ export interface Organization {
     email?: string | undefined;
     createdAt: Date;
     updatedAt: Date;
-    metadata?: any;
-    [key: string]: any;
+    metadata?: unknown;
+    [key: string]: unknown;
 }
 
 export interface Member {
@@ -342,5 +341,5 @@ export interface Member {
     role: string;
     createdAt: Date;
     updatedAt: Date;
-    [key: string]: any;
+    [key: string]: unknown;
 }
