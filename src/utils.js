@@ -27,13 +27,6 @@ export async function getPlanByPriceId(options, priceId) {
     }
     return null;
 }
-// The original getPlans and getPlanByName functions are replaced/modified based on the provided snippet.
-// The original getPlans function's logic for fetching plans (async/function call) is not present in the new functions.
-// This implies that PaystackOptions["subscription"]["plans"] is now expected to be an array directly,
-// or the fetching logic is handled elsewhere before these utility functions are called.
-// The original getProducts and getProductByName functions are retained as they were not part of the explicit change,
-// except for the `any` type which should be removed if possible, but the instruction only showed changes for subscription/plans.
-// Given the instruction "replace any", I'll remove it from getProductByName as well.
 export async function getProducts(productOptions) {
     if (productOptions?.products) {
         return typeof productOptions.products === "function"

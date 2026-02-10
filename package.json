@@ -1,19 +1,44 @@
 {
   "name": "@alexasomba/better-auth-paystack",
   "version": "1.0.0-rc.3",
-  "description": "Community Better Auth plugin for Paystack (by alexasomba)",
+  "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "license": "MIT",
   "author": "alexasomba",
-  "categories": [],
+  "homepage": "https://github.com/alexasomba/better-auth-paystack#readme",
+  "bugs": {
+    "url": "https://github.com/alexasomba/better-auth-paystack/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alexasomba/better-auth-paystack.git"
   },
+  "funding": [
+    {
+      "type": "individual",
+      "url": "https://solscan.io/account/Gepby394bBBn4AEKkSwAPVnjgBULvYTiXBpbZe9CQqSp"
+    }
+  ],
   "keywords": [
     "paystack",
     "auth",
-    "better-auth"
+    "better-auth",
+    "billing-system",
+    "checkout",
+    "fintech",
+    "nigeria",
+    "ghana",
+    "south-africa",
+    "kenya",
+    "ivory-coast",
+    "cote-divoire",
+    "egypt",
+    "rwanda",
+    "subscriptions",
+    "saas"
   ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "type": "module",
   "packageManager": "pnpm@10.26.0",
   "types": "./dist/index.d.mts",
