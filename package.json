@@ -1,6 +1,6 @@
 {
   "name": "@alexasomba/better-auth-paystack",
-  "version": "1.0.0-rc.3",
+  "version": "1.0.0",
   "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "license": "MIT",
   "author": "alexasomba",
@@ -33,7 +33,14 @@
     "cote-divoire",
     "egypt",
     "rwanda",
+    "ngn",
+    "ghs",
+    "zar",
+    "kes",
+    "usd",
+    "egp",
     "subscriptions",
+    "africa",
     "saas"
   ],
   "engines": {
