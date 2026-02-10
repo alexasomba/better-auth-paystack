@@ -1,5 +1,5 @@
-
 import type { GenericEndpointContext } from "better-auth";
+import { APIError } from "better-auth/api";
 
 import type { Subscription } from "./types";
 
@@ -21,11 +21,6 @@ export const checkSeatLimit = async (
 ) => {
 	const subscription = await getOrganizationSubscription(ctx, organizationId);
     
-	// If no subscription or no seats defined, we assume no limit or fallback to default
-	// For this implementation, let's say if no seats defined, it is unlimited or strictly limited 
-	// depending on requirement. Usually unlimited if not specified, OR 1.
-	// Let's assume if 'seats' is present, it's the limit.
-    
 	if (subscription?.seats === undefined || subscription.seats === null) {
 		return true; // No explicit seat limit found
 	}
@@ -36,7 +31,9 @@ export const checkSeatLimit = async (
 	});
 
 	if (members.length + seatsToAdd > subscription.seats) {
-		throw new Error(`Organization member limit reached. Used: ${members.length}, Max: ${subscription.seats}`);
+		throw new APIError("FORBIDDEN", {
+			message: `Organization member limit reached. Used: ${members.length}, Max: ${subscription.seats}`
+		});
 	}
 
 	return true;
@@ -53,7 +50,9 @@ export const checkTeamLimit = async (
 	});
 
 	if (teams.length >= maxTeams) {
-		throw new Error(`Organization team limit reached. Max teams: ${maxTeams}`);
+		throw new APIError("FORBIDDEN", {
+			message: `Organization team limit reached. Max teams: ${maxTeams}`
+		});
 	}
 
 	return true;

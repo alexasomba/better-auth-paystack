@@ -258,7 +258,7 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 						}
 					}
 				} catch (_e: unknown) {
-					(ctx as unknown as { context: { logger: { error: (msg: string, err: unknown) => void } } }).context.logger.error("Failed to sync Paystack webhook event", _e);
+					ctx.context.logger.error("Failed to sync Paystack webhook event", _e);
 				}
 			}
 
@@ -502,7 +502,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 					}
 				} else {
 					// One-Time Payment Flow
-					if (amount === undefined || amount === null || amount === 0) throw new Error("Amount is required for one-time payments");
+					if (amount === undefined || amount === null || amount === 0) throw new APIError("BAD_REQUEST", { message: "Amount is required for one-time payments" });
 					initBody.amount = Math.round(amount);
 				}
 
@@ -627,7 +627,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 				const verifyRaw = await paystack.transactionVerify(ctx.body.reference);
 				verifyRes = unwrapSdkResult<Record<string, unknown>>(verifyRaw);
 			} catch (error: unknown) {
-				(ctx as unknown as { context: { logger: { error: (msg: string, err: unknown) => void } } }).context.logger.error("Failed to verify Paystack transaction", error);
+				ctx.context.logger.error("Failed to verify Paystack transaction", error);
 				throw new APIError("BAD_REQUEST", {
 					code: "FAILED_TO_VERIFY_TRANSACTION",
 					message:
@@ -1054,7 +1054,7 @@ export const enablePaystackSubscription = <P extends string = "/paystack/enable-
 				}
                 
 				if (emailToken === undefined || emailToken === null || emailToken === "") {
-					throw new Error("Could not retrieve email_token for subscription enable.");
+					throw new APIError("BAD_REQUEST", { message: "Could not retrieve email_token for subscription enable." });
 				}
 
 				await paystack.subscriptionEnable({ code: subscriptionCode, token: emailToken });
@@ -1071,7 +1071,7 @@ export const enablePaystackSubscription = <P extends string = "/paystack/enable-
 
 				return ctx.json({ status: "success" });
 			} catch (error: unknown) {
-				(ctx as unknown as { context: { logger: { error: (msg: string, err: unknown) => void } } }).context.logger.error("Failed to enable subscription", error);
+				ctx.context.logger.error("Failed to enable subscription", error);
 				throw new APIError("BAD_REQUEST", {
 					code: "FAILED_TO_ENABLE_SUBSCRIPTION",
 					message:
@@ -1113,7 +1113,7 @@ export const getSubscriptionManageLink = (options: AnyPaystackOptions) => {
                 
 				return ctx.json({ link });
 			} catch (error: unknown) {
-				(ctx as unknown as { context: { logger: { error: (msg: string, err: unknown) => void } } }).context.logger.error("Failed to get subscription manage link", error);
+				ctx.context.logger.error("Failed to get subscription manage link", error);
 				throw new APIError("BAD_REQUEST", {
 					message: (error as Error)?.message ?? "Failed to get subscription manage link",
 				});

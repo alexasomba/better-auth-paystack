@@ -426,7 +426,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             else {
                 // One-Time Payment Flow
                 if (amount === undefined || amount === null || amount === 0)
-                    throw new Error("Amount is required for one-time payments");
+                    throw new APIError("BAD_REQUEST", { message: "Amount is required for one-time payments" });
                 initBody.amount = Math.round(amount);
             }
             const initRaw = await paystack.transactionInitialize(initBody);
@@ -907,7 +907,7 @@ export const enablePaystackSubscription = (options, path = "/paystack/enable-sub
                 }
             }
             if (emailToken === undefined || emailToken === null || emailToken === "") {
-                throw new Error("Could not retrieve email_token for subscription enable.");
+                throw new APIError("BAD_REQUEST", { message: "Could not retrieve email_token for subscription enable." });
             }
             await paystack.subscriptionEnable({ code: subscriptionCode, token: emailToken });
             // Update local status immediately
