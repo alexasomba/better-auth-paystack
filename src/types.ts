@@ -16,6 +16,7 @@ export type {
 };
 
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
+export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
 
 export interface PaystackOpenApiFetchResponse<T = unknown> {
     data?: T;
@@ -53,12 +54,18 @@ type SubscriptionToggleInit = NonNullableInit<
     Parameters<PaystackNodeClient["subscription_disable"]>[0]
 >;
 
+type TransactionChargeAuthorizationInit = NonNullableInit<
+    Parameters<PaystackNodeClient["transaction_chargeAuthorization"]>[0]
+>;
+
 export type PaystackCustomerCreateInput =
     WithMetadataStringOrObject<ExtractBody<CustomerCreateInit>>;
 export type PaystackCustomerUpdateInput =
     WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
 export type PaystackTransactionInitializeInput =
     WithMetadataObject<ExtractBody<TransactionInitializeInit>>;
+export type PaystackTransactionChargeAuthorizationInput =
+    WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;
 export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;
 export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit>;
 
@@ -78,6 +85,7 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
     transaction?: {
         initialize?: (params: PaystackTransactionInitializeInput) => Promise<unknown>;
         verify?: (reference: string) => Promise<unknown>;
+        chargeAuthorization?: (params: PaystackTransactionChargeAuthorizationInput) => Promise<unknown>;
     };
     subscription?: {
         fetch?: (idOrCode: string) => Promise<unknown>;
@@ -106,7 +114,7 @@ export interface PaystackPlan {
     /** Amount in the smallest currency unit (e.g. kobo). */
     amount?: number | undefined;
     /** Currency ISO code (e.g. NGN). */
-    currency?: string | undefined;
+    currency?: PaystackCurrency | (string & {}) | undefined;
     /** Paystack interval keyword (when using Paystack plans). */
     interval?:
     | "daily"
@@ -141,7 +149,7 @@ export interface PaystackProduct {
     /** Amount in the smallest currency unit (e.g., kobo). */
     amount: number;
     /** Currency ISO code (e.g., NGN). */
-    currency: string;
+    currency: PaystackCurrency | (string & {});
     /** Optional metadata to include with the transaction. */
     metadata?: Record<string, unknown> | undefined;
     /** Optional description of the product. */
@@ -157,7 +165,7 @@ export interface PaystackTransaction {
     referenceId: string;
     userId: string;
     amount: number;
-    currency: string;
+    currency: PaystackCurrency | (string & {});
     status: string;
     plan?: string | undefined;
     metadata?: string | undefined;
@@ -174,6 +182,8 @@ export interface Subscription {
     paystackCustomerCode?: string | undefined;
     paystackSubscriptionCode?: string | undefined;
     paystackTransactionReference?: string | undefined;
+    paystackAuthorizationCode?: string | undefined;
+    paystackEmailToken?: string | undefined;
     status:
     | "active"
     | "canceled"

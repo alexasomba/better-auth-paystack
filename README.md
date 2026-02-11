@@ -167,6 +167,21 @@ The plugin natively checks the `teams` limit if using the Better Auth Organizati
 
 ---
 
+## Currency Support
+
+The plugin supports the following currencies with automatic minimum transaction amount validation:
+
+| Currency | Name                   | Minimum Amount |
+| -------- | ---------------------- | -------------- |
+| **NGN**  | Nigerian Naira         | ₦50.00         |
+| **GHS**  | Ghanaian Cedi          | ₵0.10          |
+| **ZAR**  | South African Rand     | R1.00          |
+| **KES**  | Kenyan Shilling        | KSh 3.00       |
+| **USD**  | United States Dollar   | $2.00          |
+| **XOF**  | West African CFA Franc | CFA 100        |
+
+Transactions below these thresholds will be rejected with a `BAD_REQUEST` error.
+
 ## Advanced Usage
 
 ### Organization Billing
@@ -338,6 +353,9 @@ type listSubscriptions = {
 
 Cancel or restore a subscription.
 
+- **Cancel**: Sets `cancelAtPeriodEnd: true`. The subscription remains `active` until the end of the current billing period, after which it moves to `canceled`.
+- **Restore**: Reactivates a subscription that is scheduled to cancel.
+
 ```ts
 type cancelSubscription = {
   /**
@@ -371,20 +389,21 @@ The plugin extends your database with the following fields and tables.
 
 ### `subscription`
 
-| Field                          | Type      | Required | Description                                                     |
-| :----------------------------- | :-------- | :------- | :-------------------------------------------------------------- |
-| `plan`                         | `string`  | Yes      | Lowercased name of the active plan.                             |
-| `referenceId`                  | `string`  | Yes      | Associated User ID or Organization ID.                          |
-| `paystackCustomerCode`         | `string`  | No       | The Paystack customer code for this subscription.               |
-| `paystackSubscriptionCode`     | `string`  | No       | The unique code for the subscription (e.g., `SUB_...`).         |
-| `paystackTransactionReference` | `string`  | No       | The reference of the transaction that started the subscription. |
-| `status`                       | `string`  | Yes      | `active`, `trialing`, `canceled`, `incomplete`.                 |
-| `periodStart`                  | `Date`    | No       | Start date of the current billing period.                       |
-| `periodEnd`                    | `Date`    | No       | End date of the current billing period.                         |
-| `trialStart`                   | `Date`    | No       | Start date of the trial period.                                 |
-| `trialEnd`                     | `Date`    | No       | End date of the trial period.                                   |
-| `cancelAtPeriodEnd`            | `boolean` | No       | Whether to cancel at the end of the current period.             |
-| `seats`                        | `number`  | No       | Purchased seat count for team billing.                          |
+| Field                          | Type      | Required | Description                                                          |
+| :----------------------------- | :-------- | :------- | :------------------------------------------------------------------- |
+| `plan`                         | `string`  | Yes      | Lowercased name of the active plan.                                  |
+| `referenceId`                  | `string`  | Yes      | Associated User ID or Organization ID.                               |
+| `paystackCustomerCode`         | `string`  | No       | The Paystack customer code for this subscription.                    |
+| `paystackSubscriptionCode`     | `string`  | No       | The unique code for the subscription (e.g., `SUB_...` or `LOC_...`). |
+| `paystackTransactionReference` | `string`  | No       | The reference of the transaction that started the subscription.      |
+| `paystackAuthorizationCode`    | `string`  | No       | Stored card authorization code for recurring charges (local plans).  |
+| `status`                       | `string`  | Yes      | `active`, `trialing`, `canceled`, `incomplete`.                      |
+| `periodStart`                  | `Date`    | No       | Start date of the current billing period.                            |
+| `periodEnd`                    | `Date`    | No       | End date of the current billing period.                              |
+| `trialStart`                   | `Date`    | No       | Start date of the trial period.                                      |
+| `trialEnd`                     | `Date`    | No       | End date of the trial period.                                        |
+| `cancelAtPeriodEnd`            | `boolean` | No       | Whether to cancel at the end of the current period.                  |
+| `seats`                        | `number`  | No       | Purchased seat count for team billing.                               |
 
 ### `paystackTransaction`
 
@@ -440,14 +459,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Future features planned for upcoming versions:
 
-### v1.1.0 - Manual Recurring Subscriptions
+### v1.1.0 - Manual Recurring Subscriptions (Available Now)
 
-- [ ] **Stored Authorization Codes**: Securely store Paystack authorization codes from verified transactions
-- [ ] **Card Management UI**: Let users view/delete saved payment methods (masked card data only)
-- [ ] **Charge Authorization Endpoint**: Server-side endpoint to charge stored cards for renewals
-- [ ] **Renewal Scheduler Integration**: Documentation for integrating with Cloudflare Workers Cron, Vercel Cron, etc.
+- [x] **Stored Authorization Codes**: Securely store Paystack authorization codes from verified transactions.
+- [x] **Charge Authorization Endpoint**: Server-side endpoint (`/charge-recurring`) to charge stored cards for renewals.
+- [ ] **Card Management UI**: Let users view/delete saved payment methods (masked card data only) - _Upcoming_
+- [ ] **Renewal Scheduler Integration**: Documentation for integrating with Cloudflare Workers Cron, Vercel Cron, etc. - _Upcoming_
 
-> **Note**: For automatic recurring subscriptions today, use Paystack-managed plans via `planCode`. Manual recurring (storing authorization codes) is planned for a future release.
+> **Note**: For local-managed subscriptions (no `planCode`), the plugin now automatically captures and stores the `authorization_code`. You can trigger renewals using `authClient.paystack.chargeRecurringSubscription({ subscriptionId })`.
 
 ### Future Considerations
 

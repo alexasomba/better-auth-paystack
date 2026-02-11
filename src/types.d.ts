@@ -3,6 +3,7 @@ import type { createPaystack } from "@alexasomba/paystack-node";
 import type { organization, subscriptions, user } from "./schema";
 export type { GenericEndpointContext, InferOptionSchema, Session, User, };
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
+export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
 export interface PaystackOpenApiFetchResponse<T = unknown> {
     data?: T;
     error?: unknown;
@@ -27,9 +28,11 @@ type CustomerUpdateInit = NonNullableInit<Parameters<PaystackNodeClient["custome
 type TransactionInitializeInit = NonNullableInit<Parameters<PaystackNodeClient["transaction_initialize"]>[0]>;
 type SubscriptionCreateInit = NonNullableInit<Parameters<PaystackNodeClient["subscription_create"]>[0]>;
 type SubscriptionToggleInit = NonNullableInit<Parameters<PaystackNodeClient["subscription_disable"]>[0]>;
+type TransactionChargeAuthorizationInit = NonNullableInit<Parameters<PaystackNodeClient["transaction_chargeAuthorization"]>[0]>;
 export type PaystackCustomerCreateInput = WithMetadataStringOrObject<ExtractBody<CustomerCreateInit>>;
 export type PaystackCustomerUpdateInput = WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
 export type PaystackTransactionInitializeInput = WithMetadataObject<ExtractBody<TransactionInitializeInit>>;
+export type PaystackTransactionChargeAuthorizationInput = WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;
 export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;
 export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit>;
 export type PaystackSubscriptionFetchInit = {
@@ -54,6 +57,7 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
     transaction?: {
         initialize?: (params: PaystackTransactionInitializeInput) => Promise<unknown>;
         verify?: (reference: string) => Promise<unknown>;
+        chargeAuthorization?: (params: PaystackTransactionChargeAuthorizationInput) => Promise<unknown>;
     };
     subscription?: {
         fetch?: (idOrCode: string) => Promise<unknown>;
@@ -79,7 +83,7 @@ export interface PaystackPlan {
     /** Amount in the smallest currency unit (e.g. kobo). */
     amount?: number | undefined;
     /** Currency ISO code (e.g. NGN). */
-    currency?: string | undefined;
+    currency?: PaystackCurrency | (string & {}) | undefined;
     /** Paystack interval keyword (when using Paystack plans). */
     interval?: "daily" | "weekly" | "monthly" | "quarterly" | "biannually" | "annually" | undefined;
     /** Optional description of the plan. */
@@ -106,7 +110,7 @@ export interface PaystackProduct {
     /** Amount in the smallest currency unit (e.g., kobo). */
     amount: number;
     /** Currency ISO code (e.g., NGN). */
-    currency: string;
+    currency: PaystackCurrency | (string & {});
     /** Optional metadata to include with the transaction. */
     metadata?: Record<string, unknown> | undefined;
     /** Optional description of the product. */
@@ -121,7 +125,7 @@ export interface PaystackTransaction {
     referenceId: string;
     userId: string;
     amount: number;
-    currency: string;
+    currency: PaystackCurrency | (string & {});
     status: string;
     plan?: string | undefined;
     metadata?: string | undefined;
@@ -137,6 +141,8 @@ export interface Subscription {
     paystackCustomerCode?: string | undefined;
     paystackSubscriptionCode?: string | undefined;
     paystackTransactionReference?: string | undefined;
+    paystackAuthorizationCode?: string | undefined;
+    paystackEmailToken?: string | undefined;
     status: "active" | "canceled" | "incomplete" | "incomplete_expired" | "paused" | "trialing" | "unpaid";
     periodStart?: Date | undefined;
     periodEnd?: Date | undefined;

@@ -122,5 +122,16 @@ export function getPaystackOps(paystackClient) {
             }
             return paystackClient?.subscription?.manage?.email?.(code, email);
         },
+        transactionChargeAuthorization: (body) => {
+            if (paystackClient?.transaction_chargeAuthorization !== undefined) {
+                return paystackClient.transaction_chargeAuthorization({
+                    // casting to avoid deep type issues with metadata
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    body: body, // casting to avoid deep type issues with metadata
+                });
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return paystackClient?.transaction?.chargeAuthorization?.(body);
+        },
     };
 }

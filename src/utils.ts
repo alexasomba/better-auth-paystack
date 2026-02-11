@@ -51,3 +51,48 @@ export async function getProductByName(options: PaystackOptions<PaystackClientLi
 		products?.find((product) => product.name.toLowerCase() === name.toLowerCase()),
 	);
 }
+
+export function getNextPeriodEnd(startDate: Date, interval: string): Date {
+	const date = new Date(startDate);
+	switch (interval) {
+	case "daily":
+		date.setDate(date.getDate() + 1);
+		break;
+	case "weekly":
+		date.setDate(date.getDate() + 7);
+		break;
+	case "monthly":
+		date.setMonth(date.getMonth() + 1);
+		break;
+	case "quarterly":
+		date.setMonth(date.getMonth() + 3);
+		break;
+	case "biannually":
+		date.setMonth(date.getMonth() + 6);
+		break;
+	case "annually":
+		date.setFullYear(date.getFullYear() + 1);
+		break;
+	default:
+		// Default to monthly if unknown
+		date.setMonth(date.getMonth() + 1);
+	}
+	return date;
+}
+
+/**
+ * Validates if the amount meets Paystack's minimum transaction requirements.
+ * Amounts should be in the smallest currency unit (e.g., kobo, cents).
+ */
+export function validateMinAmount(amount: number, currency: string): boolean {
+	const minAmounts: Record<string, number> = {
+		NGN: 5000, // 50.00
+		GHS: 10,   // 0.10
+		ZAR: 100,  // 1.00
+		KES: 300,  // 3.00
+		USD: 200,  // 2.00
+		XOF: 100,  // 1.00
+	};
+	const min = minAmounts[currency.toUpperCase()];
+	return min !== undefined ? amount >= min : true;
+}
