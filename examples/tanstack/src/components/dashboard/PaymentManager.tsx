@@ -425,7 +425,9 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                         <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{plan.name}</p>
                                         <div className="flex items-baseline gap-1">
                                             <p className="text-3xl font-bold">
-                                                {plan.amount ? formatCurrency(plan.amount * (selectedBillingTarget !== "personal" ? seats : 1), plan.currency) : "Custom"}
+                                                {plan.amount 
+                                                    ? formatCurrency(plan.amount * ((selectedBillingTarget !== "personal" && !plan.planCode) ? seats : 1), plan.currency) 
+                                                    : "Custom"}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
                                                 /{plan.interval || "mo"}
