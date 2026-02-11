@@ -5,10 +5,10 @@ import { setCookieToHeader } from "better-auth/cookies";
 import { bearer } from "better-auth/plugins";
 import { describe, expect, it, vi } from "vitest";
 
-import { paystackClient } from "./client";
-import type { PaystackClientLike, PaystackOptions, Subscription } from "./types";
+import { paystackClient } from "../src/client";
+import type { PaystackClientLike, PaystackOptions, Subscription } from "../src/types";
 
-import { paystack } from "./index";
+import { paystack } from "../src/index";
 
 describe("Issue #60: Subscription Cancellation Logic", () => {
 	it("should set cancelAtPeriodEnd and keep status active until period end", async () => {
