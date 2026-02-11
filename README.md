@@ -358,47 +358,47 @@ The plugin extends your database with the following fields and tables.
 
 ### `user`
 
-| Field                  | Type     | Description                                   |
-| :--------------------- | :------- | :-------------------------------------------- |
-| `paystackCustomerCode` | `string` | The unique customer identifier from Paystack. |
+| Field                  | Type     | Required | Description                                   |
+| :--------------------- | :------- | :------- | :-------------------------------------------- |
+| `paystackCustomerCode` | `string` | No       | The unique customer identifier from Paystack. |
 
 ### `organization`
 
-| Field                  | Type     | Description                                                                                |
-| :--------------------- | :------- | :----------------------------------------------------------------------------------------- |
-| `paystackCustomerCode` | `string` | The unique customer identifier for the organization.                                       |
-| `email`                | `string` | The billing email for the organization. fallsback to organization owner's email if absent. |
+| Field                  | Type     | Required | Description                                                                                |
+| :--------------------- | :------- | :------- | :----------------------------------------------------------------------------------------- |
+| `paystackCustomerCode` | `string` | No       | The unique customer identifier for the organization.                                       |
+| `email`                | `string` | No       | The billing email for the organization. fallsback to organization owner's email if absent. |
 
 ### `subscription`
 
-| Field                          | Type      | Description                                                     |
-| :----------------------------- | :-------- | :-------------------------------------------------------------- |
-| `plan`                         | `string`  | Lowercased name of the active plan.                             |
-| `referenceId`                  | `string`  | Associated User ID or Organization ID.                          |
-| `paystackCustomerCode`         | `string`  | The Paystack customer code for this subscription.               |
-| `paystackSubscriptionCode`     | `string`  | The unique code for the subscription (e.g., `SUB_...`).         |
-| `paystackTransactionReference` | `string`  | The reference of the transaction that started the subscription. |
-| `status`                       | `string`  | `active`, `trialing`, `canceled`, `incomplete`.                 |
-| `periodStart`                  | `Date`    | Start date of the current billing period.                       |
-| `periodEnd`                    | `Date`    | End date of the current billing period.                         |
-| `trialStart`                   | `Date`    | Start date of the trial period.                                 |
-| `trialEnd`                     | `Date`    | End date of the trial period.                                   |
-| `cancelAtPeriodEnd`            | `boolean` | Whether to cancel at the end of the current period.             |
-| `seats`                        | `number`  | Purchased seat count for team billing.                          |
+| Field                          | Type      | Required | Description                                                     |
+| :----------------------------- | :-------- | :------- | :-------------------------------------------------------------- |
+| `plan`                         | `string`  | Yes      | Lowercased name of the active plan.                             |
+| `referenceId`                  | `string`  | Yes      | Associated User ID or Organization ID.                          |
+| `paystackCustomerCode`         | `string`  | No       | The Paystack customer code for this subscription.               |
+| `paystackSubscriptionCode`     | `string`  | No       | The unique code for the subscription (e.g., `SUB_...`).         |
+| `paystackTransactionReference` | `string`  | No       | The reference of the transaction that started the subscription. |
+| `status`                       | `string`  | Yes      | `active`, `trialing`, `canceled`, `incomplete`.                 |
+| `periodStart`                  | `Date`    | No       | Start date of the current billing period.                       |
+| `periodEnd`                    | `Date`    | No       | End date of the current billing period.                         |
+| `trialStart`                   | `Date`    | No       | Start date of the trial period.                                 |
+| `trialEnd`                     | `Date`    | No       | End date of the trial period.                                   |
+| `cancelAtPeriodEnd`            | `boolean` | No       | Whether to cancel at the end of the current period.             |
+| `seats`                        | `number`  | No       | Purchased seat count for team billing.                          |
 
 ### `paystackTransaction`
 
-| Field         | Type     | Description                                       |
-| :------------ | :------- | :------------------------------------------------ |
-| `reference`   | `string` | Unique transaction reference.                     |
-| `referenceId` | `string` | Associated User ID or Organization ID.            |
-| `userId`      | `string` | The ID of the user who initiated the transaction. |
-| `amount`      | `number` | Transaction amount in smallest currency unit.     |
-| `currency`    | `string` | Currency code (e.g., "NGN").                      |
-| `status`      | `string` | `success`, `pending`, `failed`, `abandoned`.      |
-| `plan`        | `string` | Name of the plan associated with the transaction. |
-| `metadata`    | `string` | JSON string of extra transaction metadata.        |
-| `paystackId`  | `string` | The internal Paystack ID for the transaction.     |
+| Field         | Type     | Required | Description                                       |
+| :------------ | :------- | :------- | :------------------------------------------------ |
+| `reference`   | `string` | Yes      | Unique transaction reference.                     |
+| `referenceId` | `string` | Yes      | Associated User ID or Organization ID.            |
+| `userId`      | `string` | Yes      | The ID of the user who initiated the transaction. |
+| `amount`      | `number` | Yes      | Transaction amount in smallest currency unit.     |
+| `currency`    | `string` | Yes      | Currency code (e.g., "NGN").                      |
+| `status`      | `string` | Yes      | `success`, `pending`, `failed`, `abandoned`.      |
+| `plan`        | `string` | No       | Name of the plan associated with the transaction. |
+| `metadata`    | `string` | No       | JSON string of extra transaction metadata.        |
+| `paystackId`  | `string` | No       | The internal Paystack ID for the transaction.     |
 
 ---
 
