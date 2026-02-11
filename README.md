@@ -167,6 +167,21 @@ The plugin natively checks the `teams` limit if using the Better Auth Organizati
 
 ---
 
+## Currency Support
+
+The plugin supports the following currencies with automatic minimum transaction amount validation:
+
+| Currency | Name                   | Minimum Amount |
+| -------- | ---------------------- | -------------- |
+| **NGN**  | Nigerian Naira         | ₦50.00         |
+| **GHS**  | Ghanaian Cedi          | ₵0.10          |
+| **ZAR**  | South African Rand     | R1.00          |
+| **KES**  | Kenyan Shilling        | KSh 3.00       |
+| **USD**  | United States Dollar   | $2.00          |
+| **XOF**  | West African CFA Franc | CFA 100        |
+
+Transactions below these thresholds will be rejected with a `BAD_REQUEST` error.
+
 ## Advanced Usage
 
 ### Organization Billing
