@@ -205,6 +205,7 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 											paystackSubscriptionCode: subscriptionCode,
 											status: "active",
 											updatedAt: new Date(),
+											periodEnd: (data?.next_payment_date !== undefined && data?.next_payment_date !== null && data?.next_payment_date !== "") ? new Date(data.next_payment_date) : undefined,
 										},
 										where: [{ field: "id", value: subscription.id }],
 									});
@@ -238,10 +239,15 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 								where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
 							});
 
+							let newStatus = "canceled";
+							if (existing?.cancelAtPeriodEnd === true && existing.periodEnd !== undefined && existing.periodEnd !== null && new Date(existing.periodEnd) > new Date()) {
+								newStatus = "active";
+							}
+
 							await ctx.context.adapter.update({
 								model: "subscription",
 								update: {
-									status: "canceled",
+									status: newStatus,
 									updatedAt: new Date(),
 								},
 								where: [
@@ -941,18 +947,24 @@ export const disablePaystackSubscription = <P extends string = "/paystack/disabl
 			const paystack = getPaystackOps(options.paystackClient);
 			try {
 				let emailToken = ctx.body.emailToken;
-				if (emailToken === undefined || emailToken === null || emailToken === "") {
-					try {
-						const raw = await paystack.subscriptionFetch(subscriptionCode);
-						const fetchRes = unwrapSdkResult<Record<string, unknown>>(raw);
-						const data =
-                            fetchRes !== null && fetchRes !== undefined && typeof fetchRes === "object" && "status" in fetchRes && "data" in fetchRes
-                            	? (fetchRes).data
-                            	: fetchRes?.data !== undefined ? fetchRes.data : fetchRes;
+				let nextPaymentDate: string | undefined;
+
+				// Always fetch subscription to get next_payment_date even if we have emailToken (unless passed? no, next_payment_date comes from paystack)
+				// We need next_payment_date for cancelAtPeriodEnd logic
+				try {
+					const raw = await paystack.subscriptionFetch(subscriptionCode);
+					const fetchRes = unwrapSdkResult<Record<string, unknown>>(raw);
+					const data =
+                        fetchRes !== null && fetchRes !== undefined && typeof fetchRes === "object" && "status" in fetchRes && "data" in fetchRes
+                        	? (fetchRes).data
+                        	: fetchRes?.data !== undefined ? fetchRes.data : fetchRes;
+					
+					if (emailToken === undefined || emailToken === null || emailToken === "") {
 						emailToken = (data as Record<string, unknown>)?.email_token as string | undefined;
-					} catch {
-						// ignore; try manage-link fallback below
 					}
+					nextPaymentDate = (data as Record<string, unknown>)?.next_payment_date as string | undefined;
+				} catch {
+					// ignore fetch failure? If we can't fetch, we might miss next_payment_date.
 				}
 
 				if (emailToken === undefined || emailToken === null || emailToken === "") {
@@ -963,9 +975,6 @@ export const disablePaystackSubscription = <P extends string = "/paystack/disabl
                             linkRes !== null && linkRes !== undefined && typeof linkRes === "object" && "status" in linkRes && "data" in linkRes
                             	? (linkRes).data
                             	: linkRes?.data !== undefined ? linkRes.data : linkRes;
-						// data might be string (link) or object with link?
-						// SDK says it returns string usually? 
-						// Actually the SDK wrapper returns the response object.
 						const link = typeof data === "string" ? data : (data as Record<string, unknown>)?.link as string | undefined;
                         
 						if (link !== undefined && link !== null && link !== "") {
@@ -977,22 +986,39 @@ export const disablePaystackSubscription = <P extends string = "/paystack/disabl
 				}
                 
 				if (emailToken === undefined || emailToken === null || emailToken === "") {
-					// One last try: send email to owner? No, that's async.
-					// If we still don't have emailToken, we can't disable.
 					throw new Error("Could not retrieve email_token for subscription disable.");
 				}
 
 				await paystack.subscriptionDisable({ code: subscriptionCode, token: emailToken });
                 
-				// Update local status immediately
-				await ctx.context.adapter.update({
+				// Implement Cancel at Period End logic
+				// Paystack "disable" stops future charges.
+				// We keep status as "active" but set cancelAtPeriodEnd = true
+				
+				// Duplicate removed
+
+				const periodEnd = (nextPaymentDate !== undefined && nextPaymentDate !== null && nextPaymentDate !== "") ? new Date(nextPaymentDate) : undefined;
+				
+				const sub = await ctx.context.adapter.findOne<Subscription>({
 					model: "subscription",
-					update: {
-						status: "canceled",
-						updatedAt: new Date(),
-					},
 					where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
 				});
+
+				if (sub) {
+					await ctx.context.adapter.update({
+						model: "subscription",
+						update: {
+							status: "active", // Keep active until period end
+							cancelAtPeriodEnd: true,
+							periodEnd,
+							updatedAt: new Date(),
+						},
+						where: [{ field: "id", value: sub.id }],
+					});
+				} else {
+					// This is unexpected if we are disabling a subscription that should exist
+					ctx.context.logger.warn(`Could not find subscription with code ${subscriptionCode} to disable`);
+				}
 
 				return ctx.json({ status: "success" });
 			} catch (error: unknown) {
