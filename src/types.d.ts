@@ -27,9 +27,11 @@ type CustomerUpdateInit = NonNullableInit<Parameters<PaystackNodeClient["custome
 type TransactionInitializeInit = NonNullableInit<Parameters<PaystackNodeClient["transaction_initialize"]>[0]>;
 type SubscriptionCreateInit = NonNullableInit<Parameters<PaystackNodeClient["subscription_create"]>[0]>;
 type SubscriptionToggleInit = NonNullableInit<Parameters<PaystackNodeClient["subscription_disable"]>[0]>;
+type TransactionChargeAuthorizationInit = NonNullableInit<Parameters<PaystackNodeClient["transaction_chargeAuthorization"]>[0]>;
 export type PaystackCustomerCreateInput = WithMetadataStringOrObject<ExtractBody<CustomerCreateInit>>;
 export type PaystackCustomerUpdateInput = WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
 export type PaystackTransactionInitializeInput = WithMetadataObject<ExtractBody<TransactionInitializeInit>>;
+export type PaystackTransactionChargeAuthorizationInput = WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;
 export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;
 export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit>;
 export type PaystackSubscriptionFetchInit = {
@@ -54,6 +56,7 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
     transaction?: {
         initialize?: (params: PaystackTransactionInitializeInput) => Promise<unknown>;
         verify?: (reference: string) => Promise<unknown>;
+        chargeAuthorization?: (params: PaystackTransactionChargeAuthorizationInput) => Promise<unknown>;
     };
     subscription?: {
         fetch?: (idOrCode: string) => Promise<unknown>;
@@ -137,6 +140,8 @@ export interface Subscription {
     paystackCustomerCode?: string | undefined;
     paystackSubscriptionCode?: string | undefined;
     paystackTransactionReference?: string | undefined;
+    paystackAuthorizationCode?: string | undefined;
+    paystackEmailToken?: string | undefined;
     status: "active" | "canceled" | "incomplete" | "incomplete_expired" | "paused" | "trialing" | "unpaid";
     periodStart?: Date | undefined;
     periodEnd?: Date | undefined;

@@ -17,6 +17,7 @@ import {
 	upgradeSubscription,
 	cancelSubscription,
 	restoreSubscription,
+	chargeRecurringSubscription,
 } from "./routes";
 import { getSchema } from "./schema";
 import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
@@ -61,6 +62,7 @@ export const paystack = <
 			upgradeSubscription: upgradeSubscription(options),
 			cancelSubscription: cancelSubscription(options),
 			restoreSubscription: restoreSubscription(options),
+			chargeRecurringSubscription: chargeRecurringSubscription(options),
 		},
 		schema: getSchema(options),
 		init: (ctx: AuthContext) => {

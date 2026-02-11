@@ -444,4 +444,13 @@ export declare const getConfig: (options: AnyPaystackOptions) => import("better-
     products: PaystackProduct[];
 }>;
 export { PAYSTACK_ERROR_CODES };
+export declare const chargeRecurringSubscription: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/charge-recurring", {
+    method: "POST";
+    body: z.ZodObject<{
+        subscriptionId: z.ZodString;
+    }, z.core.$strip>;
+}, {
+    status: string;
+    data: Record<string, unknown>;
+}>;
 //# sourceMappingURL=routes.d.ts.map

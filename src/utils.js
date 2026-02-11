@@ -38,3 +38,30 @@ export async function getProducts(productOptions) {
 export async function getProductByName(options, name) {
     return await getProducts(options.products).then((products) => products?.find((product) => product.name.toLowerCase() === name.toLowerCase()));
 }
+export function getNextPeriodEnd(startDate, interval) {
+    const date = new Date(startDate);
+    switch (interval) {
+        case "daily":
+            date.setDate(date.getDate() + 1);
+            break;
+        case "weekly":
+            date.setDate(date.getDate() + 7);
+            break;
+        case "monthly":
+            date.setMonth(date.getMonth() + 1);
+            break;
+        case "quarterly":
+            date.setMonth(date.getMonth() + 3);
+            break;
+        case "biannually":
+            date.setMonth(date.getMonth() + 6);
+            break;
+        case "annually":
+            date.setFullYear(date.getFullYear() + 1);
+            break;
+        default:
+            // Default to monthly if unknown
+            date.setMonth(date.getMonth() + 1);
+    }
+    return date;
+}

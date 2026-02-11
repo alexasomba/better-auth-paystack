@@ -8,6 +8,7 @@ import type {
 	PaystackSubscriptionCreateInput,
 	PaystackSubscriptionToggleInput,
 	PaystackTransactionInitializeInput,
+	PaystackTransactionChargeAuthorizationInput,
 } from "./types";
 
 function isOpenApiFetchResponse(
@@ -157,6 +158,14 @@ export function getPaystackOps(
 				});
 			}
 			return paystackClient?.subscription?.manage?.email?.(code, email);
+		},
+		transactionChargeAuthorization: (body: PaystackTransactionChargeAuthorizationInput) => {
+			if (paystackClient?.transaction_chargeAuthorization !== undefined) {
+				return paystackClient.transaction_chargeAuthorization({
+					body: body as any, // casting to avoid deep type issues with metadata
+				});
+			}
+			return paystackClient?.transaction?.chargeAuthorization?.(body as any);
 		},
 	};
 }

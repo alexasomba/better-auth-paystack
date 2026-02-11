@@ -433,6 +433,15 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         }, {
             status: string;
         }>;
+        readonly chargeRecurringSubscription: import("better-call").StrictEndpoint<"/paystack/charge-recurring", {
+            method: "POST";
+            body: import("zod").ZodObject<{
+                subscriptionId: import("zod").ZodString;
+            }, import("better-auth").$strip>;
+        }, {
+            status: string;
+            data: Record<string, unknown>;
+        }>;
     };
     readonly schema: import("@better-auth/core/db").BetterAuthPluginDBSchema;
     readonly init: (ctx: AuthContext) => {

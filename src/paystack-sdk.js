@@ -122,5 +122,13 @@ export function getPaystackOps(paystackClient) {
             }
             return paystackClient?.subscription?.manage?.email?.(code, email);
         },
+        transactionChargeAuthorization: (body) => {
+            if (paystackClient?.transaction_chargeAuthorization !== undefined) {
+                return paystackClient.transaction_chargeAuthorization({
+                    body: body, // casting to avoid deep type issues with metadata
+                });
+            }
+            return paystackClient?.transaction?.chargeAuthorization?.(body);
+        },
     };
 }

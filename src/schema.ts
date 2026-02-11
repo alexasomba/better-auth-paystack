@@ -77,6 +77,14 @@ export const subscriptions = {
 				type: "string",
 				required: false,
 			},
+			paystackAuthorizationCode: {
+				type: "string",
+				required: false,
+			},
+			paystackEmailToken: {
+				type: "string",
+				required: false,
+			},
 			status: {
 				type: "string",
 				defaultValue: "incomplete",

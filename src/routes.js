@@ -3,7 +3,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "better-auth/api";
 import * as z from "zod/v4";
-import { getPlanByName, getPlans, getProductByName, getProducts } from "./utils";
+import { getNextPeriodEnd, getPlanByName, getPlans, getProductByName, getProducts } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
@@ -554,6 +554,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
         const status = data?.status;
         const reference = data?.reference ?? ctx.body.reference;
         const paystackId = data?.id !== undefined && data?.id !== null ? String(data.id) : undefined;
+        const authorizationCode = data?.authorization?.authorization_code;
         if (status === "success") {
             try {
                 const session = await getSessionFromCtx(ctx);
@@ -639,11 +640,14 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                 let paystackSubscriptionCode;
                 if (isTrial === true && (targetPlan !== undefined && targetPlan !== null && targetPlan !== "") && (trialEnd !== undefined && trialEnd !== null && trialEnd !== "")) {
                     // Trial Flow: Create subscription with future start date using auth code
-                    const authorizationCode = data?.authorization?.authorization_code;
                     const email = data?.customer?.email;
                     // We need the planCode. We have the plan NAME in metadata (lowercased).
                     const plans = await getPlans(subscriptionOptions);
                     const planConfig = plans.find(p => p.name.toLowerCase() === targetPlan?.toLowerCase());
+                    // For local plans (no planCode), generate a local subscription code
+                    if (planConfig !== undefined && (planConfig.planCode === undefined || planConfig.planCode === null || planConfig.planCode === "")) {
+                        paystackSubscriptionCode = `LOC_${reference}`;
+                    }
                     if ((authorizationCode !== undefined && authorizationCode !== null && authorizationCode !== "") && (email !== undefined && email !== null && email !== "") && (planConfig?.planCode !== undefined && planConfig?.planCode !== null && planConfig?.planCode !== "")) {
                         const subRes = await paystack.subscriptionCreate({
                             customer: email,
@@ -656,13 +660,31 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                         paystackSubscriptionCode = (cleanSubData)?.subscription_code;
                     }
                 }
+                else if (isTrial !== true) {
+                    const planFromPaystack = data?.plan;
+                    const planCodeFromPaystack = planFromPaystack?.plan_code;
+                    if (planCodeFromPaystack === undefined || planCodeFromPaystack === null || planCodeFromPaystack === "") {
+                        // Local Plan
+                        paystackSubscriptionCode = `LOC_${reference}`;
+                    }
+                    else {
+                        // Native Paystack subscription (if created during charge)
+                        paystackSubscriptionCode = data?.subscription?.subscription_code;
+                    }
+                }
                 const updatedSubscription = await ctx.context.adapter.update({
                     model: "subscription",
                     update: {
                         status: isTrial === true ? "trialing" : "active",
                         periodStart: new Date(),
                         updatedAt: new Date(),
+                        ...(isTrial === true && (trialEnd !== undefined && trialEnd !== null && trialEnd !== "") ? {
+                            trialStart: new Date(),
+                            trialEnd: new Date(trialEnd),
+                            periodEnd: new Date(trialEnd),
+                        } : {}),
                         ...(paystackSubscriptionCode !== undefined && paystackSubscriptionCode !== null && paystackSubscriptionCode !== "" ? { paystackSubscriptionCode } : {}),
+                        ...(authorizationCode !== undefined && authorizationCode !== null && authorizationCode !== "" ? { paystackAuthorizationCode: authorizationCode } : {}),
                     },
                     where: [
                         { field: "paystackTransactionReference", value: reference },
@@ -813,6 +835,25 @@ export const disablePaystackSubscription = (options, path = "/paystack/disable-s
         const { subscriptionCode } = ctx.body;
         const paystack = getPaystackOps(options.paystackClient);
         try {
+            if (subscriptionCode.startsWith("LOC_")) {
+                const sub = await ctx.context.adapter.findOne({
+                    model: "subscription",
+                    where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+                });
+                if (sub) {
+                    await ctx.context.adapter.update({
+                        model: "subscription",
+                        update: {
+                            status: "active",
+                            cancelAtPeriodEnd: true,
+                            updatedAt: new Date(),
+                        },
+                        where: [{ field: "id", value: sub.id }],
+                    });
+                    return ctx.json({ status: "success" });
+                }
+                throw new APIError("BAD_REQUEST", { message: "Subscription not found" });
+            }
             let emailToken = ctx.body.emailToken;
             let nextPaymentDate;
             // Always fetch subscription to get next_payment_date even if we have emailToken (unless passed? no, next_payment_date comes from paystack)
@@ -1003,3 +1044,95 @@ export const getConfig = (options) => {
     });
 };
 export { PAYSTACK_ERROR_CODES };
+export const chargeRecurringSubscription = (options) => {
+    return createAuthEndpoint("/paystack/charge-recurring", {
+        method: "POST",
+        body: z.object({
+            subscriptionId: z.string(),
+        }),
+    }, async (ctx) => {
+        const { subscriptionId } = ctx.body;
+        const subscription = await ctx.context.adapter.findOne({
+            model: "subscription",
+            where: [{ field: "id", value: subscriptionId }],
+        });
+        if (subscription === null || subscription === undefined) {
+            throw new APIError("NOT_FOUND", { message: "Subscription not found" });
+        }
+        if (subscription.paystackAuthorizationCode === undefined || subscription.paystackAuthorizationCode === null || subscription.paystackAuthorizationCode === "") {
+            throw new APIError("BAD_REQUEST", { message: "No authorization code found for this subscription" });
+        }
+        const plans = await getPlans(options.subscription);
+        const plan = plans.find((p) => p.name.toLowerCase() === subscription.plan.toLowerCase());
+        if (plan === undefined || plan === null) {
+            throw new APIError("NOT_FOUND", { message: "Plan not found" });
+        }
+        const amount = plan.amount;
+        if (amount === undefined || amount === null) {
+            throw new APIError("BAD_REQUEST", { message: "Plan amount is not defined" });
+        }
+        let email;
+        if (subscription.referenceId !== undefined && subscription.referenceId !== null && subscription.referenceId !== "") {
+            // Try to find user or org
+            const user = await ctx.context.adapter.findOne({
+                model: "user",
+                where: [{ field: "id", value: subscription.referenceId }],
+            });
+            if (user !== undefined && user !== null) {
+                email = user.email;
+            }
+            else if (options.organization?.enabled === true) {
+                // Check org owner email if referenceId is organizationId
+                const ownerMember = await ctx.context.adapter.findOne({
+                    model: "member",
+                    where: [
+                        { field: "organizationId", value: subscription.referenceId },
+                        { field: "role", value: "owner" },
+                    ],
+                });
+                if (ownerMember !== undefined && ownerMember !== null) {
+                    const ownerUser = await ctx.context.adapter.findOne({
+                        model: "user",
+                        where: [{ field: "id", value: ownerMember.userId }],
+                    });
+                    email = ownerUser?.email;
+                }
+            }
+        }
+        // No fallback needed since referenceId is required and handled above
+        if (email === undefined || email === null || email === "") {
+            throw new APIError("NOT_FOUND", { message: "User email not found" });
+        }
+        const paystack = getPaystackOps(options.paystackClient);
+        const chargeRes = await paystack.transactionChargeAuthorization({
+            email,
+            amount,
+            authorization_code: subscription.paystackAuthorizationCode,
+            currency: plan.currency,
+            metadata: {
+                subscriptionId,
+                referenceId: subscription.referenceId,
+                plan: plan.name,
+            },
+        });
+        const data = unwrapSdkResult(chargeRes);
+        const chargeData = data?.data ?? data;
+        if (chargeData?.status === "success") {
+            const now = new Date();
+            const nextPeriodEnd = getNextPeriodEnd(now, plan.interval ?? "monthly");
+            await ctx.context.adapter.update({
+                model: "subscription",
+                update: {
+                    periodStart: now,
+                    periodEnd: nextPeriodEnd,
+                    updatedAt: now,
+                    // Record the last transaction reference if available
+                    paystackTransactionReference: chargeData.reference,
+                },
+                where: [{ field: "id", value: subscription.id }],
+            });
+            return ctx.json({ status: "success", data: chargeData });
+        }
+        return ctx.json({ status: "failed", data: chargeData }, { status: 400 });
+    });
+};

@@ -6,7 +6,34 @@ import unicornPlugin from "eslint-plugin-unicorn";
 import js from "@eslint/js";
 import { fixupPluginRules } from "@eslint/compat";
 
-export default [
+const cleanedPluginsCache = new Map();
+
+/** @param {any} plugin */
+function cleanPlugin(plugin) {
+  if (!plugin || typeof plugin !== "object") return plugin;
+  if (cleanedPluginsCache.has(plugin)) return cleanedPluginsCache.get(plugin);
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { configs, flatConfigs, ...rest } = plugin;
+  cleanedPluginsCache.set(plugin, rest);
+  return rest;
+}
+
+/** @param {any[]} configs */
+function cleanConfigs(configs) {
+  return configs.map(c => {
+    if (c?.plugins) {
+      const cleanedPlugins = {};
+      for (const [name, plugin] of Object.entries(c.plugins)) {
+        cleanedPlugins[name] = cleanPlugin(plugin);
+      }
+      return { ...c, plugins: cleanedPlugins };
+    }
+    return c;
+  });
+}
+
+export default cleanConfigs([
   {
     ignores: [
       "**/*.js",
@@ -21,7 +48,7 @@ export default [
       "**/.cache/**",
       "docs/**",
       "scripts/**",
-      "examples/**/eslint.config.*",
+      "examples/**",
       "vitest.config.ts",
       "vitest.config.js",
       "vitest.workspace.ts",
@@ -47,7 +74,8 @@ export default [
       },
     },
     plugins: {
-      "react-hooks": fixupPluginRules(reactHooksPlugin),
+      "@typescript-eslint": tseslint.plugin,
+      "react-hooks": reactHooksPlugin,
       import: importXPlugin,
       promise: fixupPluginRules(promisePlugin),
       unicorn: unicornPlugin,
@@ -185,4 +213,4 @@ export default [
       "@typescript-eslint/no-restricted-types": "off",
     },
   },
-];
+]);

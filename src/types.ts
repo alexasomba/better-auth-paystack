@@ -53,12 +53,18 @@ type SubscriptionToggleInit = NonNullableInit<
     Parameters<PaystackNodeClient["subscription_disable"]>[0]
 >;
 
+type TransactionChargeAuthorizationInit = NonNullableInit<
+    Parameters<PaystackNodeClient["transaction_chargeAuthorization"]>[0]
+>;
+
 export type PaystackCustomerCreateInput =
     WithMetadataStringOrObject<ExtractBody<CustomerCreateInit>>;
 export type PaystackCustomerUpdateInput =
     WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
 export type PaystackTransactionInitializeInput =
     WithMetadataObject<ExtractBody<TransactionInitializeInit>>;
+export type PaystackTransactionChargeAuthorizationInput =
+    WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;
 export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;
 export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit>;
 
@@ -78,6 +84,7 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
     transaction?: {
         initialize?: (params: PaystackTransactionInitializeInput) => Promise<unknown>;
         verify?: (reference: string) => Promise<unknown>;
+        chargeAuthorization?: (params: PaystackTransactionChargeAuthorizationInput) => Promise<unknown>;
     };
     subscription?: {
         fetch?: (idOrCode: string) => Promise<unknown>;
@@ -174,6 +181,8 @@ export interface Subscription {
     paystackCustomerCode?: string | undefined;
     paystackSubscriptionCode?: string | undefined;
     paystackTransactionReference?: string | undefined;
+    paystackAuthorizationCode?: string | undefined;
+    paystackEmailToken?: string | undefined;
     status:
     | "active"
     | "canceled"
