@@ -126,6 +126,7 @@
   "lint-staged": {
     "*.{ts,tsx}": [
       "bash -c 'pnpm tsc --noEmit'",
+      "eslint --fix",
       "vitest related --run"
     ]
   }

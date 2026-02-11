@@ -29,6 +29,7 @@ interface PaystackPlan {
     interval?: string;
     description?: string;
     features?: Array<string>;
+    planCode?: string;
 }
 
 interface PaystackProduct {
