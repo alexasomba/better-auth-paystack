@@ -29,6 +29,7 @@ interface PaystackPlan {
     interval?: string;
     description?: string;
     features?: Array<string>;
+    planCode?: string;
 }
 
 interface PaystackProduct {
@@ -404,15 +405,30 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     )}
                                 >
                                     {isCurrentPlan && (
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm z-10">
                                             Current Plan
                                         </div>
                                     )}
-                                    <div className="mb-4">
+
+                                    <div className="absolute top-4 right-4">
+                                        {plan.planCode ? (
+                                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none">
+                                                Paystack Managed
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-none">
+                                                Custom Plan
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    <div className="mb-4 mt-6">
                                         <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{plan.name}</p>
                                         <div className="flex items-baseline gap-1">
                                             <p className="text-3xl font-bold">
-                                                {plan.amount ? formatCurrency(plan.amount * (selectedBillingTarget !== "personal" ? seats : 1), plan.currency) : "Custom"}
+                                                {plan.amount 
+                                                    ? formatCurrency(plan.amount * ((selectedBillingTarget !== "personal" && !plan.planCode) ? seats : 1), plan.currency) 
+                                                    : "Custom"}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
                                                 /{plan.interval || "mo"}
