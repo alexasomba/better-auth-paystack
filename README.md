@@ -338,6 +338,9 @@ type listSubscriptions = {
 
 Cancel or restore a subscription.
 
+- **Cancel**: Sets `cancelAtPeriodEnd: true`. The subscription remains `active` until the end of the current billing period, after which it moves to `canceled`.
+- **Restore**: Reactivates a subscription that is scheduled to cancel.
+
 ```ts
 type cancelSubscription = {
   /**
