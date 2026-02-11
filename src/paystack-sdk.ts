@@ -162,9 +162,13 @@ export function getPaystackOps(
 		transactionChargeAuthorization: (body: PaystackTransactionChargeAuthorizationInput) => {
 			if (paystackClient?.transaction_chargeAuthorization !== undefined) {
 				return paystackClient.transaction_chargeAuthorization({
+					 
+					// casting to avoid deep type issues with metadata
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					body: body as any, // casting to avoid deep type issues with metadata
 				});
 			}
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			return paystackClient?.transaction?.chargeAuthorization?.(body as any);
 		},
 	};

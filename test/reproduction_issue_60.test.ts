@@ -2,16 +2,15 @@ import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
 import { setCookieToHeader } from "better-auth/cookies";
-import { bearer } from "better-auth/plugins";
+import { bearer as _bearer } from "better-auth/plugins";
 import { describe, expect, it, vi } from "vitest";
 
 import { paystackClient } from "../src/client";
 import type { PaystackClientLike, PaystackOptions, Subscription } from "../src/types";
-
 import { paystack } from "../src/index";
 
 describe("Issue #60: Subscription Cancellation Logic", () => {
-	it("should set cancelAtPeriodEnd and keep status active until period end", async () => {
+	it("should cancel subscription at period end", async () => {
 		const nextPaymentDate = new Date();
 		nextPaymentDate.setDate(nextPaymentDate.getDate() + 15); // 15 days from now
 

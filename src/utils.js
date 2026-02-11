@@ -65,3 +65,19 @@ export function getNextPeriodEnd(startDate, interval) {
     }
     return date;
 }
+/**
+ * Validates if the amount meets Paystack's minimum transaction requirements.
+ * Amounts should be in the smallest currency unit (e.g., kobo, cents).
+ */
+export function validateMinAmount(amount, currency) {
+    const minAmounts = {
+        NGN: 5000, // 50.00
+        GHS: 10, // 0.10
+        ZAR: 100, // 1.00
+        KES: 300, // 3.00
+        USD: 200, // 2.00
+        XOF: 100, // 1.00
+    };
+    const min = minAmounts[currency.toUpperCase()];
+    return min !== undefined ? amount >= min : true;
+}

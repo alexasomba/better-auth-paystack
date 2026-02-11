@@ -3,7 +3,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "better-auth/api";
 import * as z from "zod/v4";
-import { getNextPeriodEnd, getPlanByName, getPlans, getProductByName, getProducts } from "./utils";
+import { getNextPeriodEnd, getPlanByName, getPlans, getProductByName, getProducts, validateMinAmount } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
@@ -1049,9 +1049,10 @@ export const chargeRecurringSubscription = (options) => {
         method: "POST",
         body: z.object({
             subscriptionId: z.string(),
+            amount: z.number().optional(),
         }),
     }, async (ctx) => {
-        const { subscriptionId } = ctx.body;
+        const { subscriptionId, amount: bodyAmount } = ctx.body;
         const subscription = await ctx.context.adapter.findOne({
             model: "subscription",
             where: [{ field: "id", value: subscriptionId }],
@@ -1067,7 +1068,7 @@ export const chargeRecurringSubscription = (options) => {
         if (plan === undefined || plan === null) {
             throw new APIError("NOT_FOUND", { message: "Plan not found" });
         }
-        const amount = plan.amount;
+        const amount = bodyAmount ?? plan.amount;
         if (amount === undefined || amount === null) {
             throw new APIError("BAD_REQUEST", { message: "Plan amount is not defined" });
         }
@@ -1103,11 +1104,15 @@ export const chargeRecurringSubscription = (options) => {
         if (email === undefined || email === null || email === "") {
             throw new APIError("NOT_FOUND", { message: "User email not found" });
         }
+        if (!validateMinAmount(amount, plan.currency ?? "NGN")) {
+            throw new APIError("BAD_REQUEST", { message: `Amount ${amount} is below minimum for ${plan.currency ?? "NGN"}` });
+        }
         const paystack = getPaystackOps(options.paystackClient);
         const chargeRes = await paystack.transactionChargeAuthorization({
             email,
             amount,
             authorization_code: subscription.paystackAuthorizationCode,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             currency: plan.currency,
             metadata: {
                 subscriptionId,

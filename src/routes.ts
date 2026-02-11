@@ -11,7 +11,7 @@ import * as z from "zod/v4";
 import type { GenericEndpointContext } from "better-auth";
 
 import type { InputPaystackTransaction, InputSubscription, PaystackOptions, PaystackTransaction, Subscription, Organization, Member, User, PaystackClientLike } from "./types";
-import { getNextPeriodEnd, getPlanByName, getPlans, getProductByName, getProducts } from "./utils";
+import { getNextPeriodEnd, getPlanByName, getPlans, getProductByName, getProducts, validateMinAmount } from "./utils";
 import type { PaystackPlan, PaystackProduct } from "./types";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
@@ -788,7 +788,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 					const updatedSubscription = await ctx.context.adapter.update<Subscription>({
 						model: "subscription",
 						update: {
-							status: (isTrial as any) === true ? "trialing" : "active",
+							status: isTrial === true ? "trialing" : "active",
 							periodStart: new Date(),
 							updatedAt: new Date(),
 							...(isTrial === true && (trialEnd !== undefined && trialEnd !== null && trialEnd !== "") ? {
@@ -1224,10 +1224,11 @@ export const chargeRecurringSubscription = (options: AnyPaystackOptions) => {
 			method: "POST",
 			body: z.object({
 				subscriptionId: z.string(),
+				amount: z.number().optional(),
 			}),
 		},
 		async (ctx) => {
-			const { subscriptionId } = ctx.body;
+			const { subscriptionId, amount: bodyAmount } = ctx.body;
 			const subscription = await ctx.context.adapter.findOne<Subscription>({
 				model: "subscription",
 				where: [{ field: "id", value: subscriptionId }],
@@ -1248,7 +1249,7 @@ export const chargeRecurringSubscription = (options: AnyPaystackOptions) => {
 				throw new APIError("NOT_FOUND", { message: "Plan not found" });
 			}
 
-			const amount = plan.amount;
+			const amount = bodyAmount ?? plan.amount;
 			if (amount === undefined || amount === null) {
 				throw new APIError("BAD_REQUEST", { message: "Plan amount is not defined" });
 			}
@@ -1286,11 +1287,16 @@ export const chargeRecurringSubscription = (options: AnyPaystackOptions) => {
 				throw new APIError("NOT_FOUND", { message: "User email not found" });
 			}
 
+			if (!validateMinAmount(amount, plan.currency ?? "NGN")) {
+				throw new APIError("BAD_REQUEST", { message: `Amount ${amount} is below minimum for ${plan.currency ?? "NGN"}` });
+			}
+
 			const paystack = getPaystackOps(options.paystackClient);
 			const chargeRes = await paystack.transactionChargeAuthorization({
 				email,
 				amount,
 				authorization_code: subscription.paystackAuthorizationCode,
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				currency: plan.currency as any,
 				metadata: {
 					subscriptionId,

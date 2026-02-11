@@ -4,9 +4,9 @@ import { createAuthClient } from "better-auth/client";
 import { setCookieToHeader } from "better-auth/cookies";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { paystackClient } from "../src/client";
-import type { PaystackClientLike, PaystackOptions, Subscription } from "../src/types";
 import { paystack } from "../src/index";
+import { paystackClient } from "../src/client";
+import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Local Custom Subscriptions", () => {
 	const paystackSdk = {
@@ -179,6 +179,41 @@ describe("Local Custom Subscriptions", () => {
 		const updatedSub = data.subscription.find(s => (s as any).id === sub.id) as any;
 		expect(updatedSub.paystackTransactionReference).toBe("ref_recurring_456");
 		expect(new Date(updatedSub.periodEnd).getTime()).toBeGreaterThan(Date.now());
+	});
+
+	it("should reject recurring charge if amount is below minimum", async () => {
+		const testUser = { email: "below-min@test.com", password: "password", name: "Min User" };
+		const signUp = await authClient.signUp.email(testUser, { throw: true });
+        
+		const ctx = await auth.$context;
+		const sub = await (ctx.adapter as any).create({
+			model: "subscription",
+			data: {
+				plan: "local-starter",
+				referenceId: signUp.user.id,
+				status: "active",
+				paystackAuthorizationCode: "AUTH_min_123",
+				periodEnd: new Date(Date.now() - 1000),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			},
+		});
+
+		// Local starter is 500000 kobo (5000 NGN). 
+		// Let's try to charge 1000 kobo (10 NGN) which is below 5000 kobo (50 NGN) minimum.
+		// Note: The plan defined in options has amount: 500000.
+		// Our charge-recurring uses the plan's amount.
+		// To test this effectively, we'd need a plan with a very low amount in its definition.
+		
+		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/charge-recurring", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ subscriptionId: sub.id, amount: 1000 }), // Override amount to be below min
+		}));
+
+		expect(res.status).toBe(400); // BAD_REQUEST
+		const json = await res.json();
+		expect(json.message).toContain("below minimum");
 	});
 
 	it("should handle trials for local subscriptions", async () => {

@@ -437,6 +437,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             method: "POST";
             body: import("zod").ZodObject<{
                 subscriptionId: import("zod").ZodString;
+                amount: import("zod").ZodOptional<import("zod").ZodNumber>;
             }, import("better-auth").$strip>;
         }, {
             status: string;

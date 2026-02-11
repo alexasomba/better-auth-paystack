@@ -448,6 +448,7 @@ export declare const chargeRecurringSubscription: (options: AnyPaystackOptions) 
     method: "POST";
     body: z.ZodObject<{
         subscriptionId: z.ZodString;
+        amount: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>;
 }, {
     status: string;

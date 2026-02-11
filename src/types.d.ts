@@ -3,6 +3,7 @@ import type { createPaystack } from "@alexasomba/paystack-node";
 import type { organization, subscriptions, user } from "./schema";
 export type { GenericEndpointContext, InferOptionSchema, Session, User, };
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
+export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
 export interface PaystackOpenApiFetchResponse<T = unknown> {
     data?: T;
     error?: unknown;
@@ -82,7 +83,7 @@ export interface PaystackPlan {
     /** Amount in the smallest currency unit (e.g. kobo). */
     amount?: number | undefined;
     /** Currency ISO code (e.g. NGN). */
-    currency?: string | undefined;
+    currency?: PaystackCurrency | (string & {}) | undefined;
     /** Paystack interval keyword (when using Paystack plans). */
     interval?: "daily" | "weekly" | "monthly" | "quarterly" | "biannually" | "annually" | undefined;
     /** Optional description of the plan. */
@@ -109,7 +110,7 @@ export interface PaystackProduct {
     /** Amount in the smallest currency unit (e.g., kobo). */
     amount: number;
     /** Currency ISO code (e.g., NGN). */
-    currency: string;
+    currency: PaystackCurrency | (string & {});
     /** Optional metadata to include with the transaction. */
     metadata?: Record<string, unknown> | undefined;
     /** Optional description of the product. */
@@ -124,7 +125,7 @@ export interface PaystackTransaction {
     referenceId: string;
     userId: string;
     amount: number;
-    currency: string;
+    currency: PaystackCurrency | (string & {});
     status: string;
     plan?: string | undefined;
     metadata?: string | undefined;
