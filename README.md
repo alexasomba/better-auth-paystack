@@ -429,6 +429,15 @@ The plugin extends your database with the following fields and tables.
 - **Reference mismatches**: Ensure `referenceId` is passed correctly for Organization billing.
 - **Authorization Denied**: Verify your `authorizeReference` logic is correctly checking user roles or organization memberships.
 
+### Database Indexing
+
+The plugin's schema definition includes recommended indexes and uniqueness constraints for performance. When you run `npx better-auth migrate`, these will be automatically applied to your database.
+
+The following fields are indexed:
+- **`paystackTransaction`**: `reference` (unique), `userId`, `referenceId`.
+- **`subscription`**: `paystackSubscriptionCode` (unique), `referenceId`, `paystackTransactionReference`, `paystackCustomerCode`, `plan`.
+- **`user` & `organization`**: `paystackCustomerCode`.
+
 ---
 
 ## 🏗️ Development & Contributing

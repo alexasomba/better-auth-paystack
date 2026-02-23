@@ -9,6 +9,7 @@ export const transactions = {
 			reference: {
 				type: "string",
 				required: true,
+				unique: true,
 			},
 			paystackId: {
 				type: "string",
@@ -17,10 +18,12 @@ export const transactions = {
 			referenceId: {
 				type: "string",
 				required: true,
+				index: true,
 			},
 			userId: {
 				type: "string",
 				required: true,
+				index: true,
 			},
 			amount: {
 				type: "number",
@@ -60,22 +63,27 @@ export const subscriptions = {
 			plan: {
 				type: "string",
 				required: true,
+				index: true,
 			},
 			referenceId: {
 				type: "string",
 				required: true,
+				index: true,
 			},
 			paystackCustomerCode: {
 				type: "string",
 				required: false,
+				index: true,
 			},
 			paystackSubscriptionCode: {
 				type: "string",
 				required: false,
+				unique: true,
 			},
 			paystackTransactionReference: {
 				type: "string",
 				required: false,
+				index: true,
 			},
 			paystackAuthorizationCode: {
 				type: "string",
@@ -128,6 +136,7 @@ export const user = {
 			paystackCustomerCode: {
 				type: "string",
 				required: false,
+				index: true,
 			},
 		},
 	},
@@ -139,6 +148,7 @@ export const organization = {
 			paystackCustomerCode: {
 				type: "string",
 				required: false,
+				index: true,
 			},
 			email: {
 				type: "string",
