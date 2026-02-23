@@ -22,16 +22,20 @@ function isOpenApiFetchResponse(
 	);
 }
 
-export function unwrapSdkResult<T = any>(result: unknown): T {
+export function unwrapSdkResult<T = unknown>(result: unknown): T {
 	if (isOpenApiFetchResponse(result)) {
 		if (result.error !== undefined && result.error !== null) {
 			throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error));
 		}
-		return result.data as T;
+		return (result.data as T) ?? (result as T);
 	}
 	if (result !== null && result !== undefined && typeof result === "object" && "data" in result) {
-		const data = (result as { data?: unknown }).data;
-		return (data ?? result) as T;
+		const data = (result as { data: unknown }).data;
+		// If data is also an object with a data property, unwrap it (legacy SDK style)
+		if (data !== null && typeof data === "object" && "data" in data) {
+			return (data as { data: T }).data;
+		}
+		return data as T;
 	}
 	return result as T;
 }

@@ -67,8 +67,8 @@ export const paystackWebhook = (options) => {
             });
         }
         const event = JSON.parse(payload);
-        const eventName = String(event?.event ?? "");
-        const data = event?.data;
+        const eventName = event.event;
+        const data = event.data;
         // Core Transaction Status Sync (Applies to both one-time and recurring)
         if (eventName === "charge.success") {
             const reference = data?.reference;

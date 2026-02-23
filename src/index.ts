@@ -86,8 +86,9 @@ export const paystack = <
 											userId: user.id,
 										} as any,
 									});
-									const data = unwrapSdkResult<PaystackCustomerResponse>(raw);
-									const customerCode = data?.customer_code;
+									const sdkRes = unwrapSdkResult<Record<string, unknown>>(raw);
+									const customerCode = (sdkRes?.customer_code as string | undefined)
+										?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
 									if (customerCode === undefined || customerCode === null) {
 										return;
@@ -141,12 +142,9 @@ export const paystack = <
 											);
 											const paystackOps = getPaystackOps(options.paystackClient as PaystackClientLike);
 											const raw = await paystackOps.customerCreate(params as any);
-											const sdkRes = unwrapSdkResult<any>(raw);
-											const paystackCustomer =
-                                                sdkRes !== null && typeof sdkRes === "object" && "status" in sdkRes && "data" in sdkRes
-                                                	? (sdkRes as { data: PaystackCustomerResponse }).data
-                                                	: (sdkRes?.data ?? sdkRes) as PaystackCustomerResponse;
-											const customerCode = paystackCustomer?.customer_code;
+											const sdkRes = unwrapSdkResult<Record<string, unknown>>(raw);
+											const customerCode = (sdkRes?.customer_code as string | undefined)
+                                                ?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
 											if (customerCode === undefined || customerCode === null) return;
 
@@ -157,7 +155,7 @@ export const paystack = <
 
 											await options.organization?.onCustomerCreate?.(
 												{
-													paystackCustomer,
+													paystackCustomer: sdkRes as any,
 													organization: {
 														...org,
 														paystackCustomerCode: customerCode,

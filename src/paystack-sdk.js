@@ -9,11 +9,15 @@ export function unwrapSdkResult(result) {
         if (result.error !== undefined && result.error !== null) {
             throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error));
         }
-        return result.data;
+        return result.data ?? result;
     }
     if (result !== null && result !== undefined && typeof result === "object" && "data" in result) {
         const data = result.data;
-        return (data ?? result);
+        // If data is also an object with a data property, unwrap it (legacy SDK style)
+        if (data !== null && typeof data === "object" && "data" in data) {
+            return data.data;
+        }
+        return data;
     }
     return result;
 }

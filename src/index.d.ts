@@ -1,6 +1,6 @@
 import type { AuthContext, GenericEndpointContext } from "better-auth";
 import type { PaystackNodeClient, PaystackClientLike, PaystackOptions, PaystackPlan, Subscription, SubscriptionOptions, PaystackProduct } from "./types";
-export declare const paystack: <TPaystackClient extends PaystackClientLike = PaystackNodeClient, O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>>(options: O) => {
+export declare const paystack: <TPaystackClient extends PaystackClientLike = PaystackNodeClient, TMetadata = any, TLimits = any, O extends PaystackOptions<TPaystackClient, TMetadata, TLimits> = PaystackOptions<TPaystackClient, TMetadata, TLimits>>(options: O) => {
     readonly id: "paystack";
     readonly endpoints: {
         readonly initializeTransaction: import("better-call").StrictEndpoint<"/paystack/initialize-transaction", {
@@ -169,7 +169,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 };
             };
         }, {
-            plans: PaystackPlan[];
+            plans: PaystackPlan<any>[];
             products: PaystackProduct[];
         }>;
         readonly disableSubscription: import("better-call").StrictEndpoint<"/paystack/disable-subscription", {
@@ -534,6 +534,6 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         readonly EMAIL_VERIFICATION_REQUIRED: "Email verification is required before you can subscribe to a plan";
     };
 };
-export type PaystackPlugin<O extends PaystackOptions<PaystackClientLike> = PaystackOptions> = ReturnType<typeof paystack<PaystackClientLike, O>>;
+export type PaystackPlugin<O extends PaystackOptions<PaystackClientLike, any, any> = PaystackOptions> = ReturnType<typeof paystack<PaystackClientLike, any, any, O>>;
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };
 //# sourceMappingURL=index.d.ts.map

@@ -46,8 +46,9 @@ export const paystack = (options) => {
                                             userId: user.id,
                                         },
                                     });
-                                    const data = unwrapSdkResult(raw);
-                                    const customerCode = data?.customer_code ?? data?.data?.customer_code;
+                                    const sdkRes = unwrapSdkResult(raw);
+                                    const customerCode = sdkRes?.customer_code
+                                        ?? sdkRes?.data?.customer_code;
                                     if (customerCode === undefined || customerCode === null) {
                                         return;
                                     }
@@ -96,10 +97,8 @@ export const paystack = (options) => {
                                             const paystackOps = getPaystackOps(options.paystackClient);
                                             const raw = await paystackOps.customerCreate(params);
                                             const sdkRes = unwrapSdkResult(raw);
-                                            const paystackCustomer = sdkRes !== null && typeof sdkRes === "object" && "status" in sdkRes && "data" in sdkRes
-                                                ? sdkRes.data
-                                                : sdkRes?.data ?? sdkRes;
-                                            const customerCode = paystackCustomer?.customer_code;
+                                            const customerCode = sdkRes?.customer_code
+                                                ?? sdkRes?.data?.customer_code;
                                             if (customerCode === undefined || customerCode === null)
                                                 return;
                                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,7 +106,7 @@ export const paystack = (options) => {
                                                 paystackCustomerCode: customerCode,
                                             });
                                             await options.organization?.onCustomerCreate?.({
-                                                paystackCustomer: paystackCustomer,
+                                                paystackCustomer: sdkRes,
                                                 organization: {
                                                     ...org,
                                                     paystackCustomerCode: customerCode,

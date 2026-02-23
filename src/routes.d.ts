@@ -473,7 +473,7 @@ export declare const getConfig: (options: AnyPaystackOptions) => import("better-
         };
     };
 }, {
-    plans: PaystackPlan[];
+    plans: PaystackPlan<any>[];
     products: PaystackProduct[];
 }>;
 export { PAYSTACK_ERROR_CODES };

@@ -4,6 +4,50 @@ import type { organization, subscriptions, user } from "./schema";
 export type { GenericEndpointContext, InferOptionSchema, Session, User, };
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
 export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
+export type PaystackEvent = "charge.success" | "charge.failure" | "subscription.create" | "subscription.disable" | "subscription.not_renew" | "subscription.expiring_cards" | "invoice.create" | "invoice.payment_failed" | "invoice.update" | "transfer.success" | "transfer.failed" | "transfer.reversed" | "customeridentification.success" | "customeridentification.failed" | (string & {});
+export interface PaystackWebhookPayload<TData = any, TMetadata = any> {
+    event: PaystackEvent;
+    data: TData;
+    metadata?: TMetadata;
+    [key: string]: any;
+}
+export interface PaystackCustomerResponse {
+    customer_code: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    metadata?: Record<string, unknown>;
+    id: number;
+    [key: string]: unknown;
+}
+export interface PaystackTransactionResponse {
+    id: number;
+    domain: string;
+    status: string;
+    reference: string;
+    amount: number;
+    message: string | null;
+    gateway_response: string;
+    paid_at: string;
+    created_at: string;
+    channel: string;
+    currency: PaystackCurrency;
+    ip_address: string;
+    metadata: Record<string, unknown> | string | null;
+    customer: PaystackCustomerResponse;
+    [key: string]: unknown;
+}
+export interface PaystackSubscriptionResponse {
+    customer: string | number | PaystackCustomerResponse;
+    plan: string | number | Record<string, unknown>;
+    subscription_code: string;
+    email_token: string;
+    status: string;
+    amount: number;
+    currency: PaystackCurrency;
+    metadata?: Record<string, unknown> | null;
+    [key: string]: unknown;
+}
 export interface PaystackOpenApiFetchResponse<T = unknown> {
     data?: T;
     error?: unknown;
@@ -87,7 +131,7 @@ export type AuthSession = {
     user: User;
     session: Session;
 } & Record<string, unknown>;
-export interface PaystackPlan {
+export interface PaystackPlan<TLimits = Record<string, unknown>> {
     /** Human name stored in DB (lowercased). */
     name: string;
     /** Paystack plan code (if you use Paystack plans). */
@@ -105,7 +149,7 @@ export interface PaystackPlan {
     /** Optional invoice limit; Paystack uses `invoice_limit` during init. */
     invoiceLimit?: number | undefined;
     /** Arbitrary limits (stored/consumed by your app). */
-    limits?: Record<string, unknown> | undefined;
+    limits?: TLimits | undefined;
     /** Optional free trial config, if your app supports it. */
     freeTrial?: {
         days: number;
@@ -182,8 +226,8 @@ export interface Subscription {
 }
 export interface InputSubscription extends Omit<Subscription, "id"> {
 }
-export interface SubscriptionOptions {
-    plans: PaystackPlan[] | (() => PaystackPlan[] | Promise<PaystackPlan[]>);
+export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
+    plans: PaystackPlan<TLimits>[] | (() => PaystackPlan<TLimits>[] | Promise<PaystackPlan<TLimits>[]>);
     requireEmailVerification?: boolean | undefined;
     authorizeReference?: ((data: {
         user: User;
@@ -192,44 +236,46 @@ export interface SubscriptionOptions {
         action: "initialize-transaction" | "verify-transaction" | "list-subscriptions" | "list-transactions" | "disable-subscription" | "enable-subscription" | "get-subscription-manage-link";
     }, ctx: GenericEndpointContext) => Promise<boolean>) | undefined;
     onSubscriptionComplete?: ((data: {
-        event: unknown;
+        event: PaystackWebhookPayload<any, TMetadata>;
         subscription: Subscription;
-        plan: PaystackPlan;
+        plan: PaystackPlan<TLimits>;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionUpdate?: ((data: {
-        event: unknown;
+        event: PaystackWebhookPayload<any, TMetadata>;
         subscription: Subscription;
-        plan?: PaystackPlan;
+        plan?: PaystackPlan<TLimits>;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionCreated?: ((data: {
-        event: unknown;
+        event: PaystackWebhookPayload<any, TMetadata>;
         subscription: Subscription;
-        plan: PaystackPlan;
+        plan: PaystackPlan<TLimits>;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionCancel?: ((data: {
-        event: unknown;
+        event: PaystackWebhookPayload<any, TMetadata>;
         subscription: Subscription;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
     onSubscriptionDelete?: ((data: {
-        event: unknown;
+        event: PaystackWebhookPayload<any, TMetadata>;
         subscription: Subscription;
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
 }
 export interface ProductOptions {
     products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
 }
-export interface OrganizationOptions {
+export interface OrganizationOptions<TMetadata = any> {
     enabled: boolean;
     createCustomerOnOrganizationCreate?: boolean | undefined;
     onCustomerCreate?: ((data: {
-        paystackCustomer: Record<string, unknown>;
+        paystackCustomer: PaystackCustomerResponse;
         organization: Record<string, unknown> & {
             paystackCustomerCode: string;
         };
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
-    getCustomerCreateParams?: ((organization: unknown, ctx: GenericEndpointContext) => Promise<Record<string, unknown>>) | undefined;
+    getCustomerCreateParams?: ((organization: unknown, ctx: GenericEndpointContext) => Promise<Record<string, unknown> & {
+        metadata?: TMetadata;
+    }>) | undefined;
 }
-export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackNodeClient> {
+export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackNodeClient, TMetadata = any, TLimits = any> {
     /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
     paystackClient: NoInfer<TPaystackClient>;
     /** Paystack webhook secret used to verify `x-paystack-signature`. */
@@ -237,20 +283,22 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
     /** Enable customer creation on Better Auth sign up. */
     createCustomerOnSignUp?: boolean | undefined;
     onCustomerCreate?: ((data: {
-        paystackCustomer: Record<string, unknown>;
+        paystackCustomer: PaystackCustomerResponse;
         user: User & {
             paystackCustomerCode: string;
         };
     }, ctx: GenericEndpointContext) => Promise<void>) | undefined;
-    getCustomerCreateParams?: ((user: User, ctx: GenericEndpointContext) => Promise<Record<string, unknown>>) | undefined;
+    getCustomerCreateParams?: ((user: User, ctx: GenericEndpointContext) => Promise<Record<string, unknown> & {
+        metadata?: TMetadata;
+    }>) | undefined;
     subscription?: ({
         enabled: false;
     } | ({
         enabled: true;
-    } & SubscriptionOptions)) | undefined;
+    } & SubscriptionOptions<TMetadata, TLimits>)) | undefined;
     products?: ProductOptions | undefined;
-    organization?: OrganizationOptions | undefined;
-    onEvent?: ((event: unknown) => Promise<void>) | undefined;
+    organization?: OrganizationOptions<TMetadata> | undefined;
+    onEvent?: ((event: PaystackWebhookPayload<any, TMetadata>) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user & typeof organization> | undefined;
 }
 export interface Organization {
