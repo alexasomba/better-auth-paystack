@@ -3,7 +3,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "better-auth/api";
 import * as z from "zod/v4";
-import { getNextPeriodEnd, getPlanByName, getPlans, getProductByName, getProducts, validateMinAmount } from "./utils";
+import { decrementProductQuantity, getPlanByName, getPlans, getProductByName, getProducts, validateMinAmount, getNextPeriodEnd, } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
@@ -85,6 +85,14 @@ export const paystackWebhook = (options) => {
                             },
                             where: [{ field: "reference", value: reference }],
                         });
+                        // Decrement product quantity if applicable
+                        const transaction = await ctx.context.adapter.findOne({
+                            model: "paystackTransaction",
+                            where: [{ field: "reference", value: reference }],
+                        });
+                        if (transaction?.product) {
+                            await decrementProductQuantity(ctx, transaction.product);
+                        }
                     }
                 }
                 if (eventName === "charge.failure") {
@@ -285,7 +293,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             if (subscriptionOptions?.enabled !== true) {
                 throw new APIError("BAD_REQUEST", { message: "Subscriptions are not enabled." });
             }
-            plan = await getPlanByName(options, planName);
+            plan = await getPlanByName(options, planName) ?? undefined;
             if (!plan) {
                 throw new APIError("BAD_REQUEST", {
                     code: "SUBSCRIPTION_PLAN_NOT_FOUND",
@@ -296,7 +304,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
         }
         else if (productName !== undefined && productName !== null && productName !== "") {
             if (typeof productName === 'string') {
-                product = await getProductByName(options, productName);
+                product = await getProductByName(options, productName) ?? undefined;
             }
             if (!product) {
                 throw new APIError("BAD_REQUEST", {
@@ -311,7 +319,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                 status: 400
             });
         }
-        const amount = bodyAmount ?? product?.amount;
+        const amount = bodyAmount ?? product?.price;
         const finalCurrency = currency ?? product?.currency ?? plan?.currency ?? "NGN";
         let url;
         let reference;
@@ -464,6 +472,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                 currency: plan?.currency ?? currency ?? "NGN",
                 status: "pending",
                 plan: plan?.name.toLowerCase(),
+                product: product?.name.toLowerCase(),
                 metadata: (extraMetadata !== undefined && extraMetadata !== null) ? JSON.stringify(extraMetadata) : undefined,
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -625,6 +634,14 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                             where: [{ field: "id", value: referenceId }],
                         });
                     }
+                }
+                // Decrement product quantity if applicable
+                const transaction = await ctx.context.adapter.findOne({
+                    model: "paystackTransaction",
+                    where: [{ field: "reference", value: reference }],
+                });
+                if (transaction?.product) {
+                    await decrementProductQuantity(ctx, transaction.product);
                 }
                 // Check for trial activation
                 let isTrial = false;
@@ -1024,6 +1041,65 @@ export const getSubscriptionManageLink = (options) => {
         }
     });
 };
+export const syncProducts = (options) => {
+    return createAuthEndpoint("/paystack/sync-products", {
+        method: "POST",
+        use: [sessionMiddleware, originCheck],
+    }, async (ctx) => {
+        const paystack = getPaystackOps(options.paystackClient);
+        try {
+            const raw = await paystack.productList();
+            const res = unwrapSdkResult(raw);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const productsData = (res !== null && typeof res === "object" && "status" in res && "data" in res) ? res.data : res?.data ?? res;
+            if (!Array.isArray(productsData)) {
+                return ctx.json({ status: "success", count: 0 });
+            }
+            for (const product of productsData) {
+                const paystackId = String(product.id);
+                const existing = await ctx.context.adapter.findOne({
+                    model: "paystackProduct",
+                    where: [{ field: "paystackId", value: paystackId }],
+                });
+                const productData = {
+                    name: product.name,
+                    description: product.description,
+                    price: product.price,
+                    currency: product.currency,
+                    quantity: product.quantity,
+                    unlimited: product.unlimited,
+                    paystackId,
+                    slug: product.slug ?? product.name.toLowerCase().replace(/\s+/g, "-"),
+                    metadata: product.metadata ? JSON.stringify(product.metadata) : undefined,
+                    updatedAt: new Date(),
+                };
+                if (existing) {
+                    await ctx.context.adapter.update({
+                        model: "paystackProduct",
+                        update: productData,
+                        where: [{ field: "id", value: existing.id }],
+                    });
+                }
+                else {
+                    await ctx.context.adapter.create({
+                        model: "paystackProduct",
+                        data: {
+                            ...productData,
+                            createdAt: new Date(),
+                        },
+                    });
+                }
+            }
+            return ctx.json({ status: "success", count: productsData.length });
+        }
+        catch (error) {
+            ctx.context.logger.error("Failed to sync products", error);
+            throw new APIError("BAD_REQUEST", {
+                message: error?.message ?? "Failed to sync products",
+            });
+        }
+    });
+};
 export const getConfig = (options) => {
     return createAuthEndpoint("/paystack/get-config", {
         method: "GET",
@@ -1104,8 +1180,12 @@ export const chargeRecurringSubscription = (options) => {
         if (email === undefined || email === null || email === "") {
             throw new APIError("NOT_FOUND", { message: "User email not found" });
         }
-        if (!validateMinAmount(amount, plan.currency ?? "NGN")) {
-            throw new APIError("BAD_REQUEST", { message: `Amount ${amount} is below minimum for ${plan.currency ?? "NGN"}` });
+        const finalCurrency = plan.currency ?? "NGN";
+        if (!validateMinAmount(amount, finalCurrency)) {
+            throw new APIError("BAD_REQUEST", {
+                message: `Amount ${amount} is less than the minimum required for ${finalCurrency}.`,
+                status: 400
+            });
         }
         const paystack = getPaystackOps(options.paystackClient);
         const chargeRes = await paystack.transactionChargeAuthorization({

@@ -6,6 +6,7 @@ export declare const transactions: {
             reference: {
                 type: "string";
                 required: true;
+                unique: true;
             };
             paystackId: {
                 type: "string";
@@ -14,10 +15,12 @@ export declare const transactions: {
             referenceId: {
                 type: "string";
                 required: true;
+                index: true;
             };
             userId: {
                 type: "string";
                 required: true;
+                index: true;
             };
             amount: {
                 type: "number";
@@ -32,6 +35,10 @@ export declare const transactions: {
                 required: true;
             };
             plan: {
+                type: "string";
+                required: false;
+            };
+            product: {
                 type: "string";
                 required: false;
             };
@@ -56,22 +63,27 @@ export declare const subscriptions: {
             plan: {
                 type: "string";
                 required: true;
+                index: true;
             };
             referenceId: {
                 type: "string";
                 required: true;
+                index: true;
             };
             paystackCustomerCode: {
                 type: "string";
                 required: false;
+                index: true;
             };
             paystackSubscriptionCode: {
                 type: "string";
                 required: false;
+                unique: true;
             };
             paystackTransactionReference: {
                 type: "string";
                 required: false;
+                index: true;
             };
             paystackAuthorizationCode: {
                 type: "string";
@@ -123,6 +135,7 @@ export declare const user: {
             paystackCustomerCode: {
                 type: "string";
                 required: false;
+                index: true;
             };
         };
     };
@@ -133,10 +146,65 @@ export declare const organization: {
             paystackCustomerCode: {
                 type: "string";
                 required: false;
+                index: true;
             };
             email: {
                 type: "string";
                 required: false;
+            };
+        };
+    };
+};
+export declare const products: {
+    paystackProduct: {
+        fields: {
+            name: {
+                type: "string";
+                required: true;
+            };
+            description: {
+                type: "string";
+                required: false;
+            };
+            price: {
+                type: "number";
+                required: true;
+            };
+            currency: {
+                type: "string";
+                required: true;
+            };
+            quantity: {
+                type: "number";
+                required: false;
+                defaultValue: number;
+            };
+            unlimited: {
+                type: "boolean";
+                required: false;
+                defaultValue: true;
+            };
+            paystackId: {
+                type: "string";
+                required: false;
+                unique: true;
+            };
+            slug: {
+                type: "string";
+                required: true;
+                unique: true;
+            };
+            metadata: {
+                type: "string";
+                required: false;
+            };
+            createdAt: {
+                type: "date";
+                required: true;
+            };
+            updatedAt: {
+                type: "date";
+                required: true;
             };
         };
     };

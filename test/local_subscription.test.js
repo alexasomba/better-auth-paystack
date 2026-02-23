@@ -187,7 +187,7 @@ describe("Local Custom Subscriptions", () => {
         }));
         expect(res.status).toBe(400); // BAD_REQUEST
         const json = await res.json();
-        expect(json.message).toContain("below minimum");
+        expect(json.message).toContain("less than the minimum");
     });
     it("should handle trials for local subscriptions", async () => {
         const testUser = { email: "local-trial@test.com", password: "password", name: "Trial User" };

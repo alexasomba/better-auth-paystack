@@ -699,7 +699,15 @@ describe("paystack", () => {
 			subscription: { enabled: true, plans: [] },
 			products: {
 				products: [
-					{ name: "credits", amount: 1000, currency: "NGN" }
+					{
+						id: "prod_credits",
+						name: "credits",
+						price: 5000,
+						currency: "NGN",
+						slug: "credits",
+						createdAt: new Date(),
+						updatedAt: new Date(),
+					}
 				]
 			}
 		} satisfies PaystackOptions<PaystackClientLike>;
@@ -720,7 +728,9 @@ describe("paystack", () => {
 				customFetchImpl: async (url, init) => {
 					const merged = new Headers(cookieHeaders);
 					const initHeaders = new Headers(init?.headers ?? {});
-					initHeaders.forEach((v, k) => merged.set(k, v));
+					initHeaders.forEach((v, k) => {
+						merged.set(k, v);
+					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
 					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
 				},
@@ -742,7 +752,7 @@ describe("paystack", () => {
 		expect(res.url).toBe("https://paystack.test/buy");
 		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
 			body: expect.objectContaining({
-				amount: 1000,
+				amount: 5000,
 				email: "product@test.com",
 			})
 		}));
@@ -777,7 +787,9 @@ describe("paystack", () => {
 					 
 					const merged = new Headers(cookieHeaders);
 					const initHeaders = new Headers(init?.headers ?? {});
-					initHeaders.forEach((v, k) => merged.set(k, v));
+					initHeaders.forEach((v, k) => {
+						merged.set(k, v);
+					});
 					 
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
 					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
@@ -1014,7 +1026,9 @@ describe("paystack", () => {
 				customFetchImpl: async (url, init) => {
 					const merged = new Headers(cookieHeaders);
 					const initHeaders = new Headers(init?.headers ?? {});
-					initHeaders.forEach((v, k) => merged.set(k, v));
+					initHeaders.forEach((v, k) => {
+						merged.set(k, v);
+					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
 					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
 				},
@@ -1104,7 +1118,9 @@ describe("paystack", () => {
 				customFetchImpl: async (url, init) => {
 					const merged = new Headers(cookieHeaders);
 					const initHeaders = new Headers(init?.headers ?? {});
-					initHeaders.forEach((v, k) => merged.set(k, v));
+					initHeaders.forEach((v, k) => {
+						merged.set(k, v);
+					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
 					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
 				},
@@ -1233,7 +1249,9 @@ describe("paystack", () => {
 				customFetchImpl: async (url, init) => {
 					const merged = new Headers(cookieHeaders);
 					const initHeaders = new Headers(init?.headers ?? {});
-					initHeaders.forEach((v, k) => merged.set(k, v));
+					initHeaders.forEach((v, k) => {
+						merged.set(k, v);
+					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
 					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
 				},

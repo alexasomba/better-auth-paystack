@@ -133,5 +133,42 @@ export function getPaystackOps(paystackClient) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return paystackClient?.transaction?.chargeAuthorization?.(body);
         },
+        productList: () => {
+            if (paystackClient?.product_list !== undefined) {
+                return paystackClient.product_list();
+            }
+            return paystackClient?.product?.list?.();
+        },
+        productFetch: (idOrCode) => {
+            if (paystackClient?.product_fetch !== undefined) {
+                return paystackClient.product_fetch({
+                    params: { path: { id_or_code: idOrCode } },
+                });
+            }
+            return paystackClient?.product?.fetch?.(idOrCode);
+        },
+        productCreate: (params) => {
+            if (paystackClient?.product_create !== undefined) {
+                return paystackClient.product_create({ body: params });
+            }
+            return paystackClient?.product?.create?.(params);
+        },
+        productUpdate: (idOrCode, params) => {
+            if (paystackClient?.product_update !== undefined) {
+                return paystackClient.product_update({
+                    params: { path: { id_or_code: idOrCode } },
+                    body: params,
+                });
+            }
+            return paystackClient?.product?.update?.(idOrCode, params);
+        },
+        productDelete: (idOrCode) => {
+            if (paystackClient?.product_delete !== undefined) {
+                return paystackClient.product_delete({
+                    params: { path: { id_or_code: idOrCode } },
+                });
+            }
+            return paystackClient?.product?.delete?.(idOrCode);
+        },
     };
 }

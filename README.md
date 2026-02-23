@@ -416,8 +416,27 @@ The plugin extends your database with the following fields and tables.
 | `currency`    | `string` | Yes      | Currency code (e.g., "NGN").                      |
 | `status`      | `string` | Yes      | `success`, `pending`, `failed`, `abandoned`.      |
 | `plan`        | `string` | No       | Name of the plan associated with the transaction. |
+| `product`     | `string` | No       | Name of the product associated with the transaction. |
 | `metadata`    | `string` | No       | JSON string of extra transaction metadata.        |
 | `paystackId`  | `string` | No       | The internal Paystack ID for the transaction.     |
+| `createdAt`   | `Date`   | Yes      | Transaction creation timestamp.                   |
+| `updatedAt`   | `Date`   | Yes      | Transaction last update timestamp.                |
+
+### `paystackProduct`
+
+| Field         | Type      | Required | Description                                       |
+| :------------ | :-------- | :------- | :------------------------------------------------ |
+| `name`        | `string`  | Yes      | Product name.                                     |
+| `description` | `string`  | No       | Product description.                              |
+| `price`       | `number`  | Yes      | Price in smallest currency unit.                  |
+| `currency`    | `string`  | Yes      | Currency code (e.g., "NGN").                      |
+| `quantity`    | `number`  | No       | Available stock quantity.                         |
+| `unlimited`   | `boolean` | No       | Whether the product has unlimited stock.          |
+| `paystackId`  | `string`  | No       | The internal Paystack Product ID.                 |
+| `slug`        | `string`  | Yes      | Unique slug for the product.                      |
+| `metadata`    | `string`  | No       | JSON string of extra product metadata.            |
+| `createdAt`   | `Date`    | Yes      | Product creation timestamp.                       |
+| `updatedAt`   | `Date`    | Yes      | Product last update timestamp.                    |
 
 ---
 
@@ -437,6 +456,15 @@ The following fields are indexed:
 - **`paystackTransaction`**: `reference` (unique), `userId`, `referenceId`.
 - **`subscription`**: `paystackSubscriptionCode` (unique), `referenceId`, `paystackTransactionReference`, `paystackCustomerCode`, `plan`.
 - **`user` & `organization`**: `paystackCustomerCode`.
+- **`paystackProduct`**: `slug` (unique), `paystackId` (unique).
+
+### Syncing Products
+
+You can synchronize your Paystack products with your local database using the `/paystack/sync-products` endpoint.
+
+```bash
+POST /api/auth/paystack/sync-products
+```
 
 ---
 

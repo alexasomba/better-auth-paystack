@@ -443,6 +443,35 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
             status: string;
             data: Record<string, unknown>;
         }>;
+        readonly syncProducts: import("better-call").StrictEndpoint<"/paystack/sync-products", {
+            method: "POST";
+            use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+                session: {
+                    session: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        userId: string;
+                        expiresAt: Date;
+                        token: string;
+                        ipAddress?: string | null | undefined;
+                        userAgent?: string | null | undefined;
+                    };
+                    user: Record<string, any> & {
+                        id: string;
+                        createdAt: Date;
+                        updatedAt: Date;
+                        email: string;
+                        emailVerified: boolean;
+                        name: string;
+                        image?: string | null | undefined;
+                    };
+                };
+            }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+        }, {
+            status: string;
+            count: number;
+        }>;
     };
     readonly schema: import("@better-auth/core/db").BetterAuthPluginDBSchema;
     readonly init: (ctx: AuthContext) => {

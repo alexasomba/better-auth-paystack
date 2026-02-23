@@ -1,4 +1,4 @@
-import type { PaystackClientLike, PaystackOptions } from "./types";
+import type { GenericEndpointContext, PaystackClientLike, PaystackOptions, PaystackProduct } from "./types";
 
  
 export async function getPlans(subscriptionOptions: PaystackOptions["subscription"]) {
@@ -48,7 +48,7 @@ export async function getProducts(productOptions: PaystackOptions["products"]) {
 
 export async function getProductByName(options: PaystackOptions<PaystackClientLike>, name: string) {
 	return await getProducts(options.products).then((products) =>
-		products?.find((product) => product.name.toLowerCase() === name.toLowerCase()),
+		products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null,
 	);
 }
 
@@ -95,4 +95,22 @@ export function validateMinAmount(amount: number, currency: string): boolean {
 	};
 	const min = minAmounts[currency.toUpperCase()];
 	return min !== undefined ? amount >= min : true;
+}
+
+export async function decrementProductQuantity(ctx: GenericEndpointContext, productName: string) {
+	const product = await ctx.context.adapter.findOne<PaystackProduct>({
+		model: "paystackProduct",
+		where: [{ field: "slug", value: productName.toLowerCase() }], // We use slug/name for identification
+	});
+
+	if (product && product.unlimited !== true && product.quantity !== undefined && product.quantity > 0) {
+		await ctx.context.adapter.update({
+			model: "paystackProduct",
+			update: {
+				quantity: product.quantity - 1,
+				updatedAt: new Date(),
+			},
+			where: [{ field: "id", value: product.id }],
+		});
+	}
 }

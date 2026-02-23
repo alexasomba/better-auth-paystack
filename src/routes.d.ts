@@ -432,6 +432,35 @@ export declare const getSubscriptionManageLink: (options: AnyPaystackOptions) =>
 }, {
     link: unknown;
 }>;
+export declare const syncProducts: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/sync-products", {
+    method: "POST";
+    use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+        session: {
+            session: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                userId: string;
+                expiresAt: Date;
+                token: string;
+                ipAddress?: string | null | undefined;
+                userAgent?: string | null | undefined;
+            };
+            user: Record<string, any> & {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        };
+    }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+}, {
+    status: string;
+    count: number;
+}>;
 export declare const getConfig: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/get-config", {
     method: "GET";
     metadata: {

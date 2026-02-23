@@ -41,6 +41,10 @@ export const transactions = {
 				type: "string",
 				required: false,
 			},
+			product: {
+				type: "string",
+				required: false,
+			},
 			metadata: {
 				type: "string",
 				required: false,
@@ -158,6 +162,61 @@ export const organization = {
 	},
 } satisfies BetterAuthPluginDBSchema;
 
+export const products = {
+	paystackProduct: {
+		fields: {
+			name: {
+				type: "string",
+				required: true,
+			},
+			description: {
+				type: "string",
+				required: false,
+			},
+			price: {
+				type: "number",
+				required: true,
+			},
+			currency: {
+				type: "string",
+				required: true,
+			},
+			quantity: {
+				type: "number",
+				required: false,
+				defaultValue: 0,
+			},
+			unlimited: {
+				type: "boolean",
+				required: false,
+				defaultValue: true,
+			},
+			paystackId: {
+				type: "string",
+				required: false,
+				unique: true,
+			},
+			slug: {
+				type: "string",
+				required: true,
+				unique: true,
+			},
+			metadata: {
+				type: "string",
+				required: false,
+			},
+			createdAt: {
+				type: "date",
+				required: true,
+			},
+			updatedAt: {
+				type: "date",
+				required: true,
+			},
+		},
+	},
+} satisfies BetterAuthPluginDBSchema;
+
 export const getSchema = (options: PaystackOptions<PaystackClientLike>) => {
 	let baseSchema: BetterAuthPluginDBSchema;
 
@@ -166,11 +225,13 @@ export const getSchema = (options: PaystackOptions<PaystackClientLike>) => {
 			...subscriptions,
 			...transactions,
 			...user,
+			...products,
 		};
 	} else {
 		baseSchema = {
 			...user,
 			...transactions,
+			...products,
 		};
 	}
 

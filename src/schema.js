@@ -5,6 +5,7 @@ export const transactions = {
             reference: {
                 type: "string",
                 required: true,
+                unique: true,
             },
             paystackId: {
                 type: "string",
@@ -13,10 +14,12 @@ export const transactions = {
             referenceId: {
                 type: "string",
                 required: true,
+                index: true,
             },
             userId: {
                 type: "string",
                 required: true,
+                index: true,
             },
             amount: {
                 type: "number",
@@ -31,6 +34,10 @@ export const transactions = {
                 required: true,
             },
             plan: {
+                type: "string",
+                required: false,
+            },
+            product: {
                 type: "string",
                 required: false,
             },
@@ -55,22 +62,27 @@ export const subscriptions = {
             plan: {
                 type: "string",
                 required: true,
+                index: true,
             },
             referenceId: {
                 type: "string",
                 required: true,
+                index: true,
             },
             paystackCustomerCode: {
                 type: "string",
                 required: false,
+                index: true,
             },
             paystackSubscriptionCode: {
                 type: "string",
                 required: false,
+                unique: true,
             },
             paystackTransactionReference: {
                 type: "string",
                 required: false,
+                index: true,
             },
             paystackAuthorizationCode: {
                 type: "string",
@@ -122,6 +134,7 @@ export const user = {
             paystackCustomerCode: {
                 type: "string",
                 required: false,
+                index: true,
             },
         },
     },
@@ -132,10 +145,65 @@ export const organization = {
             paystackCustomerCode: {
                 type: "string",
                 required: false,
+                index: true,
             },
             email: {
                 type: "string",
                 required: false,
+            },
+        },
+    },
+};
+export const products = {
+    paystackProduct: {
+        fields: {
+            name: {
+                type: "string",
+                required: true,
+            },
+            description: {
+                type: "string",
+                required: false,
+            },
+            price: {
+                type: "number",
+                required: true,
+            },
+            currency: {
+                type: "string",
+                required: true,
+            },
+            quantity: {
+                type: "number",
+                required: false,
+                defaultValue: 0,
+            },
+            unlimited: {
+                type: "boolean",
+                required: false,
+                defaultValue: true,
+            },
+            paystackId: {
+                type: "string",
+                required: false,
+                unique: true,
+            },
+            slug: {
+                type: "string",
+                required: true,
+                unique: true,
+            },
+            metadata: {
+                type: "string",
+                required: false,
+            },
+            createdAt: {
+                type: "date",
+                required: true,
+            },
+            updatedAt: {
+                type: "date",
+                required: true,
             },
         },
     },
@@ -147,12 +215,14 @@ export const getSchema = (options) => {
             ...subscriptions,
             ...transactions,
             ...user,
+            ...products,
         };
     }
     else {
         baseSchema = {
             ...user,
             ...transactions,
+            ...products,
         };
     }
     // Add organization schema if organization support is enabled

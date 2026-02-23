@@ -69,6 +69,18 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
             email?: (code: string, email: string) => Promise<unknown>;
         };
     };
+    product?: {
+        list?: () => Promise<unknown>;
+        fetch?: (idOrCode: string) => Promise<unknown>;
+        create?: (params: Record<string, unknown>) => Promise<unknown>;
+        update?: (idOrCode: string, params: Record<string, unknown>) => Promise<unknown>;
+        delete?: (idOrCode: string) => Promise<unknown>;
+    };
+    product_list?: (init?: any) => Promise<unknown>;
+    product_fetch?: (init: any) => Promise<unknown>;
+    product_create?: (init: any) => Promise<unknown>;
+    product_update?: (init: any) => Promise<unknown>;
+    product_delete?: (init: any) => Promise<unknown>;
 };
 type NoInfer<T> = [T][T extends unknown ? 0 : never];
 export type AuthSession = {
@@ -105,18 +117,33 @@ export interface PaystackPlan {
     } | undefined;
 }
 export interface PaystackProduct {
+    id: string;
     /** Human-readable name of the product. */
     name: string;
-    /** Amount in the smallest currency unit (e.g., kobo). */
-    amount: number;
+    /** Price in the smallest currency unit (e.g., kobo). */
+    price: number;
     /** Currency ISO code (e.g., NGN). */
     currency: PaystackCurrency | (string & {});
-    /** Optional metadata to include with the transaction. */
-    metadata?: Record<string, unknown> | undefined;
+    /** Optional metadata to include with the product. */
+    metadata?: string | undefined;
     /** Optional description of the product. */
     description?: string | undefined;
     /** Optional list of features for the product. */
     features?: string[] | undefined;
+    /** Optional stock quantity for the product. */
+    quantity?: number | undefined;
+    /** Whether the product has unlimited stock. */
+    unlimited?: boolean | undefined;
+    /** The internal Paystack ID for the product. */
+    paystackId?: string | undefined;
+    /** Unique slug for the product. */
+    slug: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface InputPaystackProduct extends Omit<PaystackProduct, "id" | "createdAt" | "updatedAt"> {
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 export interface PaystackTransaction {
     id: string;
@@ -128,6 +155,7 @@ export interface PaystackTransaction {
     currency: PaystackCurrency | (string & {});
     status: string;
     plan?: string | undefined;
+    product?: string | undefined;
     metadata?: string | undefined;
     createdAt: Date;
     updatedAt: Date;

@@ -1,6 +1,6 @@
 import { defineErrorCodes } from "@better-auth/core/utils";
 import { defu } from "defu";
-import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, listTransactions, paystackWebhook, verifyTransaction, getConfig, getSubscriptionManageLink, PAYSTACK_ERROR_CODES, createSubscription, upgradeSubscription, cancelSubscription, restoreSubscription, chargeRecurringSubscription, } from "./routes";
+import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, listTransactions, paystackWebhook, verifyTransaction, getConfig, getSubscriptionManageLink, PAYSTACK_ERROR_CODES, createSubscription, upgradeSubscription, cancelSubscription, restoreSubscription, chargeRecurringSubscription, syncProducts, } from "./routes";
 import { getSchema } from "./schema";
 import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
 import { getPlanByName } from "./utils";
@@ -26,6 +26,7 @@ export const paystack = (options) => {
             cancelSubscription: cancelSubscription(options),
             restoreSubscription: restoreSubscription(options),
             chargeRecurringSubscription: chargeRecurringSubscription(options),
+            syncProducts: syncProducts(options),
         },
         schema: getSchema(options),
         init: (ctx) => {

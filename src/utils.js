@@ -36,7 +36,7 @@ export async function getProducts(productOptions) {
     return [];
 }
 export async function getProductByName(options, name) {
-    return await getProducts(options.products).then((products) => products?.find((product) => product.name.toLowerCase() === name.toLowerCase()));
+    return await getProducts(options.products).then((products) => products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null);
 }
 export function getNextPeriodEnd(startDate, interval) {
     const date = new Date(startDate);
@@ -80,4 +80,20 @@ export function validateMinAmount(amount, currency) {
     };
     const min = minAmounts[currency.toUpperCase()];
     return min !== undefined ? amount >= min : true;
+}
+export async function decrementProductQuantity(ctx, productName) {
+    const product = await ctx.context.adapter.findOne({
+        model: "paystackProduct",
+        where: [{ field: "slug", value: productName.toLowerCase() }], // We use slug/name for identification
+    });
+    if (product && product.unlimited !== true && product.quantity !== undefined && product.quantity > 0) {
+        await ctx.context.adapter.update({
+            model: "paystackProduct",
+            update: {
+                quantity: product.quantity - 1,
+                updatedAt: new Date(),
+            },
+            where: [{ field: "id", value: product.id }],
+        });
+    }
 }
