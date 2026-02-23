@@ -566,10 +566,10 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
             });
         }
         const data = unwrapSdkResult(verifyRes);
-        const status = data?.status;
-        const reference = data?.reference ?? ctx.body.reference;
-        const paystackId = data?.id !== undefined && data?.id !== null ? String(data.id) : undefined;
-        const authorizationCode = data?.authorization?.authorization_code;
+        const status = (data)?.status;
+        const reference = (data)?.reference ?? ctx.body.reference;
+        const paystackId = (data)?.id !== undefined && (data)?.id !== null ? String(data.id) : undefined;
+        const authorizationCode = (data)?.authorization?.authorization_code;
         if (status === "success") {
             const session = await getSessionFromCtx(ctx);
             // Get the local transaction record to know the intended referenceId (Org or User)
@@ -613,13 +613,13 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                         status: "success",
                         paystackId,
                         // Update with actual amount/currency from Paystack (for planCode subscriptions)
-                        ...(data?.amount !== undefined && data?.amount !== null ? { amount: data.amount } : {}),
-                        ...(data?.currency !== undefined && data?.currency !== null ? { currency: data.currency } : {}),
+                        ...((data)?.amount !== undefined && (data)?.amount !== null ? { amount: (data).amount } : {}),
+                        ...((data)?.currency !== undefined && (data)?.currency !== null ? { currency: (data).currency } : {}),
                         updatedAt: new Date(),
                     },
                     where: [{ field: "reference", value: reference }],
                 });
-                const customer = data?.customer;
+                const customer = (data)?.customer;
                 const paystackCustomerCodeFromPaystack = (customer !== undefined && customer !== null && typeof customer === "object")
                     ? customer.customer_code
                     : undefined;
@@ -652,8 +652,8 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                 let isTrial = false;
                 let trialEnd;
                 let targetPlan;
-                if (data?.metadata !== undefined && data?.metadata !== null) {
-                    const metaRaw = data.metadata;
+                if ((data)?.metadata !== undefined && (data)?.metadata !== null) {
+                    const metaRaw = (data).metadata;
                     const meta = typeof metaRaw === "string" ? JSON.parse(metaRaw) : metaRaw;
                     isTrial = meta.isTrial === true || meta.isTrial === "true";
                     trialEnd = meta.trialEnd;
@@ -662,7 +662,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                 let paystackSubscriptionCode;
                 if (isTrial === true && (targetPlan !== undefined && targetPlan !== null && targetPlan !== "") && (trialEnd !== undefined && trialEnd !== null && trialEnd !== "")) {
                     // Trial Flow: Create subscription with future start date using auth code
-                    const email = data?.customer?.email;
+                    const email = (data)?.customer?.email;
                     // We need the planCode. We have the plan NAME in metadata (lowercased).
                     const plans = await getPlans(subscriptionOptions);
                     const planConfig = plans.find(p => p.name.toLowerCase() === targetPlan?.toLowerCase());
@@ -683,7 +683,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                     }
                 }
                 else if (isTrial !== true) {
-                    const planFromPaystack = data?.plan;
+                    const planFromPaystack = (data)?.plan;
                     const planCodeFromPaystack = planFromPaystack?.plan_code;
                     if (planCodeFromPaystack === undefined || planCodeFromPaystack === null || planCodeFromPaystack === "") {
                         // Local Plan
@@ -691,7 +691,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                     }
                     else {
                         // Native Paystack subscription (if created during charge)
-                        paystackSubscriptionCode = data?.subscription?.subscription_code;
+                        paystackSubscriptionCode = (data)?.subscription?.subscription_code;
                     }
                 }
                 const updatedSubscription = await ctx.context.adapter.update({
