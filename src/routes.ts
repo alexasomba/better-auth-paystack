@@ -668,58 +668,52 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
                         (error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
 				});
 			}
-			let data =
-                verifyRes !== null && verifyRes !== undefined && typeof verifyRes === "object" && "status" in verifyRes && "data" in verifyRes
-                	? (verifyRes as Record<string, unknown>).data
-                	: (verifyRes as Record<string, unknown>)?.data !== undefined ? (verifyRes as Record<string, unknown>).data : verifyRes;
-            
-			if (data !== null && data !== undefined && typeof data === "object" && "status" in data && "data" in data) {
-				data = (data as Record<string, unknown>).data;
-			}
-			const status = (data as Record<string, unknown>)?.status as string | undefined;
-			const reference = ((data as Record<string, unknown>)?.reference as string | undefined) ?? ctx.body.reference;
-			const paystackId = (data as Record<string, unknown>)?.id !== undefined && (data as Record<string, unknown>)?.id !== null ? String((data as Record<string, unknown>).id) : undefined;
-			const authorizationCode = ((data as Record<string, unknown>)?.authorization as Record<string, unknown>)?.authorization_code as string | undefined;
+			const data = unwrapSdkResult<Record<string, unknown>>(verifyRes);
+			const status = (data)?.status as string | undefined;
+			const reference = ((data)?.reference as string | undefined) ?? ctx.body.reference;
+			const paystackId = (data)?.id !== undefined && (data)?.id !== null ? String((data as { id: string | number }).id) : undefined;
+			const authorizationCode = ((data)?.authorization as Record<string, unknown>)?.authorization_code as string | undefined;
 
 			if (status === "success") {
-				try {
-					const session = await getSessionFromCtx(ctx);
-                    
-					// Get the local transaction record to know the intended referenceId (Org or User)
-					const txRecord = await ctx.context.adapter.findOne<Record<string, unknown> & { referenceId?: string }>({
-						model: "paystackTransaction",
-						where: [{ field: "reference", value: reference }],
-					});
-                    
-					// Trust the referenceId from the record, fallback to session user if missing
-					const referenceId = txRecord?.referenceId ?? (session?.user as unknown as { id: string })?.id;
+				const session = await getSessionFromCtx(ctx);
 
-					// Authorization check: ensure the current user has access to this referenceId
-					if (session !== null && session !== undefined && referenceId !== session.user.id) {
-						const authRef = (subscriptionOptions as unknown as { authorizeReference: (data: unknown, ctx: unknown) => Promise<boolean> })?.authorizeReference;
-						let authorized = false;
-						if (authRef !== undefined && authRef !== null) {
-							authorized = await authRef({
-								user: session.user,
-								session,
-								referenceId,
-								action: "verify-transaction"
-							}, ctx);
-						} else if (options.organization?.enabled === true) {
-							const member = await ctx.context.adapter.findOne({
-								model: "member",
-								where: [
-									{ field: "userId", value: session.user.id },
-									{ field: "organizationId", value: referenceId }
-								]
-							});
-							if (member !== null && member !== undefined) authorized = true;
-						}
-                          
-						if (!authorized) {
-							throw new APIError("UNAUTHORIZED");
-						}
+				// Get the local transaction record to know the intended referenceId (Org or User)
+				const txRecord = await ctx.context.adapter.findOne<Record<string, unknown> & { referenceId?: string }>({
+					model: "paystackTransaction",
+					where: [{ field: "reference", value: reference }],
+				});
+
+				// Trust the referenceId from the record, fallback to session user if missing
+				const referenceId = txRecord?.referenceId ?? (session?.user as unknown as { id: string })?.id;
+
+				// Authorization check: ensure the current user has access to this referenceId
+				if (session !== null && session !== undefined && referenceId !== session.user.id) {
+					const authRef = (subscriptionOptions as unknown as { authorizeReference: (data: unknown, ctx: unknown) => Promise<boolean> })?.authorizeReference;
+					let authorized = false;
+					if (authRef !== undefined && authRef !== null) {
+						authorized = await authRef({
+							user: session.user,
+							session,
+							referenceId,
+							action: "verify-transaction"
+						}, ctx);
+					} else if (options.organization?.enabled === true) {
+						const member = await ctx.context.adapter.findOne({
+							model: "member",
+							where: [
+								{ field: "userId", value: session.user.id },
+								{ field: "organizationId", value: referenceId }
+							]
+						});
+						if (member !== null && member !== undefined) authorized = true;
 					}
+
+					if (!authorized) {
+						throw new APIError("UNAUTHORIZED");
+					}
+				}
+
+				try {
 
 					await ctx.context.adapter.update({
 						model: "paystackTransaction",
@@ -727,15 +721,14 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 							status: "success",
 							paystackId,
 							// Update with actual amount/currency from Paystack (for planCode subscriptions)
-							...((data as Record<string, unknown>)?.amount !== undefined && (data as Record<string, unknown>)?.amount !== null ? { amount: (data as Record<string, unknown>).amount } : {}),
-							...((data as Record<string, unknown>)?.currency !== undefined && (data as Record<string, unknown>)?.currency !== null ? { currency: (data as Record<string, unknown>).currency } : {}),
+							...((data)?.amount !== undefined && (data)?.amount !== null ? { amount: (data).amount } : {}),
+							...((data)?.currency !== undefined && (data)?.currency !== null ? { currency: (data).currency } : {}),
 							updatedAt: new Date(),
 						},
 						where: [{ field: "reference", value: reference }],
 					});
 
-					// Sync Customer Code back to User or Org if missing
-					const customer = (data as Record<string, unknown>)?.customer;
+					const customer = (data)?.customer;
 					const paystackCustomerCodeFromPaystack = (customer !== undefined && customer !== null && typeof customer === "object")
 						? (customer as Record<string, unknown>).customer_code as string | undefined
 						: undefined;
@@ -771,8 +764,8 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 					let trialEnd: string | undefined;
 					let targetPlan: string | undefined;
 
-					if ((data as Record<string, unknown>)?.metadata !== undefined && (data as Record<string, unknown>)?.metadata !== null) {
-						const metaRaw = (data as Record<string, unknown>).metadata;
+					if ((data)?.metadata !== undefined && (data)?.metadata !== null) {
+						const metaRaw = (data).metadata;
 						const meta = typeof metaRaw === "string" ? JSON.parse(metaRaw) : metaRaw as Record<string, unknown>;
 						isTrial = meta.isTrial === true || meta.isTrial === "true";
 						 
@@ -785,7 +778,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 
 					if (isTrial === true && (targetPlan !== undefined && targetPlan !== null && targetPlan !== "") && (trialEnd !== undefined && trialEnd !== null && trialEnd !== "")) {
 						// Trial Flow: Create subscription with future start date using auth code
-						const email = ((data as Record<string, unknown>)?.customer as Record<string, unknown>)?.email as string | undefined;
+						const email = ((data)?.customer as Record<string, unknown>)?.email as string | undefined;
                         
 						// We need the planCode. We have the plan NAME in metadata (lowercased).
 						const plans = await getPlans(subscriptionOptions);
@@ -809,7 +802,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 							paystackSubscriptionCode = (cleanSubData)?.subscription_code as string | undefined;
 						}
 					} else if (isTrial !== true) {
-						const planFromPaystack = (data as Record<string, unknown>)?.plan as Record<string, unknown> | undefined;
+						const planFromPaystack = (data)?.plan as Record<string, unknown> | undefined;
 						const planCodeFromPaystack = planFromPaystack?.plan_code as string | undefined;
 
 						if (planCodeFromPaystack === undefined || planCodeFromPaystack === null || planCodeFromPaystack === "") {
@@ -817,7 +810,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 							paystackSubscriptionCode = `LOC_${reference}`;
 						} else {
 							// Native Paystack subscription (if created during charge)
-							paystackSubscriptionCode = ((data as Record<string, unknown>)?.subscription as Record<string, unknown> | undefined)?.subscription_code as string | undefined;
+							paystackSubscriptionCode = ((data)?.subscription as Record<string, unknown> | undefined)?.subscription_code as string | undefined;
 						}
 					}
 

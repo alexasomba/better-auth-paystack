@@ -80,7 +80,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         }, {
             status: string | undefined;
             reference: string;
-            data: unknown;
+            data: Record<string, unknown>;
         }>;
         readonly listSubscriptions: import("better-call").StrictEndpoint<"/paystack/list-subscriptions", {
             method: "GET";

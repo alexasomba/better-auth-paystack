@@ -639,7 +639,7 @@ describe("paystack", () => {
 			},
 		);
 		const verifyResB = await auth.handler(verifyReqB);
-		expect(verifyResB.status).toBe(200);
+		expect(verifyResB.status).toBe(401);
 
 		const subA1 = (
 			await (ctx.adapter as any).findMany({
@@ -1475,7 +1475,7 @@ describe("paystack", () => {
 
 		// Extract session cookie from sign-in response
 		const setCookieHeader = signInRes.headers.get("set-cookie") ?? "";
-		const sessionCookieMatch = setCookieHeader.match(/better-auth\.session_token=[^;]+/);
+		const sessionCookieMatch = /better-auth\.session_token=[^;]+/.exec(setCookieHeader);
 		const sessionCookie = sessionCookieMatch?.[0] ?? "";
 
 		// Call sync-products with the session cookie

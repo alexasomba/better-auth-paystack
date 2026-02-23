@@ -261,7 +261,7 @@ export declare const verifyTransaction: <P extends string = "/paystack/verify-tr
 }, {
     status: string | undefined;
     reference: string;
-    data: unknown;
+    data: Record<string, unknown>;
 }>;
 export declare const listSubscriptions: (options: AnyPaystackOptions) => import("better-call").StrictEndpoint<"/paystack/list-subscriptions", {
     method: "GET";

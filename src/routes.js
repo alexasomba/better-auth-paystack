@@ -565,53 +565,48 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                 message: error?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
             });
         }
-        let data = verifyRes !== null && verifyRes !== undefined && typeof verifyRes === "object" && "status" in verifyRes && "data" in verifyRes
-            ? verifyRes.data
-            : verifyRes?.data !== undefined ? verifyRes.data : verifyRes;
-        if (data !== null && data !== undefined && typeof data === "object" && "status" in data && "data" in data) {
-            data = data.data;
-        }
+        const data = unwrapSdkResult(verifyRes);
         const status = data?.status;
         const reference = data?.reference ?? ctx.body.reference;
         const paystackId = data?.id !== undefined && data?.id !== null ? String(data.id) : undefined;
         const authorizationCode = data?.authorization?.authorization_code;
         if (status === "success") {
-            try {
-                const session = await getSessionFromCtx(ctx);
-                // Get the local transaction record to know the intended referenceId (Org or User)
-                const txRecord = await ctx.context.adapter.findOne({
-                    model: "paystackTransaction",
-                    where: [{ field: "reference", value: reference }],
-                });
-                // Trust the referenceId from the record, fallback to session user if missing
-                const referenceId = txRecord?.referenceId ?? session?.user?.id;
-                // Authorization check: ensure the current user has access to this referenceId
-                if (session !== null && session !== undefined && referenceId !== session.user.id) {
-                    const authRef = subscriptionOptions?.authorizeReference;
-                    let authorized = false;
-                    if (authRef !== undefined && authRef !== null) {
-                        authorized = await authRef({
-                            user: session.user,
-                            session,
-                            referenceId,
-                            action: "verify-transaction"
-                        }, ctx);
-                    }
-                    else if (options.organization?.enabled === true) {
-                        const member = await ctx.context.adapter.findOne({
-                            model: "member",
-                            where: [
-                                { field: "userId", value: session.user.id },
-                                { field: "organizationId", value: referenceId }
-                            ]
-                        });
-                        if (member !== null && member !== undefined)
-                            authorized = true;
-                    }
-                    if (!authorized) {
-                        throw new APIError("UNAUTHORIZED");
-                    }
+            const session = await getSessionFromCtx(ctx);
+            // Get the local transaction record to know the intended referenceId (Org or User)
+            const txRecord = await ctx.context.adapter.findOne({
+                model: "paystackTransaction",
+                where: [{ field: "reference", value: reference }],
+            });
+            // Trust the referenceId from the record, fallback to session user if missing
+            const referenceId = txRecord?.referenceId ?? session?.user?.id;
+            // Authorization check: ensure the current user has access to this referenceId
+            if (session !== null && session !== undefined && referenceId !== session.user.id) {
+                const authRef = subscriptionOptions?.authorizeReference;
+                let authorized = false;
+                if (authRef !== undefined && authRef !== null) {
+                    authorized = await authRef({
+                        user: session.user,
+                        session,
+                        referenceId,
+                        action: "verify-transaction"
+                    }, ctx);
                 }
+                else if (options.organization?.enabled === true) {
+                    const member = await ctx.context.adapter.findOne({
+                        model: "member",
+                        where: [
+                            { field: "userId", value: session.user.id },
+                            { field: "organizationId", value: referenceId }
+                        ]
+                    });
+                    if (member !== null && member !== undefined)
+                        authorized = true;
+                }
+                if (!authorized) {
+                    throw new APIError("UNAUTHORIZED");
+                }
+            }
+            try {
                 await ctx.context.adapter.update({
                     model: "paystackTransaction",
                     update: {
@@ -624,7 +619,6 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                     },
                     where: [{ field: "reference", value: reference }],
                 });
-                // Sync Customer Code back to User or Org if missing
                 const customer = data?.customer;
                 const paystackCustomerCodeFromPaystack = (customer !== undefined && customer !== null && typeof customer === "object")
                     ? customer.customer_code
