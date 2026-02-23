@@ -446,7 +446,7 @@ The plugin extends your database with the following fields and tables.
 - **Email Verification**: Use `requireEmailVerification: true` to prevent unverified checkouts.
 - **Redirect Failures**: Check your browser console; Paystack often returns 429 errors if you're hitting the test API too frequently.
 - **Reference mismatches**: Ensure `referenceId` is passed correctly for Organization billing.
-- **Authorization Denied**: Verify your `authorizeReference` logic is correctly checking user roles or organization memberships.
+- **Authorization Denied**: Verify your `authorizeReference` logic is correctly checking user roles or organization memberships. Unauthorized attempts to verify transactions now return a `401 Unauthorized` response to prevent data leaks.
 
 ### Database Indexing
 
@@ -460,7 +460,13 @@ The following fields are indexed:
 
 ### Syncing Products
 
-You can synchronize your Paystack products with your local database using the `/paystack/sync-products` endpoint.
+The plugin provides two ways to keep your product inventory in sync with Paystack:
+
+#### 1. Automated Inventory Sync (New)
+Whenever a successful one-time payment is made (via webhook or manual verification), the plugin automatically calls **`syncProductQuantityFromPaystack`**. This fetches the real-time remaining quantity from the Paystack API and updates your local database record, ensuring your inventory is always accurate.
+
+#### 2. Manual Bulk Sync
+You can synchronize all products with your local database using the `/paystack/sync-products` endpoint.
 
 ```bash
 POST /api/auth/paystack/sync-products
