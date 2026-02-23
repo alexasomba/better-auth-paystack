@@ -17,35 +17,19 @@ export function unwrapSdkResult(result) {
     }
     return result;
 }
-const normalizeMetadata = (value) => {
-    if (value === undefined || value === null || value === "")
-        return undefined;
-    return typeof value === "string" ? value : JSON.stringify(value);
-};
-const normalizeMetadataBody = (body) => {
-    const { metadata, ...rest } = body;
-    const normalized = normalizeMetadata(metadata);
-    if (normalized === undefined) {
-        return rest;
-    }
-    return { ...rest, metadata: normalized };
-};
 export function getPaystackOps(paystackClient) {
     return {
         customerCreate: (params) => {
             if (paystackClient?.customer_create !== undefined) {
-                const body = normalizeMetadataBody(params);
-                return paystackClient.customer_create({ body });
+                return paystackClient.customer_create({ body: params });
             }
             return paystackClient?.customer?.create?.(params);
         },
         customerUpdate: (code, params) => {
             if (paystackClient?.customer_update !== undefined) {
-                // Determine if it's the flat client (OpenAPI style)
-                const body = normalizeMetadataBody(params);
                 return paystackClient.customer_update({
                     params: { path: { code } },
-                    body,
+                    body: params,
                 });
             }
             return paystackClient?.customer?.update?.(code, params);

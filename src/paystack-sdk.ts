@@ -22,7 +22,7 @@ function isOpenApiFetchResponse(
 	);
 }
 
-export function unwrapSdkResult<T = unknown>(result: unknown): T {
+export function unwrapSdkResult<T = any>(result: unknown): T {
 	if (isOpenApiFetchResponse(result)) {
 		if (result.error !== undefined && result.error !== null) {
 			throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error));

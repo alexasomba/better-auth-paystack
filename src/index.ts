@@ -33,7 +33,7 @@ import type {
 	PaystackProduct,
 	Member,
 	User,
-
+	PaystackCustomerResponse,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -43,7 +43,9 @@ const INTERNAL_ERROR_CODES = defineErrorCodes({
 
 export const paystack = <
     TPaystackClient extends PaystackClientLike = PaystackNodeClient,
-    O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>,
+    TMetadata = any,
+    TLimits = any,
+    O extends PaystackOptions<TPaystackClient, TMetadata, TLimits> = PaystackOptions<TPaystackClient, TMetadata, TLimits>,
 >(
 		options: O,
 	) => {
@@ -82,10 +84,10 @@ export const paystack = <
 										first_name: user.name ?? undefined,
 										metadata: {
 											userId: user.id,
-										},
+										} as any,
 									});
-									const data = unwrapSdkResult<Record<string, unknown>>(raw);
-									const customerCode = (data?.customer_code as string | undefined) ?? (data?.data as Record<string, unknown>)?.customer_code as string | undefined;
+									const data = unwrapSdkResult<PaystackCustomerResponse>(raw);
+									const customerCode = data?.customer_code;
 
 									if (customerCode === undefined || customerCode === null) {
 										return;
@@ -138,13 +140,13 @@ export const paystack = <
 												extraCreateParams,
 											);
 											const paystackOps = getPaystackOps(options.paystackClient as PaystackClientLike);
-											const raw = await paystackOps.customerCreate(params);
-											const sdkRes = unwrapSdkResult<Record<string, unknown>>(raw);
+											const raw = await paystackOps.customerCreate(params as any);
+											const sdkRes = unwrapSdkResult<any>(raw);
 											const paystackCustomer =
                                                 sdkRes !== null && typeof sdkRes === "object" && "status" in sdkRes && "data" in sdkRes
-                                                	? (sdkRes as { data: Record<string, unknown> }).data
-                                                	: sdkRes?.data ?? sdkRes;
-											const customerCode = (paystackCustomer as Record<string, unknown>)?.customer_code as string | undefined;
+                                                	? (sdkRes as { data: PaystackCustomerResponse }).data
+                                                	: (sdkRes?.data ?? sdkRes) as PaystackCustomerResponse;
+											const customerCode = paystackCustomer?.customer_code;
 
 											if (customerCode === undefined || customerCode === null) return;
 
@@ -155,7 +157,7 @@ export const paystack = <
 
 											await options.organization?.onCustomerCreate?.(
 												{
-													paystackCustomer: paystackCustomer as Record<string, unknown>,
+													paystackCustomer,
 													organization: {
 														...org,
 														paystackCustomerCode: customerCode,
@@ -218,8 +220,10 @@ export const paystack = <
 	return res;
 };
 
-export type PaystackPlugin<O extends PaystackOptions<PaystackClientLike> = PaystackOptions> = ReturnType<
-    typeof paystack<PaystackClientLike, O>
+export type PaystackPlugin<
+    O extends PaystackOptions<PaystackClientLike, any, any> = PaystackOptions,
+> = ReturnType<
+    typeof paystack<PaystackClientLike, any, any, O>
 >;
 
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };
