@@ -36,25 +36,7 @@ export function unwrapSdkResult<T = unknown>(result: unknown): T {
 	return result as T;
 }
 
-type MetadataValue = string | Record<string, unknown> | undefined;
 
-const normalizeMetadata = (value: MetadataValue): string | undefined => {
-	if (value === undefined || value === null || value === "") return undefined;
-	return typeof value === "string" ? value : JSON.stringify(value);
-};
-
-const normalizeMetadataBody = <T extends { metadata?: MetadataValue }>(
-	body: T,
-): Omit<T, "metadata"> & { metadata?: string } => {
-	const { metadata, ...rest } = body;
-	const normalized = normalizeMetadata(metadata);
-	if (normalized === undefined) {
-		return rest as Omit<T, "metadata"> & { metadata?: string };
-	}
-	return { ...rest, metadata: normalized } as Omit<T, "metadata"> & {
-        metadata?: string;
-    };
-};
 
 
 
@@ -70,18 +52,15 @@ export function getPaystackOps(
 	return {
 		customerCreate: (params: PaystackCustomerCreateInput) => {
 			if (paystackClient?.customer_create !== undefined) {
-				const body = normalizeMetadataBody(params);
-				return paystackClient.customer_create({ body });
+				return paystackClient.customer_create({ body: params as any });
 			}
 			return paystackClient?.customer?.create?.(params);
 		},
 		customerUpdate: (code: string, params: PaystackCustomerUpdateInput) => {
 			if (paystackClient?.customer_update !== undefined) {
-				// Determine if it's the flat client (OpenAPI style)
-				const body = normalizeMetadataBody(params);
 				return paystackClient.customer_update({
 					params: { path: { code } },
-					body,
+					body: params as any,
 				});
 			}
 			return paystackClient?.customer?.update?.(code, params);
