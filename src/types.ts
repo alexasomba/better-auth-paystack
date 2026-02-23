@@ -18,6 +18,31 @@ export type {
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
 export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
 
+export type PaystackEvent =
+	| "charge.success"
+	| "charge.failure"
+	| "subscription.create"
+	| "subscription.disable"
+	| "subscription.not_renew"
+	| "subscription.expiring_cards"
+	| "invoice.create"
+	| "invoice.payment_failed"
+	| "invoice.update"
+	| "transfer.success"
+	| "transfer.failed"
+	| "transfer.reversed"
+	| "customeridentification.success"
+	| "customeridentification.failed"
+	| (string & {});
+
+export interface PaystackWebhookPayload {
+	event: PaystackEvent;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	data: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	[key: string]: any;
+}
+
 export interface PaystackOpenApiFetchResponse<T = unknown> {
     data?: T;
     error?: unknown;
@@ -256,7 +281,7 @@ export interface SubscriptionOptions {
     onSubscriptionComplete?:
     | ((
         data: {
-            event: unknown;
+            event: PaystackWebhookPayload;
             subscription: Subscription;
             plan: PaystackPlan;
         },
@@ -266,7 +291,7 @@ export interface SubscriptionOptions {
     onSubscriptionUpdate?:
     | ((
         data: {
-            event: unknown;
+            event: PaystackWebhookPayload;
             subscription: Subscription;
             plan?: PaystackPlan;
         },
@@ -276,7 +301,7 @@ export interface SubscriptionOptions {
     onSubscriptionCreated?:
     | ((
         data: {
-            event: unknown;
+            event: PaystackWebhookPayload;
             subscription: Subscription;
             plan: PaystackPlan;
         },
@@ -286,7 +311,7 @@ export interface SubscriptionOptions {
     onSubscriptionCancel?:
     | ((
         data: {
-            event: unknown;
+            event: PaystackWebhookPayload;
             subscription: Subscription;
         },
         ctx: GenericEndpointContext,
@@ -295,7 +320,7 @@ export interface SubscriptionOptions {
     onSubscriptionDelete?:
     | ((
         data: {
-            event: unknown;
+            event: PaystackWebhookPayload;
             subscription: Subscription;
         },
         ctx: GenericEndpointContext,
@@ -357,7 +382,7 @@ export interface PaystackOptions<
     | undefined;
     products?: ProductOptions | undefined;
     organization?: OrganizationOptions | undefined;
-    onEvent?: ((event: unknown) => Promise<void>) | undefined;
+    onEvent?: ((event: PaystackWebhookPayload) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user & typeof organization> | undefined;
 }
 

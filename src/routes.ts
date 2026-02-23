@@ -10,7 +10,7 @@ import {
 import * as z from "zod/v4";
 import type { GenericEndpointContext } from "better-auth";
 
-import type { InputPaystackTransaction, InputSubscription, PaystackOptions, PaystackTransaction, Subscription, Organization, Member, User, PaystackClientLike } from "./types";
+import type { InputPaystackTransaction, InputSubscription, PaystackOptions, PaystackTransaction, Subscription, Organization, Member, User, PaystackClientLike, PaystackWebhookPayload } from "./types";
 import {
 	syncProductQuantityFromPaystack,
 	getPlanByName,
@@ -106,9 +106,9 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 				});
 			}
 
-			const event = JSON.parse(payload);
-			const eventName = String(event?.event ?? "");
-			const data = event?.data;
+			const event = JSON.parse(payload) as PaystackWebhookPayload;
+			const eventName = event.event;
+			const data = event.data;
 
 			// Core Transaction Status Sync (Applies to both one-time and recurring)
 			if (eventName === "charge.success") {
