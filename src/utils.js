@@ -1,3 +1,4 @@
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 export async function getPlans(subscriptionOptions) {
     if (subscriptionOptions?.enabled === true) {
         return typeof subscriptionOptions.plans === "function"
@@ -81,19 +82,73 @@ export function validateMinAmount(amount, currency) {
     const min = minAmounts[currency.toUpperCase()];
     return min !== undefined ? amount >= min : true;
 }
-export async function decrementProductQuantity(ctx, productName) {
-    const product = await ctx.context.adapter.findOne({
+export async function syncProductQuantityFromPaystack(ctx, productName, paystackClient) {
+    // Find the local product record (by name or slug)
+    let localProduct = await ctx.context.adapter.findOne({
         model: "paystackProduct",
-        where: [{ field: "slug", value: productName.toLowerCase() }], // We use slug/name for identification
+        where: [{ field: "name", value: productName }],
     });
-    if (product && product.unlimited !== true && product.quantity !== undefined && product.quantity > 0) {
-        await ctx.context.adapter.update({
-            model: "paystackProduct",
-            update: {
-                quantity: product.quantity - 1,
-                updatedAt: new Date(),
-            },
-            where: [{ field: "id", value: product.id }],
-        });
+    localProduct ??= await ctx.context.adapter.findOne({
+        model: "paystackProduct",
+        where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
+    });
+    if (!localProduct?.paystackId) {
+        // No local record with a Paystack ID — fall back to local decrement
+        if (localProduct && localProduct.unlimited !== true && localProduct.quantity !== undefined && localProduct.quantity > 0) {
+            await ctx.context.adapter.update({
+                model: "paystackProduct",
+                update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
+                where: [{ field: "id", value: localProduct.id }],
+            });
+        }
+        return;
+    }
+    // Fetch the latest quantity from Paystack
+    try {
+        const ops = getPaystackOps(paystackClient);
+        const raw = await ops.productFetch(localProduct.paystackId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = unwrapSdkResult(raw);
+        const remoteQuantity = data?.quantity;
+        if (remoteQuantity !== undefined) {
+            await ctx.context.adapter.update({
+                model: "paystackProduct",
+                update: { quantity: remoteQuantity, updatedAt: new Date() },
+                where: [{ field: "id", value: localProduct.id }],
+            });
+        }
+    }
+    catch {
+        // If API call fails, fall back to local decrement
+        if (localProduct.unlimited !== true && localProduct.quantity !== undefined && localProduct.quantity > 0) {
+            await ctx.context.adapter.update({
+                model: "paystackProduct",
+                update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
+                where: [{ field: "id", value: localProduct.id }],
+            });
+        }
+    }
+}
+/** @deprecated Use syncProductQuantityFromPaystack instead */
+export async function decrementProductQuantity(ctx, productName) {
+    let product = await ctx.context.adapter.findOne({
+        model: "paystackProduct",
+        where: [{ field: "name", value: productName }],
+    });
+    product ??= await ctx.context.adapter.findOne({
+        model: "paystackProduct",
+        where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
+    });
+    if (product) {
+        if (product.unlimited !== true && product.quantity !== undefined && product.quantity > 0) {
+            await ctx.context.adapter.update({
+                model: "paystackProduct",
+                update: {
+                    quantity: product.quantity - 1,
+                    updatedAt: new Date(),
+                },
+                where: [{ field: "id", value: product.id }],
+            });
+        }
     }
 }

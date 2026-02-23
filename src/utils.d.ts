@@ -11,5 +11,7 @@ export declare function getNextPeriodEnd(startDate: Date, interval: string): Dat
  * Amounts should be in the smallest currency unit (e.g., kobo, cents).
  */
 export declare function validateMinAmount(amount: number, currency: string): boolean;
+export declare function syncProductQuantityFromPaystack(ctx: GenericEndpointContext, productName: string, paystackClient: PaystackClientLike): Promise<void>;
+/** @deprecated Use syncProductQuantityFromPaystack instead */
 export declare function decrementProductQuantity(ctx: GenericEndpointContext, productName: string): Promise<void>;
 //# sourceMappingURL=utils.d.ts.map

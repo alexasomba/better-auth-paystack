@@ -114,6 +114,11 @@ export const paystackClient = (_options) => {
                             method: "GET",
                         });
                     },
+                    syncProducts: async () => {
+                        return $fetch("paystack/sync-products", {
+                            method: "POST",
+                        });
+                    },
                 },
             };
         }

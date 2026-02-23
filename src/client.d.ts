@@ -266,6 +266,10 @@ export declare const paystackClient: <O extends {
                 link: string;
             }>>;
             getConfig: () => Promise<BetterFetchResponse<Record<string, unknown>>>;
+            syncProducts: () => Promise<BetterFetchResponse<{
+                status: string;
+                count: number;
+            }>>;
         };
     };
 };

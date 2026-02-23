@@ -46,12 +46,16 @@ describe("paystack type", () => {
 });
 
 describe("paystack", () => {
-	const data = {
+	const data: Record<string, any[]> = {
 		user: [],
 		session: [],
 		verification: [],
 		account: [],
 		subscription: [],
+		paystackProduct: [],
+		paystackTransaction: [],
+		paystackCustomer: [],
+		paystackSubscription: [],
 	};
 	const memory = memoryAdapter(data);
 
@@ -61,6 +65,10 @@ describe("paystack", () => {
 		data.verification = [];
 		data.account = [];
 		data.subscription = [];
+		data.paystackProduct = [];
+		data.paystackTransaction = [];
+		data.paystackCustomer = [];
+		data.paystackSubscription = [];
 		vi.clearAllMocks();
 	});
 
@@ -1358,7 +1366,9 @@ describe("paystack", () => {
 			fetchOptions: {
 				customFetchImpl: async (url, init) => {
 					const reqHeaders = new Headers(init?.headers);
-					cookieHeaders.forEach((v, k) => reqHeaders.set(k, v));
+					cookieHeaders.forEach((v, k) => {
+						reqHeaders.set(k, v);
+					});
 					if (!reqHeaders.has("origin")) reqHeaders.set("origin", "http://localhost:3000");
 					return await auth.handler(new Request(url, { ...init, headers: reqHeaders }));
 				},
@@ -1416,5 +1426,175 @@ describe("paystack", () => {
 				})
 			})
 		);
+	});
+
+	it("should sync products from Paystack", async () => {
+		const paystackSdk = {
+			product_list: vi.fn().mockResolvedValue({
+				status: true,
+				data: [
+					{
+						id: 123,
+						name: "Sync Product",
+						description: "Synced from Paystack",
+						price: 2500,
+						currency: "NGN",
+						quantity: 50,
+						unlimited: false,
+						slug: "sync-product",
+						metadata: { foo: "bar" }
+					}
+				]
+			}),
+		};
+
+		const options = {
+			paystackClient: paystackSdk as any,
+			paystackWebhookSecret: "whsec_test",
+		} satisfies PaystackOptions<PaystackClientLike>;
+
+		const auth = betterAuth({
+			baseURL: "http://localhost:3000",
+			database: memory,
+			emailAndPassword: { enabled: true },
+			plugins: [paystack<PaystackClientLike>(options)],
+		});
+
+		// Sign up and sign in to get a session cookie
+		await auth.handler(new Request("http://localhost:3000/api/auth/sign-up/email", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ email: "syncer@test.com", password: "password123", name: "Syncer" }),
+		}));
+
+		const signInRes = await auth.handler(new Request("http://localhost:3000/api/auth/sign-in/email", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ email: "syncer@test.com", password: "password123" }),
+		}));
+
+		// Extract session cookie from sign-in response
+		const setCookieHeader = signInRes.headers.get("set-cookie") ?? "";
+		const sessionCookieMatch = setCookieHeader.match(/better-auth\.session_token=[^;]+/);
+		const sessionCookie = sessionCookieMatch?.[0] ?? "";
+
+		// Call sync-products with the session cookie
+		const req = new Request("http://localhost:3000/api/auth/paystack/sync-products", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				"cookie": sessionCookie,
+			},
+		});
+
+		const res = await auth.handler(req);
+		expect(res.status).toBe(200);
+
+		const json = await res.json() as { status: string; count: number };
+		expect(json.status).toBe("success");
+		expect(json.count).toBe(1);
+
+		// Verify product was persisted
+		const _ctxAuth = await auth.$context;
+		const product = await (_ctxAuth.adapter as any).findOne({
+			model: "paystackProduct",
+			where: [{ field: "name", value: "Sync Product" }],
+		});
+		expect(product).toBeDefined();
+		expect(product?.name).toBe("Sync Product");
+		expect(product?.price).toBe(2500);
+		expect(product?.quantity).toBe(50);
+	});
+
+	it("should decrement product quantity on successful webhook charge", async () => {
+		// Mock product_fetch to return quantity: 9 (simulating Paystack's updated stock)
+		const paystackSdk = {
+			product_fetch: vi.fn().mockResolvedValue({
+				data: {
+					id: 12345,
+					name: "Inventory Product",
+					quantity: 9,
+					unlimited: false,
+				},
+			}),
+		};
+		const options = {
+			paystackClient: paystackSdk as any,
+			paystackWebhookSecret: "whsec_test",
+		} satisfies PaystackOptions<PaystackClientLike>;
+
+		const auth = betterAuth({
+			baseURL: "http://localhost:3000",
+			database: memory,
+			plugins: [paystack<PaystackClientLike>(options)],
+		});
+
+		const _ctxAuth = await auth.$context;
+		// Create a product locally with a paystackId so we trigger the API fetch path
+		await (_ctxAuth.adapter as any).create({
+			model: "paystackProduct",
+			data: {
+				paystackId: "12345",
+				name: "Inventory Product",
+				price: 1000,
+				currency: "NGN",
+				quantity: 10,
+				unlimited: false,
+				slug: "inventory-product",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			},
+		});
+
+		// Create a transaction record
+		await (_ctxAuth.adapter as any).create({
+			model: "paystackTransaction",
+			data: {
+				reference: "ref_inv",
+				referenceId: "user_1",
+				amount: 1000,
+				currency: "NGN",
+				status: "pending",
+				product: "Inventory Product",
+				userId: "user_1",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			},
+		});
+
+		const payload = JSON.stringify({
+			event: "charge.success",
+			data: {
+				reference: "ref_inv",
+				status: "success",
+				amount: 1000,
+				currency: "NGN",
+				customer: { email: "test@test.com" },
+			},
+		});
+
+		const hmac = createHmac("sha512", "whsec_test").update(payload).digest("hex");
+
+		const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
+			method: "POST",
+			headers: {
+				"x-paystack-signature": hmac,
+			},
+			body: payload,
+		});
+
+		const res = await auth.handler(req);
+		expect(res.status).toBe(200);
+
+		// Allow async operations in webhook handler to complete
+		await new Promise((resolve) => setTimeout(resolve, 100));
+
+		// Check if quantity was synced from Paystack (mocked to return 9)
+		const product = await (_ctxAuth.adapter as any).findOne({
+			model: "paystackProduct",
+			where: [{ field: "name", value: "Inventory Product" }],
+		});
+
+		expect(product?.quantity).toBe(9);
 	});
 });

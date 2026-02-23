@@ -190,6 +190,11 @@ export const paystackClient = <
 							method: "GET",
 						});
 					},
+					syncProducts: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
+						return $fetch<{ status: string; count: number }>("paystack/sync-products", {
+							method: "POST",
+						});
+					},
 				},
 			};
 		}

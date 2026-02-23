@@ -3,7 +3,7 @@ import { defineErrorCodes } from "@better-auth/core/utils";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware, } from "better-auth/api";
 import * as z from "zod/v4";
-import { decrementProductQuantity, getPlanByName, getPlans, getProductByName, getProducts, validateMinAmount, getNextPeriodEnd, } from "./utils";
+import { syncProductQuantityFromPaystack, getPlanByName, getPlans, getProductByName, getProducts, validateMinAmount, getNextPeriodEnd, } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
@@ -67,53 +67,64 @@ export const paystackWebhook = (options) => {
             });
         }
         const event = JSON.parse(payload);
+        const eventName = String(event?.event ?? "");
+        const data = event?.data;
+        // Core Transaction Status Sync (Applies to both one-time and recurring)
+        if (eventName === "charge.success") {
+            const reference = data?.reference;
+            const paystackId = data?.id !== undefined && data?.id !== null ? String(data.id) : undefined;
+            if (reference !== undefined && reference !== null && reference !== "") {
+                try {
+                    await ctx.context.adapter.update({
+                        model: "paystackTransaction",
+                        update: {
+                            status: "success",
+                            paystackId,
+                            updatedAt: new Date(),
+                        },
+                        where: [{ field: "reference", value: reference }],
+                    });
+                }
+                catch (e) {
+                    // Transaction record might not exist yet (e.g. webhook arrives before local record)
+                    ctx.context.logger.warn("Failed to update transaction status for charge.success", e);
+                }
+                // Sync product quantity from Paystack after successful charge
+                try {
+                    const transaction = await ctx.context.adapter.findOne({
+                        model: "paystackTransaction",
+                        where: [{ field: "reference", value: reference }],
+                    });
+                    if (transaction?.product) {
+                        await syncProductQuantityFromPaystack(ctx, transaction.product, options.paystackClient);
+                    }
+                }
+                catch (e) {
+                    ctx.context.logger.warn("Failed to sync product quantity", e);
+                }
+            }
+        }
+        if (eventName === "charge.failure") {
+            const reference = data?.reference;
+            if (reference !== undefined && reference !== null && reference !== "") {
+                try {
+                    await ctx.context.adapter.update({
+                        model: "paystackTransaction",
+                        update: {
+                            status: "failed",
+                            updatedAt: new Date(),
+                        },
+                        where: [{ field: "reference", value: reference }],
+                    });
+                }
+                catch (e) {
+                    ctx.context.logger.warn("Failed to update transaction status for charge.failure", e);
+                }
+            }
+        }
         // Best-effort local state sync for subscription lifecycle.
         if (options.subscription?.enabled === true) {
-            const eventName = String(event?.event ?? "");
-            const data = event?.data;
             try {
-                if (eventName === "charge.success") {
-                    const reference = data?.reference;
-                    const paystackId = data?.id !== undefined && data?.id !== null ? String(data.id) : undefined;
-                    if (reference !== undefined && reference !== null && reference !== "") {
-                        await ctx.context.adapter.update({
-                            model: "paystackTransaction",
-                            update: {
-                                status: "success",
-                                paystackId,
-                                updatedAt: new Date(),
-                            },
-                            where: [{ field: "reference", value: reference }],
-                        });
-                        // Decrement product quantity if applicable
-                        const transaction = await ctx.context.adapter.findOne({
-                            model: "paystackTransaction",
-                            where: [{ field: "reference", value: reference }],
-                        });
-                        if (transaction?.product) {
-                            await decrementProductQuantity(ctx, transaction.product);
-                        }
-                    }
-                }
-                if (eventName === "charge.failure") {
-                    const reference = data?.reference;
-                    if (reference !== undefined && reference !== null && reference !== "") {
-                        try {
-                            await ctx.context.adapter.update({
-                                model: "paystackTransaction",
-                                update: {
-                                    status: "failed",
-                                    updatedAt: new Date(),
-                                },
-                                where: [{ field: "reference", value: reference }],
-                            });
-                        }
-                        catch (e) {
-                            // Transaction might not exist or other error, log and ignore
-                            ctx.context.logger.warn("Failed to update transaction status for charge.failure", e);
-                        }
-                    }
-                }
                 if (eventName === "subscription.create") {
                     const subscriptionCode = data?.subscription_code ??
                         data?.subscription?.subscription_code ??
@@ -641,7 +652,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                     where: [{ field: "reference", value: reference }],
                 });
                 if (transaction?.product) {
-                    await decrementProductQuantity(ctx, transaction.product);
+                    await syncProductQuantityFromPaystack(ctx, transaction.product, options.paystackClient);
                 }
                 // Check for trial activation
                 let isTrial = false;
@@ -1044,8 +1055,13 @@ export const getSubscriptionManageLink = (options) => {
 export const syncProducts = (options) => {
     return createAuthEndpoint("/paystack/sync-products", {
         method: "POST",
-        use: [sessionMiddleware, originCheck],
+        metadata: {
+            ...HIDE_METADATA,
+        },
+        disableBody: true,
+        use: [sessionMiddleware],
     }, async (ctx) => {
+        console.error("DEBUG: syncProducts endpoint hit!");
         const paystack = getPaystackOps(options.paystackClient);
         try {
             const raw = await paystack.productList();

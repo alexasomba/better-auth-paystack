@@ -445,7 +445,11 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
         }>;
         readonly syncProducts: import("better-call").StrictEndpoint<"/paystack/sync-products", {
             method: "POST";
-            use: (((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
+            metadata: {
+                scope: "server";
+            };
+            disableBody: true;
+            use: ((inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<{
                 session: {
                     session: Record<string, any> & {
                         id: string;
@@ -467,7 +471,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                         image?: string | null | undefined;
                     };
                 };
-            }>) | ((getValue: (ctx: GenericEndpointContext) => string | string[]) => (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>))[];
+            }>)[];
         }, {
             status: string;
             count: number;
