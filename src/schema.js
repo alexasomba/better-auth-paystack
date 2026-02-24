@@ -208,6 +208,54 @@ export const products = {
         },
     },
 };
+export const plans = {
+    paystackPlan: {
+        fields: {
+            name: {
+                type: "string",
+                required: true,
+            },
+            description: {
+                type: "string",
+                required: false,
+            },
+            amount: {
+                type: "number",
+                required: true,
+            },
+            currency: {
+                type: "string",
+                required: true,
+            },
+            interval: {
+                type: "string",
+                required: true,
+            },
+            planCode: {
+                type: "string",
+                required: true,
+                unique: true,
+            },
+            paystackId: {
+                type: "string",
+                required: true,
+                unique: true,
+            },
+            metadata: {
+                type: "string",
+                required: false,
+            },
+            createdAt: {
+                type: "date",
+                required: true,
+            },
+            updatedAt: {
+                type: "date",
+                required: true,
+            },
+        },
+    },
+};
 export const getSchema = (options) => {
     let baseSchema;
     if (options.subscription?.enabled === true) {
@@ -216,6 +264,7 @@ export const getSchema = (options) => {
             ...transactions,
             ...user,
             ...products,
+            ...plans,
         };
     }
     else {
@@ -223,6 +272,7 @@ export const getSchema = (options) => {
             ...user,
             ...transactions,
             ...products,
+            ...plans,
         };
     }
     // Add organization schema if organization support is enabled

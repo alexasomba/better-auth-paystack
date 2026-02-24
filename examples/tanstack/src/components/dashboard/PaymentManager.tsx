@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ArrowRight, Buildings, CheckCircle, Clock, Coins, CreditCard, ShieldCheck, Sparkle, User } from "@phosphor-icons/react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowRight, Buildings, CheckCircle, Coins, CreditCard, Package, ShieldCheck, Sparkle, User } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Subscription {
   plan: string;
@@ -30,15 +32,19 @@ interface PaystackPlan {
     description?: string;
     features?: Array<string>;
     planCode?: string;
+    paystackId?: string;
 }
 
 interface PaystackProduct {
+    id?: string;
     name: string;
     amount: number;
     currency: string;
-    metadata?: Record<string, unknown>;
+    metadata?: Record<string, unknown> | string;
     description?: string;
     features?: Array<string>;
+    slug?: string;
+    paystackId?: string;
 }
 
 interface Organization {
@@ -51,60 +57,96 @@ interface Organization {
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
     const [subscriptions, setSubscriptions] = useState<Array<Subscription>>([]);
     const [config, setConfig] = useState<{ plans: Array<PaystackPlan>, products: Array<PaystackProduct> }>({ plans: [], products: [] });
+    const [nativeProducts, setNativeProducts] = useState<Array<PaystackProduct>>([]);
+    const [nativePlans, setNativePlans] = useState<Array<PaystackPlan>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [organizations, setOrganizations] = useState<Array<Organization>>([]);
     const [selectedBillingTarget, setSelectedBillingTarget] = useState<string>("personal"); // "personal" or org.id
-    const [seats, setSeats] = useState<number>(1);
+    const [quantity, setQuantity] = useState(1);
 
-    const fetchSubscriptions = async (target: string) => {
+
+    const fetchNativeProducts = useCallback(async () => {
         try {
-            const query = target === "personal" ? {} : { referenceId: target };
-            const subRes = await authClient.paystack.subscription.listLocal({ query });
-            if (subRes.data) {
-                const data = subRes.data;
-                if (Array.isArray(data)) {
-                    setSubscriptions(data as Array<Subscription>);
-                } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
-                     setSubscriptions(data.subscriptions as Array<Subscription>);
-                }
+            const res = await authClient.paystack.listProducts();
+            if (res.data?.products) {
+                setNativeProducts(res.data.products as unknown as Array<PaystackProduct>);
             }
         } catch (e) {
-            console.error("Failed to fetch subscriptions", e);
+            console.error("Failed to fetch native products", e);
         }
-    };
+    }, []);
+
+    const fetchNativePlans = useCallback(async () => {
+        try {
+            const res = await authClient.paystack.listPlans();
+            if (res.data?.plans) {
+                setNativePlans(res.data.plans as Array<PaystackPlan>);
+            }
+        } catch (e) {
+            console.error("Failed to fetch native plans", e);
+        }
+    }, []);
 
     useEffect(() => {
         async function fetchData() {
             setIsLoading(true);
             try {
-                const query = selectedBillingTarget === "personal" ? {} : { referenceId: selectedBillingTarget };
-                const [subRes, configRes] = await Promise.all([
-                    authClient.paystack.subscription.listLocal({ query }),
+                const [configRes, subsRes] = await Promise.all([
                     authClient.paystack.getConfig(),
+                    authClient.paystack.subscription.listLocal({
+                        query: { referenceId: selectedBillingTarget !== "personal" ? selectedBillingTarget : undefined }
+                    })
                 ]);
-
-                if (subRes.data) {
-                    const data = subRes.data;
-                    if (Array.isArray(data)) {
-                        setSubscriptions(data as Array<Subscription>);
-                    } else if ("subscriptions" in data && Array.isArray(data.subscriptions)) {
-                         setSubscriptions(data.subscriptions as Array<Subscription>);
-                    }
-                }
-
+                
                 if (configRes.data) {
-                    const data = configRes.data as { plans: Array<PaystackPlan>, products: Array<PaystackProduct> };
-                    setConfig(data);
+                    setConfig(configRes.data as unknown as { plans: Array<PaystackPlan>, products: Array<PaystackProduct> });
+                }
+                if (subsRes.data?.subscriptions) {
+                    setSubscriptions(subsRes.data.subscriptions as Array<Subscription>);
                 }
             } catch (e) {
-                console.error("Failed to fetch billing data", e);
+                console.error("Failed to fetch data", e);
             } finally {
                 setIsLoading(false);
             }
         }
         fetchData();
-    }, [selectedBillingTarget]);
+        fetchNativeProducts();
+        fetchNativePlans();
+    }, [selectedBillingTarget, fetchNativeProducts, fetchNativePlans]);
+
+    const handleSyncProducts = async () => {
+        setActionLoading(true);
+        try {
+            const res = await authClient.paystack.syncProducts();
+            if (res.data?.status === "success") {
+                await fetchNativeProducts();
+                alert(`Successfully synced ${res.data.count} products from Paystack.`);
+            }
+        } catch (e) {
+            console.error("Failed to sync products", e);
+            alert("Failed to sync products from Paystack.");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleSyncPlans = async () => {
+        setActionLoading(true);
+        try {
+            const res = await authClient.paystack.syncPlans();
+            if (res.data?.status === "success") {
+                await fetchNativePlans();
+                alert(`Successfully synced ${res.data.count} plans from Paystack.`);
+            }
+        } catch (e) {
+            console.error("Failed to sync plans", e);
+            alert("Failed to sync plans from Paystack.");
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     // Fetch organizations for billing target selection
     useEffect(() => {
@@ -128,11 +170,12 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 plan: planName,
                 callbackURL: `${window.location.origin}/billing/paystack/callback`,
             };
-            // If billing to an organization, pass referenceId and quantity (seats)
+            // If billing to an organization, pass referenceId
             if (selectedBillingTarget && selectedBillingTarget !== "personal") {
                 initPayload.referenceId = selectedBillingTarget;
-                if (seats > 1) {
-                    (initPayload as any).quantity = seats;
+                // Add quantity/seats for organization billing
+                if (quantity > 1) {
+                    (initPayload as any).quantity = quantity;
                 }
             }
             const res = await authClient.paystack.transaction.initialize(initPayload);
@@ -153,10 +196,12 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     const handleBuyProduct = async (product: PaystackProduct) => {
         setActionLoading(true);
         try {
+            const metadata = typeof product.metadata === 'string' ? JSON.parse(product.metadata) : product.metadata;
             const res = await authClient.paystack.transaction.initialize({
-                amount: product.amount, 
+                product: product.name,
+                amount: (product as any).price || (product as any).amount, 
                 currency: product.currency,
-                metadata: product.metadata,
+                metadata: metadata,
                 callbackURL: `${window.location.origin}/billing/paystack/callback`,
             });
             if (res.data?.url) {
@@ -194,39 +239,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         }
     };
 
-    const handleManageSubscription = async (subscriptionCode: string) => {
-        setActionLoading(true);
-        try {
-            await authClient.paystack.subscription.disable({
-                subscriptionCode,
-            });
-            await fetchSubscriptions(selectedBillingTarget);
-        } catch (e: unknown) {
-            console.error(e);
-            if (e instanceof Error) {
-                alert(e.message || "Failed to manage subscription");
-            }
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    const handleResumeSubscription = async (subscriptionCode: string) => {
-        setActionLoading(true);
-        try {
-            await authClient.paystack.subscription.restore({
-                subscriptionCode,
-            });
-            await fetchSubscriptions(selectedBillingTarget);
-        } catch (e: unknown) {
-            console.error(e);
-            if (e instanceof Error) {
-                alert(e.message || "Failed to resume subscription");
-            }
-        } finally {
-            setActionLoading(false);
-        }
-    };
+    // Subscription management functions are now handled via Paystack management link
+    // or can be re-enabled if needed:
+    // const handleManageSubscription = ...
+    // const handleResumeSubscription = ...
 
     if (isLoading) {
         return <div className="text-center py-8 text-muted-foreground animate-pulse">Loading billing details...</div>;
@@ -247,55 +263,37 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     if (activeTab === "subscriptions") {
         return (
             <Card className="w-full">
-                <CardHeader>
-                    <CardTitle className="text-xl font-semibold">Subscription Plans</CardTitle>
-                    <p className="text-sm text-muted-foreground">Choose a plan or manage your current subscription.</p>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-xl font-semibold">Subscription Plans</CardTitle>
+                        <p className="text-sm text-muted-foreground">Choose a plan that fits your needs.</p>
+                    </div>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleSyncPlans} 
+                        disabled={actionLoading}
+                        className="gap-2"
+                    >
+                        <ArrowRight className={cn("transition-transform", actionLoading && "animate-spin")} />
+                        Sync Native Plans
+                    </Button>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-8">
+                    {/* Active Subscription Summary */}
                     {activeSubscription && (
-                        <div className="flex items-center justify-between p-4 bg-primary/5 border border-primary/10 rounded-lg">
-                            <div>
-                                <p className="font-medium text-primary uppercase text-xs tracking-wider flex items-center gap-1">
-                                    <Sparkle weight="duotone" size={12} />
-                                    Active Subscription
-                                </p>
-                                <p className="text-2xl font-bold capitalize">{activeSubscription.plan}</p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                                    <span className="flex items-center gap-1">
-                                        Status: <span className="text-green-600 font-medium lowercase">{activeSubscription.status}</span>
-                                    </span>
-                                    {activeSubscription.trialEnd && new Date(activeSubscription.trialEnd) > new Date() && (
-                                        <>
-                                            <span className="text-muted-foreground/30">•</span>
-                                            <span className="flex items-center gap-1 text-amber-600">
-                                                <Clock size={12} weight="duotone" />
-                                                Trial: {Math.ceil((new Date(activeSubscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days left
-                                            </span>
-                                        </>
-                                    )}
-                                    {activeSubscription.paystackSubscriptionCode && (
-                                        <>
-                                            <span className="text-muted-foreground/30">•</span>
-                                            {activeSubscription.status === "non-renewing" ? (
-                                                <button 
-                                                    onClick={() => handleResumeSubscription(activeSubscription.paystackSubscriptionCode!)}
-                                                    className="text-xs text-primary hover:text-primary/80 hover:underline transition-all font-medium"
-                                                    disabled={actionLoading}
-                                                >
-                                                    Resume Subscription
-                                                </button>
-                                            ) : (
-                                                <button 
-                                                    onClick={() => handleManageSubscription(activeSubscription.paystackSubscriptionCode!)}
-                                                    className="text-xs text-red-500 hover:text-red-600 hover:underline transition-all"
-                                                    disabled={actionLoading}
-                                                >
-                                                    Cancel
-                                                </button>
-                                            )}
-                                        </>
-                                    )}
-                                </p>
+                        <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-primary/10">
+                                    <Sparkle weight="duotone" size={20} className="text-primary" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-sm">Active {activeSubscription.plan} Plan</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Status: <span className="capitalize">{activeSubscription.status.replace("_", " ")}</span>
+                                        {activeSubscription.cancelAtPeriodEnd && " (Ends at period end)"}
+                                    </p>
+                                </div>
                             </div>
                             <div className="flex flex-col gap-2">
                                 {activeSubscription.paystackSubscriptionCode && (
@@ -307,7 +305,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                         className="h-9 gap-2 text-xs"
                                     >
                                         <ArrowRight size={12} />
-                                        Manage Cards
+                                        Manage Billing
                                     </Button>
                                 )}
                             </div>
@@ -326,7 +324,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     <p className="text-xs text-muted-foreground">Choose who will be charged for this subscription</p>
                                 </div>
                             </div>
-                            <Select value={selectedBillingTarget} onValueChange={(val) => val && setSelectedBillingTarget(val)}>
+                            <Select 
+                                data-testid="billing-target-select"
+                                value={selectedBillingTarget} 
+                                onValueChange={(val) => val && setSelectedBillingTarget(val)}
+                            >
                                 <SelectTrigger className="w-full max-w-xs">
                                     <SelectValue placeholder="Select billing target" />
                                 </SelectTrigger>
@@ -347,138 +349,65 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {selectedBillingTarget && selectedBillingTarget !== "personal" && (
-                                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                                    <CheckCircle weight="duotone" size={12} className="text-green-500" />
-                                    Billing to organization: {organizations.find(o => o.id === selectedBillingTarget)?.name}
-                                </p>
-                            )}
-                            
-                            {selectedBillingTarget && selectedBillingTarget !== "personal" && (
+
+                            {selectedBillingTarget !== "personal" && (
                                 <div className="mt-4 pt-4 border-t border-dashed">
+                                    <Label htmlFor="seats" className="text-xs font-medium mb-1.5 block">Number of Seats</Label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-primary/10">
-                                            <User weight="duotone" size={20} className="text-primary" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-sm">Seats</p>
-                                            <p className="text-xs text-muted-foreground">Number of members allowed</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => setSeats(Math.max(1, seats - 1))}
-                                            disabled={seats <= 1}
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            -
-                                        </Button>
-                                        <span className="text-sm font-medium w-8 text-center">{seats}</span>
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => setSeats(seats + 1)}
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            +
-                                        </Button>
+                                        <Input 
+                                            id="seats"
+                                            type="number" 
+                                            min={1} 
+                                            max={100}
+                                            value={quantity} 
+                                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-24 h-9"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground italic">
+                                            Pricing scales linearly based on seat count.
+                                        </p>
                                     </div>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {config.plans.map((plan) => {
-                            const isCurrentPlan = activeSubscription?.plan.toLowerCase() === plan.name.toLowerCase();
-                            
-                            return (
-                                <div 
-                                    key={plan.name} 
-                                    className={cn(
-                                        "relative flex flex-col p-5 border rounded-2xl transition-all duration-300 group",
-                                        isCurrentPlan 
-                                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
-                                            : "bg-muted/20 hover:border-primary/50 hover:bg-muted/30"
-                                    )}
-                                >
-                                    {isCurrentPlan && (
-                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm z-10">
-                                            Current Plan
-                                        </div>
-                                    )}
-
-                                    <div className="absolute top-4 right-4">
-                                        {plan.planCode ? (
-                                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none">
-                                                Paystack Managed
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-none">
-                                                Custom Plan
-                                            </Badge>
-                                        )}
-                                    </div>
-
-                                    <div className="mb-4 mt-6">
-                                        <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{plan.name}</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <p className="text-3xl font-bold">
-                                                {plan.amount 
-                                                    ? formatCurrency(plan.amount * ((selectedBillingTarget !== "personal" && !plan.planCode) ? seats : 1), plan.currency) 
-                                                    : "Custom"}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                /{plan.interval || "mo"}
-                                                {!plan.amount && <span className="ml-1">(Paystack plan)</span>}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
-                                        <li className="flex items-center gap-2">
-                                            <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
-                                            Full access to all features
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
-                                            Priority support
-                                        </li>
-                                    </ul>
-
-                                    <div className="mt-auto">
-                                        <Button 
-                                            onClick={() => !isCurrentPlan && handleSubscribe(plan.name)} 
-                                            disabled={actionLoading || isCurrentPlan} 
-                                            variant={isCurrentPlan ? "secondary" : "default"}
-                                            className={cn(
-                                                "w-full h-11 gap-2 text-sm font-semibold transition-all duration-300",
-                                                isCurrentPlan && "opacity-50 cursor-default"
-                                            )}
-                                        >
-                                            {isCurrentPlan ? (
-                                                <>
-                                                    <CheckCircle weight="bold" size={16} />
-                                                    Current Plan
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <CreditCard weight="duotone" size={16} />
-                                                    {actionLoading ? "Processing..." : `Select ${plan.name}`}
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    {/* Local Plans Section */}
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <Sparkle weight="duotone" className="text-primary" />
+                                Better Auth Config Plans
+                            </h3>
+                            <p className="text-xs text-muted-foreground">Plans defined in your application configuration.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {config.plans.map((plan) => (
+                                <PlanCard key={plan.name} plan={plan} variant="local" />
+                            ))}
+                        </div>
                     </div>
-                    <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
-                        <ShieldCheck weight="duotone" size={12} />
-                        Secure payments by Paystack
-                    </p>
+
+                    {/* Native Plans Section */}
+                    <div className="space-y-4 border-t pt-8 border-dashed">
+                        <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2">
+                                <Package weight="duotone" className="text-primary" />
+                                Paystack-&gt;DB Synced Plans
+                            </h3>
+                            <p className="text-xs text-muted-foreground">Plans synced directly from Paystack.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {nativePlans.length > 0 ? nativePlans.map((plan) => (
+                                <PlanCard key={plan.paystackId || plan.planCode} plan={plan} variant="native" />
+                            )) : (
+                                <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                                    No native plans found. Click "Sync Native Plans" to import from Paystack.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                 </CardContent>
             </Card>
         );
@@ -492,32 +421,85 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {config.products.length > 0 ? config.products.map((product) => (
-                            <div key={product.name} className="p-4 border rounded-lg hover:border-primary/50 transition-colors cursor-default bg-muted/5 flex flex-col justify-between">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <p className="font-bold text-lg">{product.name}</p>
-                                        <p className="text-xs text-muted-foreground">One-time payment</p>
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-semibold">Better Auth Config Products</h3>
+                            <p className="text-xs text-muted-foreground">Products defined locally in your application configuration.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {config.products.length > 0 ? config.products.map((product) => (
+                                <div key={product.name} className="p-4 border rounded-lg hover:border-primary/50 transition-colors cursor-default bg-muted/5 flex flex-col justify-between">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="font-bold text-lg">{product.name}</p>
+                                            <p className="text-xs text-muted-foreground">One-time payment</p>
+                                        </div>
+                                        <Badge variant="outline" className="text-primary border-primary/20">{formatCurrency((product as any).price || (product as any).amount, product.currency)}</Badge>
                                     </div>
-                                    <Badge variant="outline" className="text-primary border-primary/20">{formatCurrency(product.amount, product.currency)}</Badge>
+                                    <Button 
+                                        onClick={() => handleBuyProduct(product)} 
+                                        disabled={actionLoading} 
+                                        variant="default"
+                                        className="w-full h-10 gap-2"
+                                    >
+                                        <Coins weight="duotone" size={20} />
+                                        {actionLoading ? "Initializing..." : "Buy Now"}
+                                    </Button>
                                 </div>
-                                <Button 
-                                    onClick={() => handleBuyProduct(product)} 
-                                    disabled={actionLoading} 
-                                    variant="default"
-                                    className="w-full h-10 gap-2"
-                                >
-                                    <Coins weight="duotone" size={20} />
-                                    {actionLoading ? "Initializing..." : "Buy Now"}
-                                </Button>
-                            </div>
-                        )) : (
-                            <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-                                No one-time products configured.
-                            </div>
-                        )}
+                            )) : (
+                                <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                                    No one-time products configured locally.
+                                </div>
+                            )}
+                        </div>
                     </div>
+
+                    <div className="space-y-4 pt-4 border-t border-dashed">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold">Paystack-&gt;DB Synced Products</h3>
+                                <p className="text-xs text-muted-foreground">Products synced automatically from your Paystack dashboard.</p>
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleSyncProducts} 
+                                disabled={actionLoading}
+                                className="gap-2"
+                            >
+                                <ArrowRight className={cn("transition-transform", actionLoading && "animate-spin")} />
+                                Sync Now
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {nativeProducts.length > 0 ? nativeProducts.map((product) => (
+                                <div key={product.id || product.paystackId} className="p-4 border rounded-lg hover:border-primary/50 transition-colors cursor-default bg-muted/5 flex flex-col justify-between">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="font-bold text-lg">{product.name}</p>
+                                            <p className="text-xs text-muted-foreground truncate max-w-37.5">{product.description || "Synced Product"}</p>
+                                        </div>
+                                        <Badge variant="outline" className="text-primary border-primary/20">{formatCurrency(product.amount, product.currency)}</Badge>
+                                    </div>
+                                    <Button 
+                                        onClick={() => handleBuyProduct(product)} 
+                                        disabled={actionLoading} 
+                                        variant="secondary"
+                                        className="w-full h-10 gap-2 border-primary/10"
+                                    >
+                                        <Package weight="duotone" size={20} />
+                                        {actionLoading ? "Initializing..." : "Purchase"}
+                                    </Button>
+                                </div>
+                            )) : (
+                                <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                                    No native products found. Click "Sync Now" to import from Paystack.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
                         <ShieldCheck weight="duotone" size={12} />
                         Secure payments by Paystack
@@ -526,4 +508,93 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             </CardContent>
         </Card>
     );
+
+    function PlanCard({ plan, variant }: { plan: PaystackPlan, variant: 'local' | 'native' }) {
+        const activeSubscription = subscriptions.find((sub: Subscription) => ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status));
+        const isCurrentPlan = activeSubscription?.plan.toLowerCase() === plan.name.toLowerCase();
+        
+        // Dynamic amount based on quantity for organizations, but only for local/custom plans
+        // Native plans have fixed pricing on Paystack.
+        const isNative = variant === 'native' || !!plan.planCode;
+        const displayAmount = (selectedBillingTarget !== "personal" && !isNative) 
+            ? (plan.amount ?? 0) * quantity 
+            : plan.amount;
+
+        return (
+            <div 
+                className={cn(
+                    "relative flex flex-col p-5 border rounded-2xl transition-all duration-300 group",
+                    isCurrentPlan 
+                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                        : "bg-muted/20 hover:border-primary/50 hover:bg-muted/30"
+                )}
+            >
+                {isCurrentPlan && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm z-10">
+                        Current Plan
+                    </div>
+                )}
+
+                <div className="absolute top-4 right-4">
+                    {isNative ? (
+                        <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none">
+                            Paystack Managed
+                        </Badge>
+                    ) : (
+                        <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-none">
+                            Custom Plan
+                        </Badge>
+                    )}
+                </div>
+
+                <div className="mb-4 mt-6">
+                    <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">{plan.name}</p>
+                    <div className="flex items-baseline gap-1">
+                        <p className="text-3xl font-bold">
+                            {displayAmount 
+                                ? formatCurrency(displayAmount, plan.currency) 
+                                : "Custom"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            /{plan.interval || "mo"}
+                            {selectedBillingTarget !== "personal" && quantity > 1 && !isNative && ` for ${quantity} seats`}
+                        </p>
+                    </div>
+                    {plan.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{plan.description}</p>}
+                </div>
+                
+                <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                        <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
+                        Full access to all features
+                    </li>
+                    <li className="flex items-center gap-2">
+                        <span className="text-primary"><CheckCircle weight="duotone" size={16} /></span>
+                        Priority support
+                    </li>
+                </ul>
+
+                <div className="mt-auto">
+                    <Button 
+                        onClick={() => !isCurrentPlan && handleSubscribe(plan.name)} 
+                        disabled={actionLoading || isCurrentPlan} 
+                        variant={isCurrentPlan ? "outline" : variant === 'native' ? "secondary" : "default"}
+                        className="w-full h-11 gap-2"
+                    >
+                        {isCurrentPlan ? (
+                            <>
+                                <CheckCircle weight="fill" size={20} />
+                                Active
+                            </>
+                        ) : (
+                            <>
+                                <CreditCard weight="duotone" size={20} />
+                                {actionLoading ? "Processing..." : "Subscribe Now"}
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 }

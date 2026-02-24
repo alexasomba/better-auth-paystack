@@ -1,5 +1,5 @@
 import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
-import type { PaystackTransaction, Subscription } from "./types";
+import type { PaystackProduct, PaystackTransaction, Subscription } from "./types";
 import type { paystack } from "./index";
 export declare const paystackClient: <O extends {
     subscription: boolean;
@@ -269,6 +269,16 @@ export declare const paystackClient: <O extends {
             syncProducts: () => Promise<BetterFetchResponse<{
                 status: string;
                 count: number;
+            }>>;
+            syncPlans: () => Promise<BetterFetchResponse<{
+                status: string;
+                count: number;
+            }>>;
+            listProducts: (options?: BetterFetchOption) => Promise<BetterFetchResponse<{
+                products: PaystackProduct[];
+            }>>;
+            listPlans: (options?: BetterFetchOption) => Promise<BetterFetchResponse<{
+                plans: any[];
             }>>;
         };
     };

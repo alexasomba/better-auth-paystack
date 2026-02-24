@@ -19,6 +19,9 @@ import {
 	restoreSubscription,
 	chargeRecurringSubscription,
 	syncProducts,
+	listProducts,
+	syncPlans,
+	listPlans,
 } from "./routes";
 import { getSchema } from "./schema";
 import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
@@ -33,7 +36,6 @@ import type {
 	PaystackProduct,
 	Member,
 	User,
-	PaystackCustomerResponse,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -43,8 +45,8 @@ const INTERNAL_ERROR_CODES = defineErrorCodes({
 
 export const paystack = <
     TPaystackClient extends PaystackClientLike = PaystackNodeClient,
-    TMetadata = any,
-    TLimits = any,
+    TMetadata = Record<string, unknown>,
+    TLimits = Record<string, unknown>,
     O extends PaystackOptions<TPaystackClient, TMetadata, TLimits> = PaystackOptions<TPaystackClient, TMetadata, TLimits>,
 >(
 		options: O,
@@ -61,12 +63,16 @@ export const paystack = <
 			disableSubscription: disablePaystackSubscription(options),
 			enableSubscription: enablePaystackSubscription(options),
 			getSubscriptionManageLink: getSubscriptionManageLink(options),
+			subscriptionManageLink: getSubscriptionManageLink(options, "/paystack/subscription/manage-link"), // Historical alias
 			createSubscription: createSubscription(options),
 			upgradeSubscription: upgradeSubscription(options),
 			cancelSubscription: cancelSubscription(options),
 			restoreSubscription: restoreSubscription(options),
 			chargeRecurringSubscription: chargeRecurringSubscription(options),
 			syncProducts: syncProducts(options),
+			listProducts: listProducts(options),
+			syncPlans: syncPlans(options),
+			listPlans: listPlans(options),
 		},
 		schema: getSchema(options),
 		init: (ctx: AuthContext) => {
@@ -211,17 +217,15 @@ export const paystack = <
 			};
 		},
 		$ERROR_CODES: INTERNAL_ERROR_CODES,
-	} as const;
-
-
+	};
 
 	return res;
 };
 
 export type PaystackPlugin<
-    O extends PaystackOptions<PaystackClientLike, any, any> = PaystackOptions,
+    O extends PaystackOptions<PaystackClientLike, Record<string, unknown>, Record<string, unknown>> = PaystackOptions,
 > = ReturnType<
-    typeof paystack<PaystackClientLike, any, any, O>
+    typeof paystack<PaystackClientLike, Record<string, unknown>, Record<string, unknown>, O>
 >;
 
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };

@@ -17,5 +17,6 @@ export declare function getPaystackOps(paystackClient: PaystackClientLike): {
     productCreate: (params: Record<string, unknown>) => Promise<unknown> | undefined;
     productUpdate: (idOrCode: string, params: Record<string, unknown>) => Promise<unknown> | undefined;
     productDelete: (idOrCode: string) => Promise<unknown> | undefined;
+    planList: () => Promise<unknown> | undefined;
 };
 //# sourceMappingURL=paystack-sdk.d.ts.map

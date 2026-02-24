@@ -5,16 +5,18 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { paystack } from "@alexasomba/better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
 
-const data: Record<string, Array<any>> = {
+export const data: Record<string, Array<any>> = {
     user: [],
     session: [],
     verification: [],
     account: [],
     subscription: [],
     paystackTransaction: [],
+    paystackProduct: [],
     organization: [],
     member: [],
     invitation: [],
+    paystackPlan: [],
 };
 
 const memory = memoryAdapter(data);
@@ -163,15 +165,15 @@ export const auth = betterAuth({
                     products: [
                         {
                             name: "50 Credits Pack",
-                            amount: 250000, // 2,500 NGN
+                            price: 250000, // 2,500 NGN
                             currency: "NGN",
-                            metadata: { type: "credits", quantity: 50 },
+                            metadata: JSON.stringify({ type: "credits", quantity: 50 }),
                         },
                         {
                             name: "150 Credits Pack",
-                            amount: 600000, // 6,000 NGN
+                            price: 600000, // 6,000 NGN
                             currency: "NGN",
-                            metadata: { type: "credits", quantity: 150 },
+                            metadata: JSON.stringify({ type: "credits", quantity: 150 }),
                         },
                     ],
                 },

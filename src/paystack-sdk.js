@@ -158,5 +158,11 @@ export function getPaystackOps(paystackClient) {
             }
             return paystackClient?.product?.delete?.(idOrCode);
         },
+        planList: () => {
+            if (paystackClient?.plan_list !== undefined) {
+                return paystackClient.plan_list();
+            }
+            return paystackClient?.plan?.list?.();
+        },
     };
 }

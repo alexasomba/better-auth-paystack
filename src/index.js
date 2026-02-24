@@ -1,6 +1,6 @@
 import { defineErrorCodes } from "@better-auth/core/utils";
 import { defu } from "defu";
-import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, listTransactions, paystackWebhook, verifyTransaction, getConfig, getSubscriptionManageLink, PAYSTACK_ERROR_CODES, createSubscription, upgradeSubscription, cancelSubscription, restoreSubscription, chargeRecurringSubscription, syncProducts, } from "./routes";
+import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, listTransactions, paystackWebhook, verifyTransaction, getConfig, getSubscriptionManageLink, PAYSTACK_ERROR_CODES, createSubscription, upgradeSubscription, cancelSubscription, restoreSubscription, chargeRecurringSubscription, syncProducts, listProducts, syncPlans, listPlans, } from "./routes";
 import { getSchema } from "./schema";
 import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
 import { getPlanByName } from "./utils";
@@ -21,12 +21,16 @@ export const paystack = (options) => {
             disableSubscription: disablePaystackSubscription(options),
             enableSubscription: enablePaystackSubscription(options),
             getSubscriptionManageLink: getSubscriptionManageLink(options),
+            subscriptionManageLink: getSubscriptionManageLink(options, "/paystack/subscription/manage-link"), // Historical alias
             createSubscription: createSubscription(options),
             upgradeSubscription: upgradeSubscription(options),
             cancelSubscription: cancelSubscription(options),
             restoreSubscription: restoreSubscription(options),
             chargeRecurringSubscription: chargeRecurringSubscription(options),
             syncProducts: syncProducts(options),
+            listProducts: listProducts(options),
+            syncPlans: syncPlans(options),
+            listPlans: listPlans(options),
         },
         schema: getSchema(options),
         init: (ctx) => {

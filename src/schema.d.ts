@@ -209,5 +209,53 @@ export declare const products: {
         };
     };
 };
+export declare const plans: {
+    paystackPlan: {
+        fields: {
+            name: {
+                type: "string";
+                required: true;
+            };
+            description: {
+                type: "string";
+                required: false;
+            };
+            amount: {
+                type: "number";
+                required: true;
+            };
+            currency: {
+                type: "string";
+                required: true;
+            };
+            interval: {
+                type: "string";
+                required: true;
+            };
+            planCode: {
+                type: "string";
+                required: true;
+                unique: true;
+            };
+            paystackId: {
+                type: "string";
+                required: true;
+                unique: true;
+            };
+            metadata: {
+                type: "string";
+                required: false;
+            };
+            createdAt: {
+                type: "date";
+                required: true;
+            };
+            updatedAt: {
+                type: "date";
+                required: true;
+            };
+        };
+    };
+};
 export declare const getSchema: (options: PaystackOptions<PaystackClientLike>) => BetterAuthPluginDBSchema;
 //# sourceMappingURL=schema.d.ts.map

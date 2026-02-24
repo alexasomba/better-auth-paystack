@@ -16,6 +16,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,6 +47,7 @@ interface Transaction {
     paystackId?: string;
     createdAt: string | Date;
     plan?: string;
+    product?: string;
     metadata?: string;
     _orgName?: string; // Added by frontend for org transactions display
 }
@@ -66,6 +69,7 @@ export default function TransactionsTable() {
                             {reference.slice(0, 12)}...
                         </code>
                         <button
+                            type="button"
                             onClick={() => {
                                 navigator.clipboard.writeText(reference);
                             }}
@@ -84,7 +88,7 @@ export default function TransactionsTable() {
             cell: ({ row }: { row: any }) => {
                 const rawAmount = row.getValue("amount");
                 const amount = parseFloat(rawAmount as string);
-                if (isNaN(amount) || rawAmount === null || rawAmount === undefined) {
+                if (Number.isNaN(amount) || rawAmount === null || rawAmount === undefined) {
                     return <div className="font-medium text-muted-foreground">—</div>;
                 }
                 const currency = row.original.currency || "NGN"; // fallback
@@ -177,12 +181,17 @@ export default function TransactionsTable() {
 
                 return (
                     <DropdownMenu>
-                        <DropdownMenuTrigger>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <DotsThree weight="duotone" size={16} />
-                            </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger
+                            render={
+                                <button
+                                    type="button"
+                                    className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "h-8 w-8 p-0")}
+                                >
+                                    <span className="sr-only">Open menu</span>
+                                    <DotsThree weight="duotone" size={16} />
+                                </button>
+                            }
+                        />
                         <DropdownMenuContent align="end">
                             <DropdownMenuGroup>
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
@@ -365,7 +374,7 @@ export default function TransactionsTable() {
                             <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                                 <span className="text-sm font-medium text-muted-foreground">Amount</span>
                                 <span className="col-span-3 text-right font-semibold">
-                                    {(selectedTransaction.amount as unknown) != null && !isNaN(selectedTransaction.amount) 
+                                    {(selectedTransaction.amount as unknown) != null && !Number.isNaN(selectedTransaction.amount) 
                                         ? new Intl.NumberFormat("en-NG", {
                                             style: "currency",
                                             currency: selectedTransaction.currency || "NGN",
@@ -406,9 +415,9 @@ export default function TransactionsTable() {
                                 </span>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
-                                <span className="text-sm font-medium text-muted-foreground">Plan</span>
+                                <span className="text-sm font-medium text-muted-foreground">Plan/Product</span>
                                 <span className="col-span-3 text-right capitalize text-sm">
-                                    {selectedTransaction.plan || "One-time Payment"}
+                                    {selectedTransaction.plan || selectedTransaction.product || "One-time Payment"}
                                 </span>
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">

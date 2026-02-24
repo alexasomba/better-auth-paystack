@@ -17,20 +17,20 @@ describe("Paystack Deep Typesafety", () => {
                             canExport: true
                         }
                     }
-                ]
+                ],
+                onSubscriptionComplete: async (_data, _ctx) => {
+                    await Promise.resolve();
+                    // Verify event metadata generic
+                    expectTypeOf(_data.event).toMatchTypeOf();
+                    // Verify plan limits generic
+                    expectTypeOf(_data.plan.limits).toMatchTypeOf();
+                }
             },
-            onCustomerCreate: async (data, ctx) => {
+            onCustomerCreate: async (_data, _ctx) => {
+                await Promise.resolve();
                 // Verify data.paystackCustomer is PaystackCustomerResponse
-                expectTypeOf(data.paystackCustomer).toMatchTypeOf();
-                // Verify custom metadata propagation would be handled via casting or inference if we refine further, 
-                // but at least standard structures are strictly typed now.
+                expectTypeOf(_data.paystackCustomer).toMatchTypeOf();
             },
-            onSubscriptionComplete: async (data, ctx) => {
-                // Verify event metadata generic
-                expectTypeOf(data.event).toMatchTypeOf();
-                // Verify plan limits generic
-                expectTypeOf(data.plan.limits).toMatchTypeOf();
-            }
         };
         const auth = betterAuth({
             baseURL: "http://localhost:3000",

@@ -1,7 +1,7 @@
 import type { BetterAuthClientPlugin } from "better-auth";
 import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
 
-import type { PaystackTransaction, Subscription } from "./types";
+import type { PaystackProduct, PaystackTransaction, Subscription } from "./types";
 
 import type { paystack } from "./index";
 
@@ -193,6 +193,31 @@ export const paystackClient = <
 					syncProducts: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
 						return $fetch<{ status: string; count: number }>("paystack/sync-products", {
 							method: "POST",
+						});
+					},
+					syncPlans: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
+						return $fetch<{ status: string; count: number }>("paystack/sync-plans", {
+							method: "POST",
+						});
+					},
+					listProducts: async (options?: BetterFetchOption): Promise<BetterFetchResponse<{
+						products: PaystackProduct[];
+					}>> => {
+						return $fetch<{
+							products: PaystackProduct[];
+						}>("paystack/list-products", {
+							method: "GET",
+							...options,
+						});
+					},
+					listPlans: async (options?: BetterFetchOption): Promise<BetterFetchResponse<{
+						plans: any[];
+					}>> => {
+						return $fetch<{
+							plans: any[];
+						}>("paystack/list-plans", {
+							method: "GET",
+							...options,
 						});
 					},
 				},

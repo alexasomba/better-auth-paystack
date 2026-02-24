@@ -708,7 +708,6 @@ describe("paystack", () => {
 			products: {
 				products: [
 					{
-						id: "prod_credits",
 						name: "credits",
 						price: 5000,
 						currency: "NGN",

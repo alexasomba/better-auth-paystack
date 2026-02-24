@@ -163,6 +163,12 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
             email?: (code: string, email: string) => Promise<unknown>;
         };
     };
+	plan?: {
+		list?: (init?: any) => Promise<unknown>;
+		fetch?: (idOrCode: string) => Promise<unknown>;
+		create?: (params: Record<string, unknown>) => Promise<unknown>;
+		update?: (idOrCode: string, params: Record<string, unknown>) => Promise<unknown>;
+	};
 	product?: {
 		list?: () => Promise<unknown>;
 		fetch?: (idOrCode: string) => Promise<unknown>;
@@ -175,6 +181,10 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
 	product_create?: (init: any) => Promise<unknown>;
 	product_update?: (init: any) => Promise<unknown>;
 	product_delete?: (init: any) => Promise<unknown>;
+	plan_list?: (init?: any) => Promise<unknown>;
+	plan_fetch?: (init: any) => Promise<unknown>;
+	plan_create?: (init: any) => Promise<unknown>;
+	plan_update?: (init: any) => Promise<unknown>;
 };
 
 type NoInfer<T> = [T][T extends unknown ? 0 : never];
@@ -247,7 +257,8 @@ export interface PaystackProduct {
 	updatedAt: Date;
 }
 
-export interface InputPaystackProduct extends Omit<PaystackProduct, "id" | "createdAt" | "updatedAt"> {
+export interface InputPaystackProduct extends Omit<PaystackProduct, "id" | "createdAt" | "updatedAt" | "slug"> {
+	slug?: string;
 	createdAt?: Date;
 	updatedAt?: Date;
 }
@@ -370,7 +381,7 @@ export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
 }
 
 export interface ProductOptions {
-    products: PaystackProduct[] | (() => PaystackProduct[] | Promise<PaystackProduct[]>);
+    products: InputPaystackProduct[] | (() => InputPaystackProduct[] | Promise<InputPaystackProduct[]>);
 }
 
 export interface OrganizationOptions<TMetadata = any> {

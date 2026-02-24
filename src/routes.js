@@ -206,13 +206,17 @@ export const paystackWebhook = (options) => {
                             where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
                         });
                         let newStatus = "canceled";
-                        if (existing?.cancelAtPeriodEnd === true && existing.periodEnd !== undefined && existing.periodEnd !== null && new Date(existing.periodEnd) > new Date()) {
+                        const nextPaymentDate = data?.next_payment_date;
+                        const periodEnd = nextPaymentDate ? new Date(nextPaymentDate) : (existing?.periodEnd ? new Date(existing.periodEnd) : undefined);
+                        if (periodEnd && periodEnd > new Date()) {
                             newStatus = "active";
                         }
                         await ctx.context.adapter.update({
                             model: "subscription",
                             update: {
                                 status: newStatus,
+                                cancelAtPeriodEnd: true,
+                                ...(periodEnd ? { periodEnd } : {}),
                                 updatedAt: new Date(),
                             },
                             where: [
@@ -306,6 +310,24 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             }
             plan = await getPlanByName(options, planName) ?? undefined;
             if (!plan) {
+                // Fallback: Check database for synced plans
+                const nativePlan = await ctx.context.adapter.findOne({
+                    model: "paystackPlan",
+                    where: [{ field: "name", value: planName }],
+                });
+                if (nativePlan) {
+                    plan = nativePlan;
+                }
+                else {
+                    // Try checking by planCode as well
+                    const nativePlanByCode = await ctx.context.adapter.findOne({
+                        model: "paystackPlan",
+                        where: [{ field: "planCode", value: planName }],
+                    });
+                    plan = nativePlanByCode ?? undefined;
+                }
+            }
+            if (!plan) {
                 throw new APIError("BAD_REQUEST", {
                     code: "SUBSCRIPTION_PLAN_NOT_FOUND",
                     message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
@@ -316,6 +338,13 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
         else if (productName !== undefined && productName !== null && productName !== "") {
             if (typeof productName === 'string') {
                 product = await getProductByName(options, productName) ?? undefined;
+                if (!product) {
+                    // Fallback: Check database for synced products
+                    product = await ctx.context.adapter.findOne({
+                        model: "paystackProduct",
+                        where: [{ field: "name", value: productName }],
+                    }) ?? undefined;
+                }
             }
             if (!product) {
                 throw new APIError("BAD_REQUEST", {
@@ -1013,7 +1042,7 @@ export const enablePaystackSubscription = (options, path = "/paystack/enable-sub
         }
     });
 };
-export const getSubscriptionManageLink = (options) => {
+export const getSubscriptionManageLink = (options, path = "/paystack/get-subscription-manage-link") => {
     const manageLinkQuerySchema = z.object({
         subscriptionCode: z.string(),
     });
@@ -1021,20 +1050,19 @@ export const getSubscriptionManageLink = (options) => {
     const useMiddlewares = subscriptionOptions?.enabled === true
         ? [sessionMiddleware, originCheck, referenceMiddleware(options, "get-subscription-manage-link")]
         : [sessionMiddleware, originCheck];
-    return createAuthEndpoint("/paystack/get-subscription-manage-link", {
-        method: "GET",
-        query: manageLinkQuerySchema,
-        use: useMiddlewares,
-    }, async (ctx) => {
+    const handler = async (ctx) => {
         const { subscriptionCode } = ctx.query;
+        // If it's a local mock subscription, return null link instead of error
+        if (subscriptionCode.startsWith("LOC_") || subscriptionCode.startsWith("sub_local_")) {
+            return ctx.json({ link: null, message: "Local subscriptions cannot be managed on Paystack" });
+        }
         const paystack = getPaystackOps(options.paystackClient);
         try {
             const raw = await paystack.subscriptionManageLink(subscriptionCode);
             const res = unwrapSdkResult(raw);
-            const data = res !== null && res !== undefined && "status" in res && "data" in res
-                ? (res).data
+            const data = (res !== null && res !== undefined && typeof res === "object" && "status" in res && "data" in res)
+                ? res.data
                 : res?.data !== undefined ? res.data : res;
-            // data might be string or object with link
             const link = typeof data === "string" ? data : data?.link;
             return ctx.json({ link });
         }
@@ -1044,7 +1072,12 @@ export const getSubscriptionManageLink = (options) => {
                 message: error?.message ?? "Failed to get subscription manage link",
             });
         }
-    });
+    };
+    return createAuthEndpoint(path, {
+        method: "GET",
+        query: manageLinkQuerySchema,
+        use: useMiddlewares,
+    }, handler);
 };
 export const syncProducts = (options) => {
     return createAuthEndpoint("/paystack/sync-products", {
@@ -1106,6 +1139,106 @@ export const syncProducts = (options) => {
             ctx.context.logger.error("Failed to sync products", error);
             throw new APIError("BAD_REQUEST", {
                 message: error?.message ?? "Failed to sync products",
+            });
+        }
+    });
+};
+export const listProducts = (_options) => {
+    return createAuthEndpoint("/paystack/list-products", {
+        method: "GET",
+        metadata: {
+            openapi: {
+                operationId: "listPaystackProducts",
+            },
+        },
+    }, async (ctx) => {
+        const res = await ctx.context.adapter.findMany({
+            model: "paystackProduct",
+        });
+        const sorted = res.sort((a, b) => a.name.localeCompare(b.name));
+        return ctx.json({ products: sorted });
+    });
+};
+export const syncPlans = (options) => {
+    return createAuthEndpoint("/paystack/sync-plans", {
+        method: "POST",
+        metadata: {
+            ...HIDE_METADATA,
+        },
+        disableBody: true,
+        use: [sessionMiddleware],
+    }, async (ctx) => {
+        const paystack = getPaystackOps(options.paystackClient);
+        try {
+            const raw = await paystack.planList();
+            const res = unwrapSdkResult(raw);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const plansData = (res !== null && typeof res === "object" && "status" in res && "data" in res) ? res.data : res?.data ?? res;
+            if (!Array.isArray(plansData)) {
+                return ctx.json({ status: "success", count: 0 });
+            }
+            for (const plan of plansData) {
+                const paystackId = String(plan.id);
+                const existing = await ctx.context.adapter.findOne({
+                    model: "paystackPlan",
+                    where: [{ field: "paystackId", value: paystackId }],
+                });
+                const planData = {
+                    name: plan.name,
+                    description: plan.description,
+                    amount: plan.amount,
+                    currency: plan.currency,
+                    interval: plan.interval,
+                    planCode: plan.plan_code,
+                    paystackId,
+                    metadata: plan.metadata ? JSON.stringify(plan.metadata) : undefined,
+                    updatedAt: new Date(),
+                };
+                if (existing) {
+                    await ctx.context.adapter.update({
+                        model: "paystackPlan",
+                        update: planData,
+                        where: [{ field: "id", value: existing.id }],
+                    });
+                }
+                else {
+                    await ctx.context.adapter.create({
+                        model: "paystackPlan",
+                        data: {
+                            ...planData,
+                            createdAt: new Date(),
+                        },
+                    });
+                }
+            }
+            return ctx.json({ status: "success", count: plansData.length });
+        }
+        catch (error) {
+            ctx.context.logger.error("Failed to sync plans", error);
+            throw new APIError("BAD_REQUEST", {
+                message: error?.message ?? "Failed to sync plans",
+            });
+        }
+    });
+};
+export const listPlans = (_options) => {
+    return createAuthEndpoint("/paystack/list-plans", {
+        method: "GET",
+        metadata: {
+            ...HIDE_METADATA,
+        },
+        use: [sessionMiddleware],
+    }, async (ctx) => {
+        try {
+            const plans = await ctx.context.adapter.findMany({
+                model: "paystackPlan",
+            });
+            return ctx.json({ plans });
+        }
+        catch (error) {
+            ctx.context.logger.error("Failed to list plans", error);
+            throw new APIError("BAD_REQUEST", {
+                message: error?.message ?? "Failed to list plans",
             });
         }
     });

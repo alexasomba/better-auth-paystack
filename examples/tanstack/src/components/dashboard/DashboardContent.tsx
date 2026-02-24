@@ -92,6 +92,14 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                                             <strong>User ID:</strong> {session.user.id}
                                         </p>
                                     )}
+                                    {(session.user as any).paystackCustomerCode && (
+                                        <p className="text-md">
+                                            <strong>Paystack Customer ID:</strong>{" "}
+                                            <code className="bg-muted px-1 rounded text-sm text-primary">
+                                                {(session.user as any).paystackCustomerCode}
+                                            </code>
+                                        </p>
+                                    )}
                                     <SignOutButton />
                                 </CardContent>
                             </Card>
