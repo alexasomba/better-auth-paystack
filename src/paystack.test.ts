@@ -1,4 +1,4 @@
- 
+
 import { createHmac } from "node:crypto";
 
 import { betterAuth } from "better-auth";
@@ -46,6 +46,7 @@ describe("paystack type", () => {
 });
 
 describe("paystack", () => {
+	 
 	const data: Record<string, any[]> = {
 		user: [],
 		session: [],
@@ -356,7 +357,7 @@ describe("paystack", () => {
 		};
 
 		const signUpRes = await authClient.signUp.email(testUser, { throw: true });
-        
+
 		const headers = new Headers();
 		await authClient.signIn.email(testUser, {
 			throw: true,
@@ -602,6 +603,19 @@ describe("paystack", () => {
 
 		const aHeaders = await signInWithCookies(userA);
 
+		// Need to isolate the mock so it doesn't match transactions from prior tests.
+		paystackSdk.transaction_initialize.mockResolvedValueOnce({
+			data: {
+				status: true,
+				message: "ok",
+				data: {
+					authorization_url: "https://checkout.paystack.com/AUTH_test",
+					reference: "REF_unique_isolated_123",
+					access_code: "ACCESS_test",
+				},
+			},
+		});
+
 		// User A initializes a transaction, creating an incomplete local subscription row.
 		const initReq = new Request(
 			new URL("paystack/initialize-transaction", authBaseUrl),
@@ -622,11 +636,22 @@ describe("paystack", () => {
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: aRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_shared_123" },
+					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
 				],
 			})
 		)?.[0] as Subscription | undefined;
 		expect(subA0?.status).toBe("incomplete");
+
+		paystackSdk.transaction_verify.mockResolvedValueOnce({
+			data: {
+				status: true,
+				message: "ok",
+				data: {
+					status: "success",
+					reference: "REF_unique_isolated_123",
+				},
+			},
+		});
 
 		// User B tries to verify the same Paystack reference; should NOT update User A's row.
 		const bHeaders = await signInWithCookies(userB);
@@ -635,7 +660,7 @@ describe("paystack", () => {
 			{
 				method: "POST",
 				headers: bHeaders,
-				body: JSON.stringify({ reference: "REF_shared_123" }),
+				body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
 			},
 		);
 		const verifyResB = await auth.handler(verifyReqB);
@@ -646,11 +671,22 @@ describe("paystack", () => {
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: aRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_shared_123" },
+					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
 				],
 			})
 		)?.[0] as Subscription | undefined;
 		expect(subA1?.status).toBe("incomplete");
+
+		paystackSdk.transaction_verify.mockResolvedValueOnce({
+			data: {
+				status: true,
+				message: "ok",
+				data: {
+					status: "success",
+					reference: "REF_unique_isolated_123",
+				},
+			},
+		});
 
 		// User A verifies; should update their own subscription.
 		const verifyReqA = new Request(
@@ -658,7 +694,7 @@ describe("paystack", () => {
 			{
 				method: "POST",
 				headers: aHeaders,
-				body: JSON.stringify({ reference: "REF_shared_123" }),
+				body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
 			},
 		);
 		const verifyResA = await auth.handler(verifyReqA);
@@ -669,7 +705,7 @@ describe("paystack", () => {
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: aRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_shared_123" },
+					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
 				],
 			})
 		)?.[0] as Subscription | undefined;
@@ -681,7 +717,7 @@ describe("paystack", () => {
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: bRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_shared_123" },
+					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
 				],
 			})
 		)?.[0] as Subscription | undefined;
@@ -791,13 +827,13 @@ describe("paystack", () => {
 			plugins: [bearer(), paystackClient({ subscription: true })],
 			fetchOptions: {
 				customFetchImpl: async (url, init) => {
-					 
+
 					const merged = new Headers(cookieHeaders);
 					const initHeaders = new Headers(init?.headers ?? {});
 					initHeaders.forEach((v, k) => {
 						merged.set(k, v);
 					});
-					 
+
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
 					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
 				},
@@ -1247,7 +1283,7 @@ describe("paystack", () => {
 
 		const ctx = await auth.$context;
 		const cookieHeaders = new Headers();
-        
+
 		// Mock client setup
 		const client = createAuthClient({
 			baseURL: "http://localhost:3000",
@@ -1286,7 +1322,7 @@ describe("paystack", () => {
 			} as any
 		});
 		const actualOrgId = orgRes.id;
-        
+
 		// Add user as owner
 		await (ctx.adapter as any).create({
 			model: "member",
@@ -1305,7 +1341,7 @@ describe("paystack", () => {
 			plan: "enterprise",
 			callbackURL: "http://localhost:3000/callback",
 		});
-        
+
 		expect(data?.url).toBeDefined();
 
 		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
@@ -1393,7 +1429,7 @@ describe("paystack", () => {
 			} as any
 		});
 		const actualOrgId = orgRes.id;
-        
+
 		// Add user as owner
 		await (_ctxAuth.adapter as any).create({
 			model: "member",

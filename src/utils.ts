@@ -10,7 +10,8 @@ export async function getPlans(subscriptionOptions: PaystackOptions["subscriptio
 	throw new Error("Subscriptions are not enabled in the Paystack options.");
 }
 
-export const getPlan = async (options: PaystackOptions<PaystackClientLike>, planId: string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getPlan = async (options: PaystackOptions<PaystackClientLike, any, any>, planId: string) => {
 	if (options.subscription?.enabled === true) {
 		const plans = await getPlans(options.subscription);
 		return plans.find((plan) => plan.name === planId) ?? null;
@@ -18,7 +19,8 @@ export const getPlan = async (options: PaystackOptions<PaystackClientLike>, plan
 	return null;
 };
 
-export async function getPlanByName(options: PaystackOptions<PaystackClientLike>, name: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getPlanByName(options: PaystackOptions<PaystackClientLike, any, any>, name: string) {
 	if (options.subscription?.enabled === true) {
 		const plans = await getPlans(options.subscription);
 		return plans.find(
@@ -28,7 +30,8 @@ export async function getPlanByName(options: PaystackOptions<PaystackClientLike>
 	return null;
 }
 
-export async function getPlanByPriceId(options: PaystackOptions<PaystackClientLike>, priceId: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getPlanByPriceId(options: PaystackOptions<PaystackClientLike, any, any>, priceId: string) {
 	if (options.subscription?.enabled === true) {
 		const plans = await getPlans(options.subscription);
 		return plans.find((plan) => plan.name === priceId) ?? null;
@@ -46,7 +49,8 @@ export async function getProducts(productOptions: PaystackOptions["products"]) {
 	return [];
 }
 
-export async function getProductByName(options: PaystackOptions<PaystackClientLike>, name: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getProductByName(options: PaystackOptions<PaystackClientLike, any, any>, name: string) {
 	return await getProducts(options.products).then((products) =>
 		products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null,
 	);
@@ -113,7 +117,7 @@ export async function syncProductQuantityFromPaystack(
 		where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
 	});
 
-	if (!localProduct?.paystackId) {
+	if (localProduct?.paystackId === undefined || localProduct?.paystackId === null || localProduct?.paystackId === "") {
 		// No local record with a Paystack ID — fall back to local decrement
 		if (localProduct && localProduct.unlimited !== true && localProduct.quantity !== undefined && localProduct.quantity > 0) {
 			await ctx.context.adapter.update({
@@ -129,8 +133,7 @@ export async function syncProductQuantityFromPaystack(
 	try {
 		const ops = getPaystackOps(paystackClient);
 		const raw = await ops.productFetch(localProduct.paystackId);
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const data = unwrapSdkResult<Record<string, any>>(raw);
+		const data = unwrapSdkResult<Record<string, unknown>>(raw);
 		const remoteQuantity = data?.quantity as number | undefined;
 
 		if (remoteQuantity !== undefined) {

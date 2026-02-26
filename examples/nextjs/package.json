@@ -14,34 +14,34 @@
   },
   "dependencies": {
     "@alexasomba/better-auth-paystack": "workspace:*",
-    "@alexasomba/paystack-node": "^1.1.6",
+    "@alexasomba/paystack-node": "^1.2.1",
     "@base-ui/react": "latest",
-    "@opennextjs/cloudflare": "^1.16.3",
+    "@opennextjs/cloudflare": "^1.17.1",
     "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-table": "^8.21.3",
-    "better-auth": "^1.4.18",
+    "better-auth": "^1.4.19",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
     "next": "~16.1.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
-    "@eslint/eslintrc": "^3.3.3",
-    "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^22.19.10",
-    "@types/react": "^19.2.13",
+    "@eslint/eslintrc": "^3.3.4",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^22.19.12",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "dotenv": "^16.6.1",
-    "drizzle-kit": "^0.31.8",
-    "eslint": "^9.39.2",
+    "drizzle-kit": "^0.31.9",
+    "eslint": "^9.39.3",
     "eslint-config-next": "~16.1.6",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4",
-    "wrangler": "^4.63.0"
+    "wrangler": "^4.68.1"
   }
 }

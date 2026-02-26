@@ -47,7 +47,7 @@
     "node": ">=22.0.0"
   },
   "type": "module",
-  "packageManager": "pnpm@10.26.0",
+  "packageManager": "pnpm@10.30.2+sha512.36cdc707e7b7940a988c9c1ecf88d084f8514b5c3f085f53a2e244c2921d3b2545bc20dd4ebe1fc245feec463bb298aecea7a63ed1f7680b877dc6379d8d0cb4",
   "types": "./dist/index.d.mts",
   "files": [
     "dist"
@@ -105,7 +105,7 @@
     "@eslint/compat": "^2.0.2",
     "@eslint/js": "^10.0.1",
     "@rollup/rollup-linux-x64-gnu": "^4.59.0",
-    "@types/node": "^22.19.11",
+    "@types/node": "^22.19.12",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "@vitest/coverage-v8": "^3.2.4",
