@@ -211,10 +211,10 @@ export const paystackClient = <
 						});
 					},
 					listPlans: async (options?: BetterFetchOption): Promise<BetterFetchResponse<{
-						plans: any[];
+						plans: unknown[];
 					}>> => {
 						return $fetch<{
-							plans: any[];
+							plans: unknown[];
 						}>("paystack/list-plans", {
 							method: "GET",
 							...options,

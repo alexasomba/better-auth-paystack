@@ -36,6 +36,7 @@ import type {
 	PaystackProduct,
 	Member,
 	User,
+	PaystackCustomerResponse,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -44,35 +45,37 @@ const INTERNAL_ERROR_CODES = defineErrorCodes({
 });
 
 export const paystack = <
-    TPaystackClient extends PaystackClientLike = PaystackNodeClient,
-    TMetadata = Record<string, unknown>,
-    TLimits = Record<string, unknown>,
-    O extends PaystackOptions<TPaystackClient, TMetadata, TLimits> = PaystackOptions<TPaystackClient, TMetadata, TLimits>,
+	TPaystackClient extends PaystackClientLike = PaystackNodeClient,
+	TMetadata = Record<string, unknown>,
+	TLimits = Record<string, unknown>,
+	O extends PaystackOptions<TPaystackClient, TMetadata, TLimits> = PaystackOptions<TPaystackClient, TMetadata, TLimits>,
 >(
 		options: O,
 	) => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const routeOptions = options as any;
 	const res = {
 		id: "paystack",
 		endpoints: {
-			initializeTransaction: initializeTransaction(options),
-			verifyTransaction: verifyTransaction(options),
-			listSubscriptions: listSubscriptions(options),
-			paystackWebhook: paystackWebhook(options),
-			listTransactions: listTransactions(options),
-			getConfig: getConfig(options),
-			disableSubscription: disablePaystackSubscription(options),
-			enableSubscription: enablePaystackSubscription(options),
-			getSubscriptionManageLink: getSubscriptionManageLink(options),
-			subscriptionManageLink: getSubscriptionManageLink(options, "/paystack/subscription/manage-link"), // Historical alias
-			createSubscription: createSubscription(options),
-			upgradeSubscription: upgradeSubscription(options),
-			cancelSubscription: cancelSubscription(options),
-			restoreSubscription: restoreSubscription(options),
-			chargeRecurringSubscription: chargeRecurringSubscription(options),
-			syncProducts: syncProducts(options),
-			listProducts: listProducts(options),
-			syncPlans: syncPlans(options),
-			listPlans: listPlans(options),
+			initializeTransaction: initializeTransaction(routeOptions),
+			verifyTransaction: verifyTransaction(routeOptions),
+			listSubscriptions: listSubscriptions(routeOptions),
+			paystackWebhook: paystackWebhook(routeOptions),
+			listTransactions: listTransactions(routeOptions),
+			getConfig: getConfig(routeOptions),
+			disableSubscription: disablePaystackSubscription(routeOptions),
+			enableSubscription: enablePaystackSubscription(routeOptions),
+			getSubscriptionManageLink: getSubscriptionManageLink(routeOptions),
+			subscriptionManageLink: getSubscriptionManageLink(routeOptions, "/paystack/subscription/manage-link"), // Historical alias
+			createSubscription: createSubscription(routeOptions),
+			upgradeSubscription: upgradeSubscription(routeOptions),
+			cancelSubscription: cancelSubscription(routeOptions),
+			restoreSubscription: restoreSubscription(routeOptions),
+			chargeRecurringSubscription: chargeRecurringSubscription(routeOptions),
+			syncProducts: syncProducts(routeOptions),
+			listProducts: listProducts(routeOptions),
+			syncPlans: syncPlans(routeOptions),
+			listPlans: listPlans(routeOptions),
 		},
 		schema: getSchema(options),
 		init: (ctx: AuthContext) => {
@@ -90,9 +93,9 @@ export const paystack = <
 										first_name: user.name ?? undefined,
 										metadata: {
 											userId: user.id,
-										} as any,
+										} as Record<string, unknown>,
 									});
-									const sdkRes = unwrapSdkResult<Record<string, unknown>>(raw);
+									const sdkRes = unwrapSdkResult<PaystackCustomerResponse>(raw);
 									const customerCode = (sdkRes?.customer_code as string | undefined)
 										?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
@@ -147,10 +150,10 @@ export const paystack = <
 												extraCreateParams,
 											);
 											const paystackOps = getPaystackOps(options.paystackClient as PaystackClientLike);
-											const raw = await paystackOps.customerCreate(params as any);
-											const sdkRes = unwrapSdkResult<Record<string, unknown>>(raw);
+											const raw = await paystackOps.customerCreate(params as unknown as Parameters<typeof paystackOps.customerCreate>[0]);
+											const sdkRes = unwrapSdkResult<PaystackCustomerResponse>(raw);
 											const customerCode = (sdkRes?.customer_code as string | undefined)
-                                                ?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
+												?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
 											if (customerCode === undefined || customerCode === null) return;
 
@@ -161,13 +164,13 @@ export const paystack = <
 
 											await options.organization?.onCustomerCreate?.(
 												{
-													paystackCustomer: sdkRes as any,
+													paystackCustomer: sdkRes as unknown as PaystackCustomerResponse,
 													organization: {
 														...org,
 														paystackCustomerCode: customerCode,
 													},
 												},
-                                                hookCtx!,
+												hookCtx!,
 											);
 										} catch (error: unknown) {
 											(ctx as unknown as AuthContext).logger.error("Failed to create Paystack customer for organization", error);
@@ -223,9 +226,11 @@ export const paystack = <
 };
 
 export type PaystackPlugin<
-    O extends PaystackOptions<PaystackClientLike, Record<string, unknown>, Record<string, unknown>> = PaystackOptions,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	O extends PaystackOptions<PaystackClientLike, any, any> = PaystackOptions,
 > = ReturnType<
-    typeof paystack<PaystackClientLike, Record<string, unknown>, Record<string, unknown>, O>
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	typeof paystack<PaystackClientLike, any, any, O>
 >;
 
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };

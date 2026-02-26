@@ -56,7 +56,7 @@ export function getPaystackOps(
 	return {
 		customerCreate: (params: PaystackCustomerCreateInput) => {
 			if (paystackClient?.customer_create !== undefined) {
-				return paystackClient.customer_create({ body: params as any });
+				return paystackClient.customer_create({ body: params as unknown as NonNullable<Parameters<PaystackNodeClient["customer_create"]>[0]>["body"] });
 			}
 			return paystackClient?.customer?.create?.(params);
 		},
@@ -64,7 +64,7 @@ export function getPaystackOps(
 			if (paystackClient?.customer_update !== undefined) {
 				return paystackClient.customer_update({
 					params: { path: { code } },
-					body: params as any,
+					body: params as unknown as NonNullable<Parameters<PaystackNodeClient["customer_update"]>[0]>["body"],
 				});
 			}
 			return paystackClient?.customer?.update?.(code, params);

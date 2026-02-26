@@ -92,12 +92,13 @@ describe("Issue #60: Subscription Cancellation Logic", () => {
 			} as unknown as Subscription
 		});
 
-		await authClient.paystack.subscription.cancel({
+		const res = await authClient.paystack.subscription.cancel({
 			subscriptionCode: "SUB_cancel_test",
 		}, {
 			headers
 		});
 
+		console.log(res);
 		const sub = (
 			await (ctx.adapter as any).findMany({
 				model: "subscription",
@@ -112,5 +113,6 @@ describe("Issue #60: Subscription Cancellation Logic", () => {
 		expect(sub?.status).toBe("active"); 
 		expect(sub?.cancelAtPeriodEnd).toBe(true);
 		expect(sub?.periodEnd).toEqual(nextPaymentDate);
+		console.log("FETCH CALLS:", paystackSdk.subscription_fetch.mock.calls);
 	});
 });

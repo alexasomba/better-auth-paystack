@@ -35,13 +35,12 @@ export type PaystackEvent =
 	| "customeridentification.failed"
 	| (string & {});
 
-export interface PaystackWebhookPayload<TData = any, TMetadata = any> {
+export interface PaystackWebhookPayload<TData = Record<string, unknown>, TMetadata = PaystackMetadata> {
 	event: PaystackEvent;
 	 
 	data: TData;
 	metadata?: TMetadata;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	[key: string]: any;
+	[key: string]: unknown;
 }
 
 export interface PaystackCustomerResponse {
@@ -49,7 +48,7 @@ export interface PaystackCustomerResponse {
 	email: string;
 	first_name?: string;
 	last_name?: string;
-	metadata?: Record<string, unknown>;
+	metadata?: PaystackMetadata | string | null;
 	id: number;
 	[key: string]: unknown;
 }
@@ -67,7 +66,9 @@ export interface PaystackTransactionResponse {
 	channel: string;
 	currency: PaystackCurrency;
 	ip_address: string;
-	metadata: Record<string, unknown> | string | null;
+	metadata: PaystackMetadata | string | null;
+	authorization_url?: string;
+	access_code?: string;
 	customer: PaystackCustomerResponse;
 	[key: string]: unknown;
 }
@@ -80,7 +81,8 @@ export interface PaystackSubscriptionResponse {
 	status: string;
 	amount: number;
 	currency: PaystackCurrency;
-	metadata?: Record<string, unknown> | null;
+	metadata?: PaystackMetadata | string | null;
+	next_payment_date?: string | null;
 	[key: string]: unknown;
 }
 
@@ -163,6 +165,7 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
             email?: (code: string, email: string) => Promise<unknown>;
         };
     };
+	/* eslint-disable @typescript-eslint/no-explicit-any */
 	plan?: {
 		list?: (init?: any) => Promise<unknown>;
 		fetch?: (idOrCode: string) => Promise<unknown>;
@@ -185,7 +188,14 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
 	plan_fetch?: (init: any) => Promise<unknown>;
 	plan_create?: (init: any) => Promise<unknown>;
 	plan_update?: (init: any) => Promise<unknown>;
+	/* eslint-enable @typescript-eslint/no-explicit-any */
 };
+
+export interface PaystackMetadata {
+    userId?: string;
+    organizationId?: string;
+    [key: string]: unknown;
+}
 
 type NoInfer<T> = [T][T extends unknown ? 0 : never];
 
@@ -309,7 +319,7 @@ export interface Subscription {
 
 export interface InputSubscription extends Omit<Subscription, "id"> { }
 
-export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
+export interface SubscriptionOptions<TMetadata = Record<string, unknown>, TLimits = Record<string, unknown>> {
     plans: PaystackPlan<TLimits>[] | (() => PaystackPlan<TLimits>[] | Promise<PaystackPlan<TLimits>[]>);
     requireEmailVerification?: boolean | undefined;
     authorizeReference?:
@@ -333,7 +343,7 @@ export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
     onSubscriptionComplete?:
     | ((
         data: {
-            event: PaystackWebhookPayload<any, TMetadata>;
+            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
             subscription: Subscription;
             plan: PaystackPlan<TLimits>;
         },
@@ -343,7 +353,7 @@ export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
     onSubscriptionUpdate?:
     | ((
         data: {
-            event: PaystackWebhookPayload<any, TMetadata>;
+            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
             subscription: Subscription;
             plan?: PaystackPlan<TLimits>;
         },
@@ -353,7 +363,7 @@ export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
     onSubscriptionCreated?:
     | ((
         data: {
-            event: PaystackWebhookPayload<any, TMetadata>;
+            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
             subscription: Subscription;
             plan: PaystackPlan<TLimits>;
         },
@@ -363,7 +373,7 @@ export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
     onSubscriptionCancel?:
     | ((
         data: {
-            event: PaystackWebhookPayload<any, TMetadata>;
+            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
             subscription: Subscription;
         },
         ctx: GenericEndpointContext,
@@ -372,7 +382,7 @@ export interface SubscriptionOptions<TMetadata = any, TLimits = any> {
     onSubscriptionDelete?:
     | ((
         data: {
-            event: PaystackWebhookPayload<any, TMetadata>;
+            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
             subscription: Subscription;
         },
         ctx: GenericEndpointContext,
@@ -384,7 +394,7 @@ export interface ProductOptions {
     products: InputPaystackProduct[] | (() => InputPaystackProduct[] | Promise<InputPaystackProduct[]>);
 }
 
-export interface OrganizationOptions<TMetadata = any> {
+export interface OrganizationOptions<TMetadata = Record<string, unknown>> {
     enabled: boolean;
     createCustomerOnOrganizationCreate?: boolean | undefined;
     onCustomerCreate?:
@@ -403,8 +413,8 @@ export interface OrganizationOptions<TMetadata = any> {
 
 export interface PaystackOptions<
     TPaystackClient extends PaystackClientLike = PaystackNodeClient,
-    TMetadata = any,
-    TLimits = any,
+    TMetadata = Record<string, unknown>,
+    TLimits = Record<string, unknown>,
 > {
     /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
     paystackClient: NoInfer<TPaystackClient>;
@@ -436,7 +446,7 @@ export interface PaystackOptions<
     | undefined;
     products?: ProductOptions | undefined;
     organization?: OrganizationOptions<TMetadata> | undefined;
-    onEvent?: ((event: PaystackWebhookPayload<any, TMetadata>) => Promise<void>) | undefined;
+    onEvent?: ((event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>) => Promise<void>) | undefined;
     schema?: InferOptionSchema<typeof subscriptions & typeof user & typeof organization> | undefined;
 }
 
