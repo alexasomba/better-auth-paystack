@@ -1,7 +1,7 @@
 import type {
-	InferOptionSchema,
-	Session,
-	User,
+    InferOptionSchema,
+    Session,
+    User,
 } from "better-auth";
 import type { createPaystack } from "@alexasomba/paystack-node";
 
@@ -129,6 +129,7 @@ export type PaystackTransactionInitializeInput =
     WithMetadataObject<ExtractBody<TransactionInitializeInit>> & {
         scheduleAtPeriodEnd?: boolean;
         cancelAtPeriodEnd?: boolean;
+        prorateAndCharge?: boolean;
     };
 export type PaystackTransactionChargeAuthorizationInput =
     WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;

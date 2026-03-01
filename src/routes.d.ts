@@ -37,6 +37,7 @@ export declare const initializeTransaction: <P extends string = "/paystack/initi
         quantity: z.ZodOptional<z.ZodNumber>;
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         referenceId: string;
@@ -78,6 +79,7 @@ export declare const createSubscription: (options: AnyPaystackOptions) => import
         quantity: z.ZodOptional<z.ZodNumber>;
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         referenceId: string;
@@ -119,6 +121,7 @@ export declare const upgradeSubscription: (options: AnyPaystackOptions) => impor
         quantity: z.ZodOptional<z.ZodNumber>;
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         referenceId: string;

@@ -274,6 +274,7 @@ const initializeTransactionBodySchema = z.object({
     quantity: z.number().int().positive().optional(),
     scheduleAtPeriodEnd: z.boolean().optional(),
     cancelAtPeriodEnd: z.boolean().optional(),
+    prorateAndCharge: z.boolean().optional(),
 });
 export const initializeTransaction = (options, path = "/paystack/initialize-transaction") => {
     const subscriptionOptions = options.subscription;
@@ -288,7 +289,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
         use: useMiddlewares,
     }, async (ctx) => {
         const paystack = getPaystackOps(options.paystackClient);
-        const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity, scheduleAtPeriodEnd, cancelAtPeriodEnd } = ctx.body;
+        const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity, scheduleAtPeriodEnd, cancelAtPeriodEnd, prorateAndCharge } = ctx.body;
         // 1. Validate Callback URL validation (same as before)
         if (callbackURL !== undefined && callbackURL !== null && callbackURL !== "") {
             const checkTrusted = () => {
@@ -526,6 +527,90 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                 }
                 catch (_e) {
                     // Ignore sync errors
+                }
+            }
+            // Handle prorateAndCharge for existing active subscriptions
+            if (plan && prorateAndCharge === true) {
+                const existingSub = await getOrganizationSubscription(ctx, referenceId);
+                if (existingSub?.status === "active" && existingSub.paystackAuthorizationCode !== null && existingSub.paystackAuthorizationCode !== undefined && existingSub.paystackSubscriptionCode !== null && existingSub.paystackSubscriptionCode !== undefined) {
+                    // 1. Calculate remaining days
+                    const now = new Date();
+                    const periodEndLocal = existingSub.periodEnd ? new Date(existingSub.periodEnd) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // fallback 30 days
+                    const periodStartLocal = existingSub.periodStart ? new Date(existingSub.periodStart) : now;
+                    const totalDays = Math.max(1, Math.ceil((periodEndLocal.getTime() - periodStartLocal.getTime()) / (1000 * 60 * 60 * 24)));
+                    const remainingDays = Math.max(0, Math.ceil((periodEndLocal.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+                    // 2. Fetch old plan/amount
+                    let oldAmount = 0;
+                    if (existingSub.plan) {
+                        const oldPlan = await getPlanByName(options, existingSub.plan) || await (ctx.context.adapter).findOne({ model: "paystackPlan", where: [{ field: "name", value: existingSub.plan }] });
+                        if (oldPlan) {
+                            const oldSeatCount = existingSub.seats ?? 1;
+                            oldAmount = (oldPlan.amount ?? 0) + (oldSeatCount * (oldPlan.seatAmount ?? oldPlan.seatPriceId ?? 0));
+                        }
+                    }
+                    // 3. Calculate new total amount
+                    let membersCount = 1;
+                    if (plan.seatAmount !== undefined || plan.seatPriceId !== undefined) {
+                        const members = await (ctx.context.adapter).findMany({
+                            model: "member",
+                            where: [{ field: "organizationId", value: referenceId }],
+                        });
+                        membersCount = members.length > 0 ? members.length : 1;
+                    }
+                    const newSeatCount = quantity ?? existingSub.seats ?? membersCount;
+                    const newAmount = (plan.amount ?? 0) + (newSeatCount * (plan.seatAmount ?? plan.seatPriceId ?? 0));
+                    // 4. Calculate Difference & Charge
+                    const costDifference = newAmount - oldAmount;
+                    if (costDifference > 0 && remainingDays > 0) {
+                        let proratedAmount = Math.round((costDifference / totalDays) * remainingDays);
+                        // Ensure minimum Paystack charge limit is met (50 NGN -> 5000)
+                        if (proratedAmount >= 5000) {
+                            const ops = getPaystackOps(options.paystackClient);
+                            const chargeResRaw = await ops.transactionChargeAuthorization({
+                                email: targetEmail,
+                                amount: proratedAmount,
+                                authorization_code: existingSub.paystackAuthorizationCode,
+                                reference: `prorate_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+                                metadata: {
+                                    type: "proration",
+                                    referenceId,
+                                    newPlan: plan.name,
+                                    oldPlan: existingSub.plan,
+                                    remainingDays,
+                                },
+                            });
+                            const chargeRes = unwrapSdkResult(chargeResRaw);
+                            let chargeData = chargeRes;
+                            if (chargeData !== undefined && chargeData !== null && "data" in chargeData) {
+                                chargeData = chargeData.data ?? chargeData;
+                            }
+                            if (chargeData?.status !== "success") {
+                                throw new APIError("BAD_REQUEST", { message: "Failed to process prorated charge via saved authorization." });
+                            }
+                        }
+                    }
+                    // 5. Update Subscription Future Cycle in Paystack
+                    const ops = getPaystackOps(options.paystackClient);
+                    await ops.subscriptionUpdate({
+                        code: existingSub.paystackSubscriptionCode,
+                        amount: newAmount,
+                        plan: plan.planCode,
+                    });
+                    // 6. Update Local DB
+                    await (ctx.context.adapter).update({
+                        model: "subscription",
+                        where: [{ field: "id", value: existingSub.id }],
+                        update: {
+                            plan: plan.name,
+                            seats: newSeatCount,
+                            updatedAt: new Date(),
+                        },
+                    });
+                    return ctx.json({
+                        status: "success",
+                        message: "Subscription successfully upgraded with prorated charge.",
+                        prorated: true,
+                    });
                 }
             }
             if (plan) {

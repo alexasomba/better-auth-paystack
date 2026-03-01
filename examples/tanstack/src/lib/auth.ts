@@ -80,7 +80,7 @@ export const auth = betterAuth({
                         // ========================================
                         {
                             name: "starter",
-                            amount: 500000, // 5000 NGN
+                            amount: 500000, // 5000 NGN, this is inconsequential as the actual price on Paystack for this plan is what is used
                             currency: "NGN",
                             planCode: "PLN_jm9wgvkqykajlp7", // Replace with your Paystack plan code
                             // v0.3.0: Trial period with abuse prevention (user can only get trial once)
@@ -104,7 +104,7 @@ export const auth = betterAuth({
                         },
                         {
                             name: "pro",
-                            amount: 1000000, // 10000 NGN
+                            amount: 1000000, // 10000 NGN, this is inconsequential as the actual price on Paystack for this plan is what is used
                             currency: "NGN",
                             planCode: "PLN_6ikzoaxnunttb5e", // Replace with your Paystack plan code
                             description: "For serious professionals. Supports scheduled changes.",
@@ -121,6 +121,30 @@ export const auth = betterAuth({
                             interval: "monthly",
                             seatAmount: 500000, // 5,000 NGN per seat
                             description: "Best for growing teams (Seat-based)",
+                            features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
+                        },
+                        {
+                            name: "business",
+                            amount: 5000000, // 50,000 NGN
+                            currency: "NGN",
+                            interval: "monthly",
+                            seatAmount: 1000000, // 10,000 NGN per seat
+                            freeTrial: {
+                                days: 7,
+                                onTrialStart: async (subscription) => {
+                                    await Promise.resolve();
+                                    console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
+                                },
+                                onTrialEnd: async ({ subscription }) => {
+                                    await Promise.resolve();
+                                    console.log(`✅ Trial ended, now active: ${subscription.referenceId}`);
+                                },
+                                onTrialExpired: async (subscription) => {
+                                    await Promise.resolve();
+                                    console.log(`⚠️ Trial expired without conversion: ${subscription.referenceId}`);
+                                },
+                            },
+                            description: "Best for established businesses (Seat-based)",
                             features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
                         },
                         {

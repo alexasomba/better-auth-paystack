@@ -17,6 +17,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 quantity: import("zod").ZodOptional<import("zod").ZodNumber>;
                 scheduleAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
                 cancelAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
+                prorateAndCharge: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -300,6 +301,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 quantity: import("zod").ZodOptional<import("zod").ZodNumber>;
                 scheduleAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
                 cancelAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
+                prorateAndCharge: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -341,6 +343,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 quantity: import("zod").ZodOptional<import("zod").ZodNumber>;
                 scheduleAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
                 cancelAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
+                prorateAndCharge: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;

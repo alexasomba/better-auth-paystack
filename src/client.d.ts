@@ -25,6 +25,7 @@ export declare const paystackClient: <O extends {
                 product?: string;
                 scheduleAtPeriodEnd?: boolean;
                 cancelAtPeriodEnd?: boolean;
+                prorateAndCharge?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;
@@ -48,6 +49,7 @@ export declare const paystackClient: <O extends {
                 product?: string;
                 scheduleAtPeriodEnd?: boolean;
                 cancelAtPeriodEnd?: boolean;
+                prorateAndCharge?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;
@@ -132,6 +134,7 @@ export declare const paystackClient: <O extends {
                     product?: string;
                     scheduleAtPeriodEnd?: boolean;
                     cancelAtPeriodEnd?: boolean;
+                    prorateAndCharge?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
@@ -166,6 +169,7 @@ export declare const paystackClient: <O extends {
                     product?: string;
                     scheduleAtPeriodEnd?: boolean;
                     cancelAtPeriodEnd?: boolean;
+                    prorateAndCharge?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
@@ -186,6 +190,7 @@ export declare const paystackClient: <O extends {
                     product?: string;
                     scheduleAtPeriodEnd?: boolean;
                     cancelAtPeriodEnd?: boolean;
+                    prorateAndCharge?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
@@ -253,6 +258,7 @@ export declare const paystackClient: <O extends {
                 product?: string;
                 scheduleAtPeriodEnd?: boolean;
                 cancelAtPeriodEnd?: boolean;
+                prorateAndCharge?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;

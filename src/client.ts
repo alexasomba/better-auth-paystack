@@ -10,8 +10,8 @@ export const paystackClient = <
 		subscription: boolean;
 	},
 >(
-		_options?: O,
-	) => {
+	_options?: O,
+) => {
 	return {
 		id: "paystack",
 		$InferServerPlugin: {} as ReturnType<typeof paystack>,
@@ -30,6 +30,7 @@ export const paystackClient = <
 				product?: string;
 				scheduleAtPeriodEnd?: boolean;
 				cancelAtPeriodEnd?: boolean;
+				prorateAndCharge?: boolean;
 			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				url: string;
 				reference: string;
