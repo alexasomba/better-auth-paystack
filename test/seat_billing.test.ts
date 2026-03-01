@@ -124,6 +124,44 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
 			body: expect.objectContaining({
 				amount: 200000,
+				quantity: 1,
+			})
+		}));
+	});
+
+	it("should calculate correct amount when quantity is provided in request with seatAmount", async () => {
+		const testUser = { email: "qty@test.com", password: "password", name: "Qty User" };
+		await authClient.signUp.email(testUser, { throw: true });
+		const headers = new Headers();
+		await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+
+		const orgRes = await authClient.organization.create({
+			name: "Qty Org",
+			slug: "qty-org",
+		}, { headers });
+		const orgId = orgRes.data?.id ?? "";
+
+		(paystackSdk.transaction_initialize as any).mockResolvedValue({
+			data: {
+				status: true,
+				data: {
+					authorization_url: "https://paystack.com/auth",
+					reference: "ref_qty",
+				},
+			},
+		});
+
+		// Request with explicit quantity: 3. Base 1000 + (3 * 500) = 2500.
+		await authClient.paystack.initializeTransaction({
+			plan: "team-plan",
+			referenceId: orgId,
+			quantity: 3,
+		}, { headers });
+
+		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
+			body: expect.objectContaining({
+				amount: 250000,
+				quantity: 1, // Plugin forces 1 to avoid Paystack double-multiplication
 			})
 		}));
 	});

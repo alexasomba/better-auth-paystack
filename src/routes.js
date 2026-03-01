@@ -540,12 +540,19 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                     initBody.plan = plan.planCode;
                     initBody.invoice_limit = plan.invoiceLimit;
                     // Paystack requires amount even with planCode (it uses plan's stored amount)
-                    // For local plans without planCode, use finalAmount; for planCode plans, use plan.amount or minimum
-                    const planAmount = amount ?? plan.amount ?? 50000; // 500 NGN minimum fallback
-                    initBody.amount = Math.max(Math.round(planAmount), 50000);
-                    if (quantity !== undefined && quantity !== null && quantity > 0) {
-                        initBody.amount = initBody.amount * quantity;
+                    // For local plans without planCode, use finalAmount; for planCode plans, use plan.amount or override
+                    let finalAmount;
+                    if (amount !== undefined && amount !== null) {
+                        // amount was calculated via seat-based logic or provided as override
+                        finalAmount = amount;
+                        // We force quantity to 1 in the Paystack call because our amount already includes the quantity multiplier
+                        initBody.quantity = 1;
                     }
+                    else {
+                        // Standard Flow: Plan Price * Quantity
+                        finalAmount = (plan.amount ?? 50000) * (quantity ?? 1);
+                    }
+                    initBody.amount = Math.max(Math.round(finalAmount), 50000);
                 }
             }
             else {
