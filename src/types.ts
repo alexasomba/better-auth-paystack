@@ -1,7 +1,7 @@
 import type {
-    InferOptionSchema,
-    Session,
-    User,
+	InferOptionSchema,
+	Session,
+	User,
 } from "better-auth";
 import type { createPaystack } from "@alexasomba/paystack-node";
 

@@ -10,8 +10,8 @@ export const paystackClient = <
 		subscription: boolean;
 	},
 >(
-	_options?: O,
-) => {
+		_options?: O,
+	) => {
 	return {
 		id: "paystack",
 		$InferServerPlugin: {} as ReturnType<typeof paystack>,
