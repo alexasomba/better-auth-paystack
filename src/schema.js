@@ -125,6 +125,10 @@ export const subscriptions = {
                 type: "number",
                 required: false,
             },
+            pendingPlan: {
+                type: "string",
+                required: false,
+            },
         },
     },
 };

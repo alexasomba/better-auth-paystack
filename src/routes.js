@@ -6,6 +6,7 @@ import * as z from "zod/v4";
 import { syncProductQuantityFromPaystack, getPlanByName, getPlans, getProductByName, getProducts, validateMinAmount, getNextPeriodEnd, } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { getOrganizationSubscription } from "./limits";
 const PAYSTACK_ERROR_CODES = defineErrorCodes({
     SUBSCRIPTION_NOT_FOUND: "Subscription not found",
     SUBSCRIPTION_PLAN_NOT_FOUND: "Subscription plan not found",
@@ -230,6 +231,28 @@ export const paystackWebhook = (options) => {
                         }
                     }
                 }
+                // Handle plan changes on renewal
+                if (eventName === "charge.success" || eventName === "invoice.update") {
+                    const payloadData = data;
+                    const subscriptionCode = payloadData?.subscription?.subscription_code ?? payloadData?.subscription_code;
+                    if (subscriptionCode) {
+                        const existingSub = await (ctx.context.adapter).findOne({
+                            model: "subscription",
+                            where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+                        });
+                        if (existingSub?.pendingPlan) {
+                            await (ctx.context.adapter).update({
+                                model: "subscription",
+                                update: {
+                                    plan: existingSub.pendingPlan,
+                                    pendingPlan: null,
+                                    updatedAt: new Date(),
+                                },
+                                where: [{ field: "id", value: existingSub.id }],
+                            });
+                        }
+                    }
+                }
             }
             catch (_e) {
                 ctx.context.logger.error("Failed to sync Paystack webhook event", _e);
@@ -242,13 +265,15 @@ export const paystackWebhook = (options) => {
 const initializeTransactionBodySchema = z.object({
     plan: z.string().optional(),
     product: z.string().optional(),
-    amount: z.number().int().positive().optional(), // Amount in smallest currency unit (e.g., kobo)
+    amount: z.number().int().positive().optional(),
     currency: z.string().optional(),
     email: z.string().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     referenceId: z.string().optional(),
     callbackURL: z.string().optional(),
     quantity: z.number().int().positive().optional(),
+    scheduleAtPeriodEnd: z.boolean().optional(),
+    cancelAtPeriodEnd: z.boolean().optional(),
 });
 export const initializeTransaction = (options, path = "/paystack/initialize-transaction") => {
     const subscriptionOptions = options.subscription;
@@ -263,7 +288,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
         use: useMiddlewares,
     }, async (ctx) => {
         const paystack = getPaystackOps(options.paystackClient);
-        const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity } = ctx.body;
+        const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity, scheduleAtPeriodEnd, cancelAtPeriodEnd } = ctx.body;
         // 1. Validate Callback URL validation (same as before)
         if (callbackURL !== undefined && callbackURL !== null && callbackURL !== "") {
             const checkTrusted = () => {
@@ -359,18 +384,65 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                 status: 400
             });
         }
-        const amount = bodyAmount ?? product?.price;
+        let amount = bodyAmount ?? product?.price;
         const finalCurrency = currency ?? product?.currency ?? plan?.currency ?? "NGN";
-        let url;
-        let reference;
-        let accessCode;
-        // 5. Prepare Payload
         const referenceIdFromCtx = ctx.context.referenceId;
         const referenceId = (ctx.body.referenceId !== undefined && ctx.body.referenceId !== null && ctx.body.referenceId !== "")
             ? ctx.body.referenceId
             : (referenceIdFromCtx !== undefined && referenceIdFromCtx !== null && referenceIdFromCtx !== "")
                 ? referenceIdFromCtx
                 : session.user.id;
+        // Handle scheduleAtPeriodEnd for existing subscriptions
+        if (plan && scheduleAtPeriodEnd === true) {
+            const existingSub = await getOrganizationSubscription(ctx, referenceId);
+            if (existingSub?.status === "active") {
+                await (ctx.context.adapter).update({
+                    model: "subscription",
+                    where: [{ field: "id", value: existingSub.id }],
+                    update: {
+                        pendingPlan: plan.name,
+                        updatedAt: new Date(),
+                    },
+                });
+                return ctx.json({
+                    status: "success",
+                    message: "Plan change scheduled at period end.",
+                    scheduled: true,
+                });
+            }
+        }
+        // Handle cancelAtPeriodEnd for existing subscriptions
+        if (cancelAtPeriodEnd === true) {
+            const existingSub = await getOrganizationSubscription(ctx, referenceId);
+            if (existingSub?.status === "active") {
+                await (ctx.context.adapter).update({
+                    model: "subscription",
+                    where: [{ field: "id", value: existingSub.id }],
+                    update: {
+                        cancelAtPeriodEnd: true,
+                        updatedAt: new Date(),
+                    },
+                });
+                return ctx.json({
+                    status: "success",
+                    message: "Subscription cancellation scheduled at period end.",
+                    scheduled: true,
+                });
+            }
+        }
+        // Calculate final amount considering seats if applicable
+        if (plan && (plan.seatAmount !== undefined || plan.seatPriceId !== undefined)) {
+            const members = await (ctx.context.adapter).findMany({
+                model: "member",
+                where: [{ field: "organizationId", value: referenceId }],
+            });
+            const seatCount = members.length > 0 ? members.length : 1;
+            const quantityToUse = quantity ?? seatCount;
+            amount = (plan.amount ?? 0) + (quantityToUse * (plan.seatAmount ?? plan.seatPriceId ?? 0));
+        }
+        let url;
+        let reference;
+        let accessCode;
         // Check trial eligibility - prevent trial abuse
         let trialStart;
         let trialEnd;

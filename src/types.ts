@@ -139,6 +139,7 @@ export type PaystackSubscriptionFetchInit =
 export type PaystackClientLike = Partial<PaystackNodeClient> & {
     // Some older SDKs use snake_case for manage link
     subscription_manage_link?: PaystackNodeClient["subscription_manageLink"];
+    subscription_update?: (params: { params: { path: { code: string } }; body: { plan?: string; authorization?: string; amount?: number } }) => Promise<unknown>;
 
     // Legacy nested style support (kept for compatibility)
     customer?: {
@@ -225,6 +226,10 @@ export interface PaystackPlan<TLimits = Record<string, unknown>> {
     invoiceLimit?: number | undefined;
     /** Arbitrary limits (stored/consumed by your app). */
     limits?: TLimits | undefined;
+    /** Amount per seat (optional). */
+    seatAmount?: number | undefined;
+    /** Paystack plan code for seat (optional). */
+    seatPlanCode?: string | undefined;
     /** Optional free trial config, if your app supports it. */
     freeTrial?:
     | {
@@ -310,6 +315,8 @@ export interface Subscription {
     cancelAtPeriodEnd?: boolean | undefined;
     groupId?: string | undefined;
     seats?: number | undefined;
+    /** The plan that will be applied at the next billing cycle. */
+    pendingPlan?: string | undefined;
 }
 
 export interface InputSubscription extends Omit<Subscription, "id"> { }

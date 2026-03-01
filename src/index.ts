@@ -25,7 +25,7 @@ import {
 } from "./routes";
 import { getSchema } from "./schema";
 import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
-import { getPlanByName } from "./utils";
+import { getPlanByName, syncSubscriptionSeats } from "./utils";
 import type {
 	PaystackNodeClient,
 	PaystackClientLike,
@@ -190,7 +190,19 @@ export const paystack = <
 									await checkSeatLimit(ctx, member.organizationId);
 								}
 							},
+							after: async (member: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
+								if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+									await syncSubscriptionSeats(ctx, member.organizationId, options);
+								}
+							},
 						},
+						delete: {
+							after: async (member: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
+								if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+									await syncSubscriptionSeats(ctx, member.organizationId, options);
+								}
+							},
+						}
 					},
 					invitation: {
 						create: {
@@ -199,7 +211,19 @@ export const paystack = <
 									await checkSeatLimit(ctx, invitation.organizationId);
 								}
 							},
+							after: async (invitation: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
+								if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+									await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+								}
+							},
 						},
+						delete: {
+							after: async (invitation: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
+								if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+									await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+								}
+							},
+						}
 					},
 					team: {
 						create: {

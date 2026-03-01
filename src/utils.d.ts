@@ -14,4 +14,5 @@ export declare function validateMinAmount(amount: number, currency: string): boo
 export declare function syncProductQuantityFromPaystack(ctx: any, productName: string, paystackClient: PaystackClientLike): Promise<void>;
 /** @deprecated Use syncProductQuantityFromPaystack instead */
 export declare function decrementProductQuantity(ctx: any, productName: string): Promise<void>;
+export declare function syncSubscriptionSeats(ctx: any, organizationId: string, options: PaystackOptions<PaystackClientLike, any, any>): Promise<void>;
 //# sourceMappingURL=utils.d.ts.map

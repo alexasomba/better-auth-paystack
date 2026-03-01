@@ -3,7 +3,7 @@ import { defu } from "defu";
 import { disablePaystackSubscription, enablePaystackSubscription, initializeTransaction, listSubscriptions, listTransactions, paystackWebhook, verifyTransaction, getConfig, getSubscriptionManageLink, PAYSTACK_ERROR_CODES, createSubscription, upgradeSubscription, cancelSubscription, restoreSubscription, chargeRecurringSubscription, syncProducts, listProducts, syncPlans, listPlans, } from "./routes";
 import { getSchema } from "./schema";
 import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
-import { getPlanByName } from "./utils";
+import { getPlanByName, syncSubscriptionSeats } from "./utils";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 const INTERNAL_ERROR_CODES = defineErrorCodes({
     ...Object.fromEntries(Object.entries(PAYSTACK_ERROR_CODES).map(([key, value]) => [
@@ -137,7 +137,19 @@ export const paystack = (options) => {
                                     await checkSeatLimit(ctx, member.organizationId);
                                 }
                             },
+                            after: async (member, ctx) => {
+                                if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+                                    await syncSubscriptionSeats(ctx, member.organizationId, options);
+                                }
+                            },
                         },
+                        delete: {
+                            after: async (member, ctx) => {
+                                if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+                                    await syncSubscriptionSeats(ctx, member.organizationId, options);
+                                }
+                            },
+                        }
                     },
                     invitation: {
                         create: {
@@ -146,7 +158,19 @@ export const paystack = (options) => {
                                     await checkSeatLimit(ctx, invitation.organizationId);
                                 }
                             },
+                            after: async (invitation, ctx) => {
+                                if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+                                    await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+                                }
+                            },
                         },
+                        delete: {
+                            after: async (invitation, ctx) => {
+                                if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
+                                    await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+                                }
+                            },
+                        }
                     },
                     team: {
                         create: {

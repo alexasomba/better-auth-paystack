@@ -110,6 +110,20 @@ export function getPaystackOps(paystackClient) {
             }
             return paystackClient?.subscription?.manage?.email?.(code, email);
         },
+        subscriptionUpdate: (params) => {
+            if (paystackClient?.subscription_update !== undefined) {
+                return paystackClient.subscription_update({
+                    params: { path: { code: params.code } },
+                    body: {
+                        plan: params.plan,
+                        authorization: params.authorization,
+                        amount: params.amount,
+                    },
+                });
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return paystackClient?.subscription?.update?.(params.code, params);
+        },
         transactionChargeAuthorization: (body) => {
             if (paystackClient?.transaction_chargeAuthorization !== undefined) {
                 return paystackClient.transaction_chargeAuthorization({

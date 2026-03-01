@@ -155,3 +155,52 @@ export async function decrementProductQuantity(ctx, productName) {
         }
     }
 }
+export async function syncSubscriptionSeats(ctx, organizationId, options) {
+    if (options.subscription?.enabled !== true)
+        return;
+    const adapter = ctx.context?.adapter ?? ctx.adapter;
+    const subscription = await (adapter).findOne({
+        model: "subscription",
+        where: [{ field: "referenceId", value: organizationId }],
+    });
+    if (subscription === null || subscription.paystackSubscriptionCode === undefined || subscription.paystackSubscriptionCode === null)
+        return;
+    const plan = await getPlanByName(options, subscription.plan);
+    if (plan === null)
+        return;
+    if (plan.seatAmount === undefined && plan.seatPlanCode === undefined)
+        return;
+    const members = await (adapter).findMany({
+        model: "member",
+        where: [{ field: "organizationId", value: organizationId }],
+    });
+    const quantity = members.length;
+    let totalAmount = plan.amount ?? 0;
+    if (plan.seatAmount !== undefined && plan.seatAmount !== null) {
+        totalAmount += (quantity * plan.seatAmount);
+    }
+    const ops = getPaystackOps(options.paystackClient);
+    try {
+        // Paystack subscription update doesn't natively support quantity in the same way as Stripe
+        // but we can update the amount or the plan.
+        await ops.subscriptionUpdate({
+            code: subscription.paystackSubscriptionCode,
+            amount: totalAmount,
+        });
+        // Update local DB to reflect current seat count
+        await (adapter).update({
+            model: "subscription",
+            where: [{ field: "id", value: subscription.id }],
+            update: {
+                seats: quantity,
+                updatedAt: new Date(),
+            },
+        });
+    }
+    catch (e) {
+        const log = ctx.context?.logger ?? ctx.logger;
+        if (log !== undefined && log !== null) {
+            log.error("Failed to sync subscription seats with Paystack", e);
+        }
+    }
+}

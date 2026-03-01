@@ -23,6 +23,7 @@ import {
 import type { PaystackPlan } from "./types";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { getOrganizationSubscription } from "./limits";
 
 type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
 
@@ -297,6 +298,31 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 							}
 						}
 					}
+
+					// Handle plan changes on renewal
+					if (eventName === "charge.success" || eventName === "invoice.update") {
+						const payloadData = data as any;
+						const subscriptionCode = payloadData?.subscription?.subscription_code ?? payloadData?.subscription_code;
+
+						if (subscriptionCode) {
+							const existingSub = await (ctx.context.adapter).findOne({
+								model: "subscription",
+								where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+							}) as Subscription | null;
+
+							if (existingSub?.pendingPlan) {
+								await (ctx.context.adapter).update({
+									model: "subscription",
+									update: {
+										plan: existingSub.pendingPlan,
+										pendingPlan: null,
+										updatedAt: new Date(),
+									},
+									where: [{ field: "id", value: existingSub.id }],
+								});
+							}
+						}
+					}
 				} catch (_e: unknown) {
 					ctx.context.logger.error("Failed to sync Paystack webhook event", _e);
 				}
@@ -308,17 +334,18 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 	);
 };
 
-
 const initializeTransactionBodySchema = z.object({
 	plan: z.string().optional(),
 	product: z.string().optional(),
-	amount: z.number().int().positive().optional(), // Amount in smallest currency unit (e.g., kobo)
+	amount: z.number().int().positive().optional(),
 	currency: z.string().optional(),
 	email: z.string().optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
 	referenceId: z.string().optional(),
 	callbackURL: z.string().optional(),
 	quantity: z.number().int().positive().optional(),
+	scheduleAtPeriodEnd: z.boolean().optional(),
+	cancelAtPeriodEnd: z.boolean().optional(),
 });
 
 export const initializeTransaction = <P extends string = "/paystack/initialize-transaction">(options: AnyPaystackOptions, path: P = "/paystack/initialize-transaction" as P) => {
@@ -338,7 +365,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 		},
 		async (ctx: any) => {
 			const paystack = getPaystackOps(options.paystackClient);
-			const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity } = ctx.body;
+			const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity, scheduleAtPeriodEnd, cancelAtPeriodEnd } = ctx.body;
 
 			// 1. Validate Callback URL validation (same as before)
 			if (callbackURL !== undefined && callbackURL !== null && callbackURL !== "") {
@@ -433,14 +460,8 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				});
 			}
 
-			const amount = bodyAmount ?? product?.price;
-			const finalCurrency = currency ?? product?.currency ?? plan?.currency ?? "NGN";
-
-			let url: string | undefined;
-			let reference: string | undefined;
-			let accessCode: string | undefined;
-
-			// 5. Prepare Payload
+			let amount = bodyAmount ?? (product as PaystackProduct | undefined)?.price;
+			const finalCurrency = currency ?? (product as PaystackProduct | undefined)?.currency ?? plan?.currency ?? "NGN";
 
 			const referenceIdFromCtx = (ctx.context as Record<string, unknown>).referenceId as string | undefined;
 			const referenceId = (ctx.body.referenceId !== undefined && ctx.body.referenceId !== null && ctx.body.referenceId !== "")
@@ -448,6 +469,62 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				: (referenceIdFromCtx !== undefined && referenceIdFromCtx !== null && referenceIdFromCtx !== "")
 					? referenceIdFromCtx
 					: (session.user as unknown as { id: string }).id;
+
+			// Handle scheduleAtPeriodEnd for existing subscriptions
+			if (plan && scheduleAtPeriodEnd === true) {
+				const existingSub = await getOrganizationSubscription(ctx, referenceId);
+				if (existingSub?.status === "active") {
+					await (ctx.context.adapter).update({
+						model: "subscription",
+						where: [{ field: "id", value: existingSub.id }],
+						update: {
+							pendingPlan: plan.name,
+							updatedAt: new Date(),
+						},
+					});
+					return ctx.json({
+						status: "success",
+						message: "Plan change scheduled at period end.",
+						scheduled: true,
+					});
+				}
+			}
+
+			// Handle cancelAtPeriodEnd for existing subscriptions
+			if (cancelAtPeriodEnd === true) {
+				const existingSub = await getOrganizationSubscription(ctx, referenceId);
+				if (existingSub?.status === "active") {
+					await (ctx.context.adapter).update({
+						model: "subscription",
+						where: [{ field: "id", value: existingSub.id }],
+						update: {
+							cancelAtPeriodEnd: true,
+							updatedAt: new Date(),
+						},
+					});
+
+					return ctx.json({
+						status: "success",
+						message: "Subscription cancellation scheduled at period end.",
+						scheduled: true,
+					});
+				}
+			}
+
+			// Calculate final amount considering seats if applicable
+			if (plan && (plan.seatAmount !== undefined || (plan as any).seatPriceId !== undefined)) {
+				const members = await (ctx.context.adapter).findMany({
+					model: "member",
+					where: [{ field: "organizationId", value: referenceId }],
+				});
+				const seatCount = members.length > 0 ? members.length : 1;
+				const quantityToUse = quantity ?? seatCount;
+				amount = (plan.amount ?? 0) + (quantityToUse * (plan.seatAmount ?? (plan as any).seatPriceId ?? 0));
+			}
+
+			let url: string | undefined;
+			let reference: string | undefined;
+			let accessCode: string | undefined;
 
 			// Check trial eligibility - prevent trial abuse
 			let trialStart: Date | undefined;

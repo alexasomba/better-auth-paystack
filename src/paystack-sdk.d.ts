@@ -11,6 +11,12 @@ export declare function getPaystackOps(paystackClient: PaystackClientLike): {
     subscriptionFetch: (idOrCode: string) => Promise<unknown>;
     subscriptionManageLink: (code: string) => Promise<unknown> | undefined;
     subscriptionManageEmail: (code: string, email: string) => Promise<unknown> | undefined;
+    subscriptionUpdate: (params: {
+        code: string;
+        plan?: string;
+        authorization?: string;
+        amount?: number;
+    }) => any;
     transactionChargeAuthorization: (body: PaystackTransactionChargeAuthorizationInput) => Promise<unknown> | undefined;
     productList: () => Promise<unknown> | undefined;
     productFetch: (idOrCode: string) => Promise<unknown> | undefined;

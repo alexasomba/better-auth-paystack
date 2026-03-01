@@ -292,7 +292,7 @@ describe("planCode and organization referenceId tests", () => {
 									],
 								});
 								if (members && members.length > 0) {
-									const member = members[0] as any;
+									const member = members[0];
 									return member.role === "owner" || member.role === "admin";
 								}
 								return false;
@@ -403,7 +403,7 @@ describe("planCode and organization referenceId tests", () => {
 									],
 								});
 								if (members && members.length > 0) {
-									const member = members[0] as any;
+									const member = members[0];
 									return member.role === "owner" || member.role === "admin";
 								}
 								return false;

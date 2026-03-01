@@ -17,8 +17,8 @@ function isOpenApiFetchResponse(
 	return (
 		value !== null &&
 		value !== undefined &&
-        typeof value === "object" &&
-        ("data" in value || "error" in value || "response" in value)
+		typeof value === "object" &&
+		("data" in value || "error" in value || "response" in value)
 	);
 }
 
@@ -111,8 +111,8 @@ export function getPaystackOps(
 					});
 				} catch {
 					const compatFetch = paystackClient.subscription_fetch as unknown as (
-                        init: PaystackSubscriptionFetchInit,
-                    ) => Promise<unknown>;
+						init: PaystackSubscriptionFetchInit,
+					) => Promise<unknown>;
 					return compatFetch({
 						params: { path: { id_or_code: idOrCode } },
 					});
@@ -142,10 +142,24 @@ export function getPaystackOps(
 			}
 			return paystackClient?.subscription?.manage?.email?.(code, email);
 		},
+		subscriptionUpdate: (params: { code: string; plan?: string; authorization?: string; amount?: number }) => {
+			if (paystackClient?.subscription_update !== undefined) {
+				return (paystackClient.subscription_update as any)({
+					params: { path: { code: params.code } },
+					body: {
+						plan: params.plan,
+						authorization: params.authorization,
+						amount: params.amount,
+					},
+				});
+			}
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			return (paystackClient as any)?.subscription?.update?.(params.code, params);
+		},
 		transactionChargeAuthorization: (body: PaystackTransactionChargeAuthorizationInput) => {
 			if (paystackClient?.transaction_chargeAuthorization !== undefined) {
 				return paystackClient.transaction_chargeAuthorization({
-					 
+
 					// casting to avoid deep type issues with metadata
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					body: body as any, // casting to avoid deep type issues with metadata

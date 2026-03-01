@@ -130,6 +130,10 @@ export const subscriptions = {
 				type: "number",
 				required: false,
 			},
+			pendingPlan: {
+				type: "string",
+				required: false,
+			},
 		},
 	},
 } satisfies BetterAuthPluginDBSchema;
@@ -297,8 +301,8 @@ export const getSchema = (options: PaystackOptions<PaystackClientLike, any, any>
 
 	if (
 		options.schema !== undefined &&
-        options.subscription?.enabled !== true &&
-        "subscription" in options.schema
+		options.subscription?.enabled !== true &&
+		"subscription" in options.schema
 	) {
 		const { subscription: _subscription, ...restSchema } = options.schema as Record<string, unknown>;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any

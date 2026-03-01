@@ -15,6 +15,8 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
                 quantity: import("zod").ZodOptional<import("zod").ZodNumber>;
+                scheduleAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
+                cancelAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -294,6 +296,8 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
                 quantity: import("zod").ZodOptional<import("zod").ZodNumber>;
+                scheduleAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
+                cancelAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -333,6 +337,8 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
                 quantity: import("zod").ZodOptional<import("zod").ZodNumber>;
+                scheduleAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
+                cancelAtPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -559,12 +565,28 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                     before: (member: {
                         organizationId: string;
                     }, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
+                    after: (member: {
+                        organizationId: string | undefined;
+                    }, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
+                };
+                delete: {
+                    after: (member: {
+                        organizationId: string | undefined;
+                    }, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
                 };
             };
             invitation: {
                 create: {
                     before: (invitation: {
                         organizationId: string;
+                    }, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
+                    after: (invitation: {
+                        organizationId: string | undefined;
+                    }, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
+                };
+                delete: {
+                    after: (invitation: {
+                        organizationId: string | undefined;
                     }, ctx: GenericEndpointContext | null | undefined) => Promise<void>;
                 };
             };
