@@ -107,7 +107,7 @@ export const auth = betterAuth({
                             amount: 1000000, // 10000 NGN
                             currency: "NGN",
                             planCode: "PLN_6ikzoaxnunttb5e", // Replace with your Paystack plan code
-                            description: "For serious professionals",
+                            description: "For serious professionals. Supports scheduled changes.",
                             features: ["Advanced analytics", "Unlimited projects", "Priority support", "Custom domain"],
                         },
 
@@ -119,7 +119,8 @@ export const auth = betterAuth({
                             amount: 2500000, // 25,000 NGN
                             currency: "NGN",
                             interval: "monthly",
-                            description: "Best for growing teams",
+                            seatAmount: 500000, // 5,000 NGN per seat
+                            description: "Best for growing teams (Seat-based)",
                             features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
                         },
                         {
