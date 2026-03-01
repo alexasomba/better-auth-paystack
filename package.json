@@ -80,7 +80,7 @@
   "pnpm": {
     "overrides": {
       "esbuild": "0.27.0",
-      "rollup": "npm:@rollup/wasm-node@4.53.5"
+      "rollup": "npm:@rollup/wasm-node@4.59.0"
     }
   },
   "publishConfig": {

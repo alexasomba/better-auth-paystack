@@ -6,7 +6,7 @@ settings:
 
 overrides:
   esbuild: 0.27.0
-  rollup: npm:@rollup/wasm-node@4.53.5
+  rollup: npm:@rollup/wasm-node@4.59.0
 
 importers:
 
@@ -1488,8 +1488,8 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@rollup/wasm-node@4.53.5':
-    resolution: {integrity: sha512-WXEVEJrhhz6daplMeGBCpgLlv7+radmwvUZquNMUsLKrHDJxjzrnWTlsdueJDObkZ00cNmAF30LAD0tm+WytrQ==}
+  '@rollup/wasm-node@4.59.0':
+    resolution: {integrity: sha512-cKB/Pe05aJWQYw3UFS79Id+KVXdExBxWful0+CSl24z3ukwOgBSy6l39XZNwfm3vCh/fpUrAAs+T7PsJ6dC8NA==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
@@ -5919,7 +5919,7 @@ snapshots:
   '@rollup/rollup-linux-x64-gnu@4.59.0':
     optional: true
 
-  '@rollup/wasm-node@4.53.5':
+  '@rollup/wasm-node@4.59.0':
     dependencies:
       '@types/estree': 1.0.8
     optionalDependencies:
@@ -9072,7 +9072,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
       postcss: 8.5.6
-      rollup: '@rollup/wasm-node@4.53.5'
+      rollup: '@rollup/wasm-node@4.59.0'
       tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 22.19.13
