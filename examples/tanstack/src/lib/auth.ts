@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { anonymous, organization } from "better-auth/plugins";
+import { dash } from "@better-auth/infra";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { paystack } from "@alexasomba/better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
@@ -48,7 +49,7 @@ export const auth = betterAuth({
             paystack({
                 paystackClient,
                 paystackWebhookSecret: webhookSecret,
-                
+
                 organization: {
                     enabled: true,
                     onCustomerCreate: async ({ organization: org, paystackCustomer }) => {
@@ -56,10 +57,10 @@ export const auth = betterAuth({
                         console.log(`🏢 Paystack customer created for org "${org.name}": ${paystackCustomer.customer_code}`);
                     },
                 },
-                
+
                 subscription: {
                     enabled: true,
-                    
+
                     // v0.3.0: Subscription lifecycle hooks
                     onSubscriptionCreated: async ({ subscription, plan }) => {
                         await Promise.resolve();
@@ -72,7 +73,7 @@ export const auth = betterAuth({
                         await Promise.resolve();
                         console.log(`❌ Subscription cancelled: ${subscription.plan}`);
                     },
-                    
+
                     plans: [
                         // ========================================
                         // Plans WITH planCode (Paystack-managed)
@@ -98,8 +99,8 @@ export const auth = betterAuth({
                                     console.log(`⚠️ Trial expired without conversion: ${subscription.referenceId}`);
                                 },
                             },
-                             description: "Perfect for testing the waters",
-                             features: ["Basic analytics", "Up to 5 projects", "Community support"],
+                            description: "Perfect for testing the waters",
+                            features: ["Basic analytics", "Up to 5 projects", "Community support"],
                         },
                         {
                             name: "pro",
@@ -109,7 +110,7 @@ export const auth = betterAuth({
                             description: "For serious professionals",
                             features: ["Advanced analytics", "Unlimited projects", "Priority support", "Custom domain"],
                         },
-                        
+
                         // ========================================
                         // Plans WITHOUT planCode (Local/Custom)
                         // ========================================
@@ -130,14 +131,14 @@ export const auth = betterAuth({
                             features: ["Everything in Team", "Dedicated account manager", "SLA", "On-premise deployment"],
                         },
                     ],
-                    
+
                     // Authorize referenceId for organization billing
                     authorizeReference: async ({ user, session: _session, referenceId, action: _action }, ctx) => {
                         // If no referenceId provided, allow (defaults to user.id)
                         if (!referenceId || referenceId === user.id) {
                             return true;
                         }
-                        
+
                         // Check if referenceId is an organization the user belongs to
                         try {
                             const members = await ctx.context.adapter.findMany({
@@ -147,7 +148,7 @@ export const auth = betterAuth({
                                     { field: "organizationId", value: referenceId },
                                 ],
                             });
-                            
+
                             // User is a member of this organization
                             if (members.length > 0) {
                                 const member = members[0] as any;
@@ -157,7 +158,7 @@ export const auth = betterAuth({
                         } catch (e) {
                             console.error("Error checking org membership:", e);
                         }
-                        
+
                         return false;
                     },
                 },
@@ -179,6 +180,7 @@ export const auth = betterAuth({
                 },
             })
         ] : []),
+        dash(),
         tanstackStartCookies(), // make sure this is the last plugin in the array
     ],
 });
