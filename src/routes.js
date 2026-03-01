@@ -75,7 +75,7 @@ export const paystackWebhook = (options) => {
             const paystackId = data?.id !== undefined && data?.id !== null ? String((data).id) : undefined;
             if (reference !== undefined && reference !== null && reference !== "") {
                 try {
-                    await ctx.context.adapter.update({
+                    await (ctx.context.adapter).update({
                         model: "paystackTransaction",
                         update: {
                             status: "success",
@@ -91,7 +91,7 @@ export const paystackWebhook = (options) => {
                 }
                 // Sync product quantity from Paystack after successful charge
                 try {
-                    const transaction = await ctx.context.adapter.findOne({
+                    const transaction = await (ctx.context.adapter).findOne({
                         model: "paystackTransaction",
                         where: [{ field: "reference", value: reference }],
                     });
@@ -108,7 +108,7 @@ export const paystackWebhook = (options) => {
             const reference = data?.reference;
             if (reference !== undefined && reference !== null && reference !== "") {
                 try {
-                    await ctx.context.adapter.update({
+                    await (ctx.context.adapter).update({
                         model: "paystackTransaction",
                         update: {
                             status: "failed",
@@ -170,13 +170,13 @@ export const paystackWebhook = (options) => {
                             where.push({ field: "plan", value: planName });
                         }
                         if (where.length > 0) {
-                            const matches = await ctx.context.adapter.findMany({
+                            const matches = await (ctx.context.adapter).findMany({
                                 model: "subscription",
                                 where: where,
                             });
                             const subscription = (matches !== undefined && matches !== null) ? matches[0] : undefined;
                             if (subscription !== undefined && subscription !== null) {
-                                await ctx.context.adapter.update({
+                                await (ctx.context.adapter).update({
                                     model: "subscription",
                                     update: {
                                         paystackSubscriptionCode: subscriptionCode,
@@ -203,7 +203,7 @@ export const paystackWebhook = (options) => {
                         payloadData?.code;
                     if (subscriptionCode !== undefined && subscriptionCode !== null && subscriptionCode !== "") {
                         // Find the subscription first to get full data for the hook
-                        const existing = await ctx.context.adapter.findOne({
+                        const existing = await (ctx.context.adapter).findOne({
                             model: "subscription",
                             where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
                         });
@@ -213,7 +213,7 @@ export const paystackWebhook = (options) => {
                         if (periodEnd && periodEnd > new Date()) {
                             newStatus = "active";
                         }
-                        await ctx.context.adapter.update({
+                        await (ctx.context.adapter).update({
                             model: "subscription",
                             update: {
                                 status: newStatus,
@@ -313,7 +313,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             plan = await getPlanByName(options, planName) ?? undefined;
             if (!plan) {
                 // Fallback: Check database for synced plans
-                const nativePlan = await ctx.context.adapter.findOne({
+                const nativePlan = await (ctx.context.adapter).findOne({
                     model: "paystackPlan",
                     where: [{ field: "name", value: planName }],
                 });
@@ -322,7 +322,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                 }
                 else {
                     // Try checking by planCode as well
-                    const nativePlanByCode = await ctx.context.adapter.findOne({
+                    const nativePlanByCode = await (ctx.context.adapter).findOne({
                         model: "paystackPlan",
                         where: [{ field: "planCode", value: planName }],
                     });
@@ -341,7 +341,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             if (typeof productName === 'string') {
                 product ??= await getProductByName(options, productName) ?? undefined;
                 // Fallback: Check database for synced products
-                product ??= await ctx.context.adapter.findOne({
+                product ??= await (ctx.context.adapter).findOne({
                     model: "paystackProduct",
                     where: [{ field: "name", value: productName }],
                 }) ?? undefined;
@@ -376,7 +376,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
         let trialEnd;
         if (plan?.freeTrial?.days !== undefined && plan.freeTrial.days !== null && plan.freeTrial.days > 0) {
             // Check if user/referenceId has ever had a trial
-            const previousTrials = await ctx.context.adapter.findMany({
+            const previousTrials = await (ctx.context.adapter).findMany({
                 model: "subscription",
                 where: [{ field: "referenceId", value: referenceId }],
             });
@@ -392,7 +392,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             let targetEmail = (email !== undefined && email !== null && email !== "") ? email : user.email;
             let paystackCustomerCode = user.paystackCustomerCode;
             if (options.organization?.enabled === true && referenceId !== undefined && referenceId !== null && referenceId !== "" && referenceId !== user.id) {
-                const org = await ctx.context.adapter.findOne({
+                const org = await (ctx.context.adapter).findOne({
                     model: "organization",
                     where: [{ field: "id", value: referenceId }],
                 });
@@ -406,7 +406,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                     }
                     else {
                         // Fallback: Use Organization Owner Email
-                        const ownerMember = await ctx.context.adapter.findOne({
+                        const ownerMember = await (ctx.context.adapter).findOne({
                             model: "member",
                             where: [
                                 { field: "organizationId", value: referenceId },
@@ -414,7 +414,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                             ]
                         });
                         if (ownerMember) {
-                            const ownerUser = await ctx.context.adapter.findOne({
+                            const ownerUser = await (ctx.context.adapter).findOne({
                                 model: "user",
                                 where: [{ field: "id", value: ownerMember.userId }]
                             });
@@ -502,7 +502,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             });
         }
         // 6. Record Transaction & Subscription
-        await ctx.context.adapter.create({
+        await (ctx.context.adapter).create({
             model: "paystackTransaction",
             data: {
                 reference: reference,
@@ -523,7 +523,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
             // For now, use what we have (user's or org's)
             let storedCustomerCode = user.paystackCustomerCode;
             if (options.organization?.enabled === true && referenceId !== user.id) {
-                const org = await ctx.context.adapter.findOne({
+                const org = await (ctx.context.adapter).findOne({
                     model: "organization",
                     where: [{ field: "id", value: referenceId }],
                 });
@@ -531,7 +531,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                     storedCustomerCode = org.paystackCustomerCode;
                 }
             }
-            const newSubscription = await ctx.context.adapter.create({
+            const newSubscription = await (ctx.context.adapter).create({
                 model: "subscription",
                 data: {
                     plan: plan.name.toLowerCase(),
@@ -602,7 +602,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
         if (status === "success") {
             const session = await getSessionFromCtx(ctx);
             // Get the local transaction record to know the intended referenceId (Org or User)
-            const txRecord = await ctx.context.adapter.findOne({
+            const txRecord = await (ctx.context.adapter).findOne({
                 model: "paystackTransaction",
                 where: [{ field: "reference", value: reference }],
             });
@@ -621,7 +621,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                     }, ctx);
                 }
                 else if (options.organization?.enabled === true) {
-                    const member = await ctx.context.adapter.findOne({
+                    const member = await (ctx.context.adapter).findOne({
                         model: "member",
                         where: [
                             { field: "userId", value: session.user.id },
@@ -636,7 +636,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                 }
             }
             try {
-                await ctx.context.adapter.update({
+                await (ctx.context.adapter).update({
                     model: "paystackTransaction",
                     update: {
                         status: "success",
@@ -655,14 +655,14 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                 if (paystackCustomerCodeFromPaystack !== undefined && paystackCustomerCodeFromPaystack !== null && paystackCustomerCodeFromPaystack !== "" && referenceId !== undefined && referenceId !== null && referenceId !== "") {
                     const isOrg = options.organization?.enabled === true && ((referenceId.startsWith("org_")) || (await ctx.context.adapter.findOne({ model: "organization", where: [{ field: "id", value: referenceId }] }) !== null));
                     if (isOrg === true) {
-                        await ctx.context.adapter.update({
+                        await (ctx.context.adapter).update({
                             model: "organization",
                             update: { paystackCustomerCode: paystackCustomerCodeFromPaystack },
                             where: [{ field: "id", value: referenceId }],
                         });
                     }
                     else {
-                        await ctx.context.adapter.update({
+                        await (ctx.context.adapter).update({
                             model: "user",
                             update: { paystackCustomerCode: paystackCustomerCodeFromPaystack },
                             where: [{ field: "id", value: referenceId }],
@@ -670,7 +670,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                     }
                 }
                 // Decrement product quantity if applicable
-                const transaction = await ctx.context.adapter.findOne({
+                const transaction = await (ctx.context.adapter).findOne({
                     model: "paystackTransaction",
                     where: [{ field: "reference", value: reference }],
                 });
@@ -723,7 +723,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                         paystackSubscriptionCode = (data)?.subscription?.subscription_code;
                     }
                 }
-                const existingSubs = await ctx.context.adapter.findMany({
+                const existingSubs = await (ctx.context.adapter).findMany({
                     model: "subscription",
                     where: [{ field: "paystackTransactionReference", value: reference }],
                 });
@@ -733,7 +733,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
                 }
                 let updatedSubscription = null;
                 if (targetSub !== undefined && targetSub !== null) {
-                    updatedSubscription = await ctx.context.adapter.update({
+                    updatedSubscription = await (ctx.context.adapter).update({
                         model: "subscription",
                         update: {
                             status: isTrial === true ? "trialing" : "active",
@@ -769,7 +769,7 @@ export const verifyTransaction = (options, path = "/paystack/verify-transaction"
         }
         else if (status === "failed" || status === "abandoned") {
             try {
-                await ctx.context.adapter.update({
+                await (ctx.context.adapter).update({
                     model: "paystackTransaction",
                     update: {
                         status,
@@ -817,7 +817,7 @@ export const listSubscriptions = (options) => {
             : (queryRefId !== undefined && queryRefId !== null && queryRefId !== "")
                 ? queryRefId
                 : session.user.id;
-        const res = await ctx.context.adapter.findMany({
+        const res = await (ctx.context.adapter).findMany({
             model: "subscription",
             where: [{ field: "referenceId", value: referenceId }],
         });
@@ -843,7 +843,7 @@ export const listTransactions = (options, path = "/paystack/list-transactions") 
         const referenceId = ctx.context.referenceId ??
             (ctx.query?.referenceId) ??
             (session.user.id);
-        const res = await ctx.context.adapter.findMany({
+        const res = await (ctx.context.adapter).findMany({
             model: "paystackTransaction",
             where: [{ field: "referenceId", value: referenceId }],
         });
@@ -895,12 +895,12 @@ export const disablePaystackSubscription = (options, path = "/paystack/disable-s
         const paystack = getPaystackOps(options.paystackClient);
         try {
             if (subscriptionCode.startsWith("LOC_")) {
-                const sub = await ctx.context.adapter.findOne({
+                const sub = await (ctx.context.adapter).findOne({
                     model: "subscription",
                     where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
                 });
                 if (sub) {
-                    await ctx.context.adapter.update({
+                    await (ctx.context.adapter).update({
                         model: "subscription",
                         update: {
                             status: "active",
@@ -956,12 +956,12 @@ export const disablePaystackSubscription = (options, path = "/paystack/disable-s
             // We keep status as "active" but set cancelAtPeriodEnd = true
             // Duplicate removed
             const periodEnd = (nextPaymentDate !== undefined && nextPaymentDate !== null && nextPaymentDate !== "") ? new Date(nextPaymentDate) : undefined;
-            const sub = await ctx.context.adapter.findOne({
+            const sub = await (ctx.context.adapter).findOne({
                 model: "subscription",
                 where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
             });
             if (sub) {
-                await ctx.context.adapter.update({
+                await (ctx.context.adapter).update({
                     model: "subscription",
                     update: {
                         status: "active", // Keep active until period end
@@ -1031,7 +1031,7 @@ export const enablePaystackSubscription = (options, path = "/paystack/enable-sub
             }
             await paystack.subscriptionEnable({ code: subscriptionCode, token: emailToken });
             // Update local status immediately
-            await ctx.context.adapter.update({
+            await (ctx.context.adapter).update({
                 model: "subscription",
                 update: {
                     status: "active",
@@ -1108,7 +1108,7 @@ export const syncProducts = (options) => {
             }
             for (const product of productsData) {
                 const paystackId = String(product.id);
-                const existing = await ctx.context.adapter.findOne({
+                const existing = await (ctx.context.adapter).findOne({
                     model: "paystackProduct",
                     where: [{ field: "paystackId", value: paystackId }],
                 });
@@ -1125,14 +1125,14 @@ export const syncProducts = (options) => {
                     updatedAt: new Date(),
                 };
                 if (existing) {
-                    await ctx.context.adapter.update({
+                    await (ctx.context.adapter).update({
                         model: "paystackProduct",
                         update: productData,
                         where: [{ field: "id", value: existing.id }],
                     });
                 }
                 else {
-                    await ctx.context.adapter.create({
+                    await (ctx.context.adapter).create({
                         model: "paystackProduct",
                         data: {
                             ...productData,
@@ -1160,7 +1160,7 @@ export const listProducts = (_options) => {
             },
         },
     }, async (ctx) => {
-        const res = await ctx.context.adapter.findMany({
+        const res = await (ctx.context.adapter).findMany({
             model: "paystackProduct",
         });
         const sorted = res.sort((a, b) => a.name.localeCompare(b.name));
@@ -1187,7 +1187,7 @@ export const syncPlans = (options) => {
             }
             for (const plan of plansData) {
                 const paystackId = String(plan.id);
-                const existing = await ctx.context.adapter.findOne({
+                const existing = await (ctx.context.adapter).findOne({
                     model: "paystackPlan",
                     where: [{ field: "paystackId", value: paystackId }],
                 });
@@ -1203,14 +1203,14 @@ export const syncPlans = (options) => {
                     updatedAt: new Date(),
                 };
                 if (existing) {
-                    await ctx.context.adapter.update({
+                    await (ctx.context.adapter).update({
                         model: "paystackPlan",
                         update: planData,
                         where: [{ field: "id", value: existing.id }],
                     });
                 }
                 else {
-                    await ctx.context.adapter.create({
+                    await (ctx.context.adapter).create({
                         model: "paystackPlan",
                         data: {
                             ...planData,
@@ -1238,7 +1238,7 @@ export const listPlans = (_options) => {
         use: [sessionMiddleware],
     }, async (ctx) => {
         try {
-            const plans = await ctx.context.adapter.findMany({
+            const plans = await (ctx.context.adapter).findMany({
                 model: "paystackPlan",
             });
             return ctx.json({ plans });
@@ -1280,7 +1280,7 @@ export const chargeRecurringSubscription = (options) => {
         }),
     }, async (ctx) => {
         const { subscriptionId, amount: bodyAmount } = ctx.body;
-        const subscription = await ctx.context.adapter.findOne({
+        const subscription = await (ctx.context.adapter).findOne({
             model: "subscription",
             where: [{ field: "id", value: subscriptionId }],
         });
@@ -1302,7 +1302,7 @@ export const chargeRecurringSubscription = (options) => {
         let email;
         if (subscription.referenceId !== undefined && subscription.referenceId !== null && subscription.referenceId !== "") {
             // Try to find user or org
-            const user = await ctx.context.adapter.findOne({
+            const user = await (ctx.context.adapter).findOne({
                 model: "user",
                 where: [{ field: "id", value: subscription.referenceId }],
             });
@@ -1311,7 +1311,7 @@ export const chargeRecurringSubscription = (options) => {
             }
             else if (options.organization?.enabled === true) {
                 // Check org owner email if referenceId is organizationId
-                const ownerMember = await ctx.context.adapter.findOne({
+                const ownerMember = await (ctx.context.adapter).findOne({
                     model: "member",
                     where: [
                         { field: "organizationId", value: subscription.referenceId },
@@ -1319,7 +1319,7 @@ export const chargeRecurringSubscription = (options) => {
                     ],
                 });
                 if (ownerMember !== undefined && ownerMember !== null) {
-                    const ownerUser = await ctx.context.adapter.findOne({
+                    const ownerUser = await (ctx.context.adapter).findOne({
                         model: "user",
                         where: [{ field: "id", value: ownerMember.userId }],
                     });
@@ -1356,7 +1356,7 @@ export const chargeRecurringSubscription = (options) => {
         if (chargeData?.status === "success") {
             const now = new Date();
             const nextPeriodEnd = getNextPeriodEnd(now, plan.interval ?? "monthly");
-            await ctx.context.adapter.update({
+            await (ctx.context.adapter).update({
                 model: "subscription",
                 update: {
                     periodStart: now,

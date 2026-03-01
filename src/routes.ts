@@ -10,7 +10,7 @@ import {
 import * as z from "zod/v4";
 import type { GenericEndpointContext } from "better-auth";
 
-import type { InputPaystackTransaction, InputPaystackProduct, InputSubscription, PaystackOptions, PaystackTransaction, Subscription, Organization, Member, User, PaystackClientLike, PaystackWebhookPayload } from "./types";
+import type { InputPaystackProduct, PaystackOptions, PaystackTransaction, Subscription, Member, User, PaystackClientLike, PaystackWebhookPayload, PaystackProduct } from "./types";
 import {
 	syncProductQuantityFromPaystack,
 	getPlanByName,
@@ -20,7 +20,7 @@ import {
 	validateMinAmount,
 	getNextPeriodEnd,
 } from "./utils";
-import type { PaystackPlan, PaystackProduct } from "./types";
+import type { PaystackPlan } from "./types";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -475,7 +475,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				let paystackCustomerCode = (user as unknown as { paystackCustomerCode?: string }).paystackCustomerCode;
 
 				if (options.organization?.enabled === true && referenceId !== undefined && referenceId !== null && referenceId !== "" && referenceId !== user.id) {
-					const org = await  (ctx.context.adapter).findOne({
+					const org = await (ctx.context.adapter).findOne({
 						model: "organization",
 						where: [{ field: "id", value: referenceId }],
 					});
@@ -612,7 +612,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				// For now, use what we have (user's or org's)
 				let storedCustomerCode = (user as unknown as { paystackCustomerCode?: string }).paystackCustomerCode;
 				if (options.organization?.enabled === true && referenceId !== user.id) {
-					const org = await  (ctx.context.adapter).findOne({
+					const org = await (ctx.context.adapter).findOne({
 						model: "organization",
 						where: [{ field: "id", value: referenceId }],
 					});

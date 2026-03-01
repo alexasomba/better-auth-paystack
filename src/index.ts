@@ -34,8 +34,6 @@ import type {
 	Subscription,
 	SubscriptionOptions,
 	PaystackProduct,
-	Member,
-	User,
 	PaystackCustomerResponse,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
@@ -128,7 +126,7 @@ export const paystack = <
 
 											let targetEmail = org.email;
 											if (targetEmail === undefined || targetEmail === null) {
-												const ownerMember = await  (ctx.adapter as any).findOne({
+												const ownerMember = await (ctx.adapter as any).findOne({
 													model: "member",
 													where: [
 														{ field: "organizationId", value: org.id },
@@ -136,7 +134,7 @@ export const paystack = <
 													]
 												});
 												if (ownerMember !== null && ownerMember !== undefined) {
-													const ownerUser = await  (ctx.adapter as any).findOne({
+													const ownerUser = await (ctx.adapter as any).findOne({
 														model: "user",
 														where: [{ field: "id", value: ownerMember.userId }]
 													});
