@@ -28,6 +28,8 @@ export const paystackClient = <
 				quantity?: number;
 				referenceId?: string;
 				product?: string;
+				scheduleAtPeriodEnd?: boolean;
+				cancelAtPeriodEnd?: boolean;
 			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				url: string;
 				reference: string;
@@ -101,6 +103,7 @@ export const paystackClient = <
 			const cancelSubscription = async (data: {
 				subscriptionCode: string;
 				emailToken?: string;
+				atPeriodEnd?: boolean;
 			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				status: string;
 			}>> => {
@@ -131,32 +134,32 @@ export const paystackClient = <
 			return {
 				subscription: {
 					/**
-                     * Initialize a transaction to upgrade or creating a subscription.
-                     */
+					 * Initialize a transaction to upgrade or creating a subscription.
+					 */
 					upgrade: initializeTransaction,
 					/**
-                     * Initialize a payment to create a subscription.
-                     */
+					 * Initialize a payment to create a subscription.
+					 */
 					create: initializeTransaction,
 					/**
-                     * Disable a subscription.
-                     */
+					 * Disable a subscription.
+					 */
 					cancel: cancelSubscription,
 					/**
-                     * Enable a subscription.
-                     */
+					 * Enable a subscription.
+					 */
 					restore: restoreSubscription,
 					/**
-                     * List subscriptions for the user.
-                     */
+					 * List subscriptions for the user.
+					 */
 					list: listSubscriptions,
 					/**
-                     * Get a link to manage the subscription on Paystack.
-                     */
+					 * Get a link to manage the subscription on Paystack.
+					 */
 					billingPortal: getSubscriptionManageLink,
 					/**
-                     * Aliases for legacy/demo usage.
-                     */
+					 * Aliases for legacy/demo usage.
+					 */
 					listLocal: listSubscriptions,
 					manageLink: getSubscriptionManageLink,
 					disable: cancelSubscription,

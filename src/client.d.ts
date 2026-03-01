@@ -23,6 +23,8 @@ export declare const paystackClient: <O extends {
                 quantity?: number;
                 referenceId?: string;
                 product?: string;
+                scheduleAtPeriodEnd?: boolean;
+                cancelAtPeriodEnd?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;
@@ -44,6 +46,8 @@ export declare const paystackClient: <O extends {
                 quantity?: number;
                 referenceId?: string;
                 product?: string;
+                scheduleAtPeriodEnd?: boolean;
+                cancelAtPeriodEnd?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;
@@ -56,6 +60,7 @@ export declare const paystackClient: <O extends {
             cancel: (data: {
                 subscriptionCode: string;
                 emailToken?: string;
+                atPeriodEnd?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 status: string;
             }>>;
@@ -100,6 +105,7 @@ export declare const paystackClient: <O extends {
             disable: (data: {
                 subscriptionCode: string;
                 emailToken?: string;
+                atPeriodEnd?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 status: string;
             }>>;
@@ -124,6 +130,8 @@ export declare const paystackClient: <O extends {
                     quantity?: number;
                     referenceId?: string;
                     product?: string;
+                    scheduleAtPeriodEnd?: boolean;
+                    cancelAtPeriodEnd?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
@@ -156,6 +164,8 @@ export declare const paystackClient: <O extends {
                     quantity?: number;
                     referenceId?: string;
                     product?: string;
+                    scheduleAtPeriodEnd?: boolean;
+                    cancelAtPeriodEnd?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
@@ -174,6 +184,8 @@ export declare const paystackClient: <O extends {
                     quantity?: number;
                     referenceId?: string;
                     product?: string;
+                    scheduleAtPeriodEnd?: boolean;
+                    cancelAtPeriodEnd?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     url: string;
                     reference: string;
@@ -183,6 +195,7 @@ export declare const paystackClient: <O extends {
                 cancel: (data: {
                     subscriptionCode: string;
                     emailToken?: string;
+                    atPeriodEnd?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     status: string;
                 }>>;
@@ -215,6 +228,7 @@ export declare const paystackClient: <O extends {
                 disable: (data: {
                     subscriptionCode: string;
                     emailToken?: string;
+                    atPeriodEnd?: boolean;
                 }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                     status: string;
                 }>>;
@@ -237,6 +251,8 @@ export declare const paystackClient: <O extends {
                 quantity?: number;
                 referenceId?: string;
                 product?: string;
+                scheduleAtPeriodEnd?: boolean;
+                cancelAtPeriodEnd?: boolean;
             }, options?: BetterFetchOption) => Promise<BetterFetchResponse<{
                 url: string;
                 reference: string;

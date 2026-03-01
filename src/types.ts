@@ -126,7 +126,10 @@ export type PaystackCustomerCreateInput =
 export type PaystackCustomerUpdateInput =
     WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
 export type PaystackTransactionInitializeInput =
-    WithMetadataObject<ExtractBody<TransactionInitializeInit>>;
+    WithMetadataObject<ExtractBody<TransactionInitializeInit>> & {
+        scheduleAtPeriodEnd?: boolean;
+        cancelAtPeriodEnd?: boolean;
+    };
 export type PaystackTransactionChargeAuthorizationInput =
     WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;
 export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;

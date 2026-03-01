@@ -162,6 +162,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 subscriptionCode: import("zod").ZodString;
                 emailToken: import("zod").ZodOptional<import("zod").ZodString>;
+                atPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -195,6 +196,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 subscriptionCode: import("zod").ZodString;
                 emailToken: import("zod").ZodOptional<import("zod").ZodString>;
+                atPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -372,6 +374,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 subscriptionCode: import("zod").ZodString;
                 emailToken: import("zod").ZodOptional<import("zod").ZodString>;
+                atPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;
@@ -405,6 +408,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                 referenceId: import("zod").ZodOptional<import("zod").ZodString>;
                 subscriptionCode: import("zod").ZodString;
                 emailToken: import("zod").ZodOptional<import("zod").ZodString>;
+                atPeriodEnd: import("zod").ZodOptional<import("zod").ZodBoolean>;
             }, import("better-auth").$strip>;
             use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
                 referenceId: string;

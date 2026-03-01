@@ -16,6 +16,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		transaction_verify: vi.fn(),
 		subscription_update: vi.fn(),
 		subscription_fetch: vi.fn(),
+		subscription_disable: vi.fn(),
 		customer_update: vi.fn(),
 	} as unknown as PaystackClientLike;
 
@@ -260,5 +261,63 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		});
 		expect(updatedSub.plan).toBe("team-plan");
 		expect(updatedSub.pendingPlan).toBeNull();
+	});
+
+	it("should cancel immediately when atPeriodEnd is false", async () => {
+		const testUser = { email: "immediate-cancel@test.com", password: "password", name: "User" };
+		await authClient.signUp.email(testUser, { throw: true });
+		const headers = new Headers();
+		await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+
+		const ctx = await auth.$context;
+		await (ctx.adapter as any).create({
+			model: "subscription",
+			data: {
+				plan: "team-plan",
+				referenceId: testUser.email,
+				paystackSubscriptionCode: "SUB_IMMEDIATE",
+				status: "active",
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			}
+		});
+
+		(paystackSdk.subscription_fetch as any).mockResolvedValue({
+			data: {
+				status: true,
+				data: {
+					email_token: "token_abc",
+					next_payment_date: "2025-01-01T00:00:00Z",
+				},
+			},
+		});
+
+		(paystackSdk.subscription_disable as any).mockResolvedValue({
+			data: { status: true },
+		});
+
+		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/disable-subscription", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"Authorization": (headers.get("Authorization") ?? "") || (headers.get("Cookie") ?? ""),
+				"Cookie": headers.get("Cookie") ?? "",
+			},
+			body: JSON.stringify({
+				subscriptionCode: "SUB_IMMEDIATE",
+				atPeriodEnd: false,
+			}),
+		}));
+
+		const json = await res.json();
+		expect(res.status).toBe(200);
+		expect(json.status).toBe("success");
+
+		const updatedSub = await (ctx.adapter as any).findOne({
+			model: "subscription",
+			where: [{ field: "paystackSubscriptionCode", value: "SUB_IMMEDIATE" }],
+		});
+		expect(updatedSub.status).toBe("canceled");
+		expect(updatedSub.cancelAtPeriodEnd).toBe(false);
 	});
 });

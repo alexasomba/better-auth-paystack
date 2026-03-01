@@ -79,7 +79,10 @@ type SubscriptionToggleInit = NonNullableInit<Parameters<PaystackNodeClient["sub
 type TransactionChargeAuthorizationInit = NonNullableInit<Parameters<PaystackNodeClient["transaction_chargeAuthorization"]>[0]>;
 export type PaystackCustomerCreateInput = WithMetadataStringOrObject<ExtractBody<CustomerCreateInit>>;
 export type PaystackCustomerUpdateInput = WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
-export type PaystackTransactionInitializeInput = WithMetadataObject<ExtractBody<TransactionInitializeInit>>;
+export type PaystackTransactionInitializeInput = WithMetadataObject<ExtractBody<TransactionInitializeInit>> & {
+    scheduleAtPeriodEnd?: boolean;
+    cancelAtPeriodEnd?: boolean;
+};
 export type PaystackTransactionChargeAuthorizationInput = WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;
 export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;
 export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit>;

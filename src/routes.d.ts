@@ -152,6 +152,7 @@ export declare const restoreSubscription: (options: AnyPaystackOptions) => impor
         referenceId: z.ZodOptional<z.ZodString>;
         subscriptionCode: z.ZodString;
         emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         referenceId: string;
@@ -185,6 +186,7 @@ export declare const cancelSubscription: (options: AnyPaystackOptions) => import
         referenceId: z.ZodOptional<z.ZodString>;
         subscriptionCode: z.ZodString;
         emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         referenceId: string;
@@ -311,6 +313,7 @@ export declare const disablePaystackSubscription: <P extends string = "/paystack
         referenceId: z.ZodOptional<z.ZodString>;
         subscriptionCode: z.ZodString;
         emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         referenceId: string;
@@ -344,6 +347,7 @@ export declare const enablePaystackSubscription: <P extends string = "/paystack/
         referenceId: z.ZodOptional<z.ZodString>;
         subscriptionCode: z.ZodString;
         emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     use: (((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<{
         referenceId: string;

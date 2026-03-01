@@ -937,6 +937,7 @@ const enableDisableBodySchema = z.object({
     referenceId: z.string().optional(),
     subscriptionCode: z.string(),
     emailToken: z.string().optional(),
+    atPeriodEnd: z.boolean().optional(),
 });
 function decodeBase64UrlToString(value) {
     const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -970,7 +971,7 @@ export const disablePaystackSubscription = (options, path = "/paystack/disable-s
         ? [sessionMiddleware, originCheck, referenceMiddleware(options, "disable-subscription")]
         : [sessionMiddleware, originCheck];
     return createAuthEndpoint(path, { method: "POST", body: enableDisableBodySchema, use: useMiddlewares }, async (ctx) => {
-        const { subscriptionCode } = ctx.body;
+        const { subscriptionCode, atPeriodEnd } = ctx.body;
         const paystack = getPaystackOps(options.paystackClient);
         try {
             if (subscriptionCode.startsWith("LOC_")) {
@@ -982,8 +983,8 @@ export const disablePaystackSubscription = (options, path = "/paystack/disable-s
                     await (ctx.context.adapter).update({
                         model: "subscription",
                         update: {
-                            status: "active",
-                            cancelAtPeriodEnd: true,
+                            status: atPeriodEnd === false ? "canceled" : "active",
+                            cancelAtPeriodEnd: atPeriodEnd !== false,
                             updatedAt: new Date(),
                         },
                         where: [{ field: "id", value: sub.id }],
@@ -1043,8 +1044,8 @@ export const disablePaystackSubscription = (options, path = "/paystack/disable-s
                 await (ctx.context.adapter).update({
                     model: "subscription",
                     update: {
-                        status: "active", // Keep active until period end
-                        cancelAtPeriodEnd: true,
+                        status: atPeriodEnd === false ? "canceled" : "active",
+                        cancelAtPeriodEnd: atPeriodEnd !== false,
                         periodEnd,
                         updatedAt: new Date(),
                     },
