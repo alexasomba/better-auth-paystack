@@ -897,7 +897,7 @@ describe("paystack", () => {
 
 		await auth.handler(req);
 
-		const updatedSub = await ctx.adapter.findOne<any>({
+		const updatedSub = await  (ctx.adapter as any).findOne({
 			model: "subscription",
 			where: [{ field: "paystackSubscriptionCode", value: "SUB_ABC" }]
 		});
@@ -1109,7 +1109,7 @@ describe("paystack", () => {
 		expect(res.url).toBe("https://paystack.test/trial");
 
 		// Check the subscription was created without trial dates
-		const newSub = await ctx.adapter.findOne<any>({
+		const newSub = await  (ctx.adapter as any).findOne({
 			model: "subscription",
 			where: [
 				{ field: "referenceId", value: signUpRes.user.id },
@@ -1184,7 +1184,7 @@ describe("paystack", () => {
 		}, { throw: true });
 
 		// Check subscription has trial dates
-		const sub = await ctx.adapter.findOne<any>({
+		const sub = await  (ctx.adapter as any).findOne({
 			model: "subscription",
 			where: [
 				{ field: "referenceId", value: signUpRes.user.id },

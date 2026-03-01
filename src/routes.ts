@@ -1,5 +1,5 @@
 import { createAuthEndpoint } from "@better-auth/core/api";
-import { defineErrorCodes } from "@better-auth/core/utils";
+import { defineErrorCodes } from "@better-auth/core/utils/error-codes";
 import { HIDE_METADATA } from "better-auth";
 import {
 	APIError,
@@ -77,7 +77,7 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 			cloneRequest: true,
 			disableBody: true,
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			const request = (ctx as GenericEndpointContext & { requestClone?: Request }).requestClone ?? ctx.request;
 			if (!request) {
 				throw new APIError("BAD_REQUEST", {
@@ -116,7 +116,7 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 				const paystackId = (data as Record<string, unknown> | undefined)?.id !== undefined && (data as Record<string, unknown> | undefined)?.id !== null ? String((data).id) : undefined;
 				if (reference !== undefined && reference !== null && reference !== "") {
 					try {
-						await ctx.context.adapter.update({
+						await (ctx.context.adapter).update({
 							model: "paystackTransaction",
 							update: {
 								status: "success",
@@ -132,12 +132,12 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 
 					// Sync product quantity from Paystack after successful charge
 					try {
-						const transaction = await ctx.context.adapter.findOne<PaystackTransaction>({
+						const transaction = await (ctx.context.adapter).findOne({
 							model: "paystackTransaction",
 							where: [{ field: "reference", value: reference }],
-						});
+						}) as PaystackTransaction | null;
 						if (transaction?.product) {
-							await syncProductQuantityFromPaystack(ctx as GenericEndpointContext, transaction.product, options.paystackClient);
+							await syncProductQuantityFromPaystack(ctx, transaction.product, options.paystackClient);
 						}
 					} catch (e) {
 						ctx.context.logger.warn("Failed to sync product quantity", e);
@@ -149,7 +149,7 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 				const reference = (data as Record<string, unknown> | undefined)?.reference as string | undefined;
 				if (reference !== undefined && reference !== null && reference !== "") {
 					try {
-						await ctx.context.adapter.update({
+						await (ctx.context.adapter).update({
 							model: "paystackTransaction",
 							update: {
 								status: "failed",
@@ -221,13 +221,13 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 							}
 
 							if (where.length > 0) {
-								const matches = await ctx.context.adapter.findMany<Subscription>({
+								const matches = await (ctx.context.adapter).findMany({
 									model: "subscription",
 									where: where as { field: string; value: string | number | boolean | null }[],
-								});
+								}) as Subscription[];
 								const subscription = (matches !== undefined && matches !== null) ? matches[0] : undefined;
 								if (subscription !== undefined && subscription !== null) {
-									await ctx.context.adapter.update({
+									await (ctx.context.adapter).update({
 										model: "subscription",
 										update: {
 											paystackSubscriptionCode: subscriptionCode,
@@ -263,10 +263,10 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 							payloadData?.code;
 						if (subscriptionCode !== undefined && subscriptionCode !== null && subscriptionCode !== "") {
 							// Find the subscription first to get full data for the hook
-							const existing = await ctx.context.adapter.findOne<Subscription>({
+							const existing = await (ctx.context.adapter).findOne({
 								model: "subscription",
 								where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
-							});
+							}) as Subscription | null;
 
 							let newStatus = "canceled";
 							const nextPaymentDate = (data)?.next_payment_date as string | undefined;
@@ -276,7 +276,7 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 								newStatus = "active";
 							}
 
-							await ctx.context.adapter.update({
+							await (ctx.context.adapter).update({
 								model: "subscription",
 								update: {
 									status: newStatus,
@@ -336,7 +336,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 			body: initializeTransactionBodySchema,
 			use: useMiddlewares,
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			const paystack = getPaystackOps(options.paystackClient);
 			const { plan: planName, product: productName, amount: bodyAmount, currency, email, metadata: extraMetadata, callbackURL, quantity } = ctx.body;
 
@@ -374,7 +374,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 			if (subscriptionOptions?.enabled === true && subscriptionOptions.requireEmailVerification === true && !user.emailVerified) {
 				throw new APIError("BAD_REQUEST", {
 					code: "EMAIL_VERIFICATION_REQUIRED",
-					message: PAYSTACK_ERROR_CODES.EMAIL_VERIFICATION_REQUIRED,
+					message: PAYSTACK_ERROR_CODES.EMAIL_VERIFICATION_REQUIRED.message,
 				});
 			}
 
@@ -389,25 +389,25 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				plan = await getPlanByName(options, planName) ?? undefined;
 				if (!plan) {
 					// Fallback: Check database for synced plans
-					const nativePlan = await ctx.context.adapter.findOne<PaystackPlan>({
+					const nativePlan = await (ctx.context.adapter).findOne({
 						model: "paystackPlan",
 						where: [{ field: "name", value: planName }],
-					});
+					}) as PaystackPlan | null;
 					if (nativePlan) {
 						plan = nativePlan;
 					} else {
 						// Try checking by planCode as well
-						const nativePlanByCode = await ctx.context.adapter.findOne<PaystackPlan>({
+						const nativePlanByCode = await (ctx.context.adapter).findOne({
 							model: "paystackPlan",
 							where: [{ field: "planCode", value: planName }],
-						});
+						}) as PaystackPlan | null;
 						plan = nativePlanByCode ?? undefined;
 					}
 				}
 				if (!plan) {
 					throw new APIError("BAD_REQUEST", {
 						code: "SUBSCRIPTION_PLAN_NOT_FOUND",
-						message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND,
+						message: PAYSTACK_ERROR_CODES.SUBSCRIPTION_PLAN_NOT_FOUND.message,
 						status: 400
 					});
 				}
@@ -415,10 +415,10 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				if (typeof productName === 'string') {
 					product ??= await getProductByName(options, productName) ?? undefined;
 					// Fallback: Check database for synced products
-					product ??= await ctx.context.adapter.findOne<PaystackProduct>({
+					product ??= (await (ctx.context.adapter).findOne({
 						model: "paystackProduct",
 						where: [{ field: "name", value: productName }],
-					}) ?? undefined;
+					}) as PaystackProduct | null) ?? undefined;
 				}
 				if (!product) {
 					throw new APIError("BAD_REQUEST", {
@@ -454,10 +454,10 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 			let trialEnd: Date | undefined;
 			if (plan?.freeTrial?.days !== undefined && plan.freeTrial.days !== null && plan.freeTrial.days > 0) {
 				// Check if user/referenceId has ever had a trial
-				const previousTrials = await ctx.context.adapter.findMany<Subscription>({
+				const previousTrials = await (ctx.context.adapter).findMany({
 					model: "subscription",
 					where: [{ field: "referenceId", value: referenceId }],
-				});
+				}) as Subscription[];
 				const hadTrial = previousTrials?.some(
 					(sub) => (sub.trialStart !== undefined && sub.trialStart !== null) || (sub.trialEnd !== undefined && sub.trialEnd !== null) || sub.status === "trialing"
 				);
@@ -475,7 +475,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				let paystackCustomerCode = (user as unknown as { paystackCustomerCode?: string }).paystackCustomerCode;
 
 				if (options.organization?.enabled === true && referenceId !== undefined && referenceId !== null && referenceId !== "" && referenceId !== user.id) {
-					const org = await ctx.context.adapter.findOne<Organization>({
+					const org = await  (ctx.context.adapter).findOne({
 						model: "organization",
 						where: [{ field: "id", value: referenceId }],
 					});
@@ -488,19 +488,19 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 							targetEmail = org.email;
 						} else {
 							// Fallback: Use Organization Owner Email
-							const ownerMember = await ctx.context.adapter.findOne<Member>({
+							const ownerMember = await (ctx.context.adapter).findOne({
 								model: "member",
 								where: [
 									{ field: "organizationId", value: referenceId },
 									{ field: "role", value: "owner" }
 								]
-							});
+							}) as Member | null;
 
 							if (ownerMember) {
-								const ownerUser = await ctx.context.adapter.findOne<User>({
+								const ownerUser = await (ctx.context.adapter).findOne({
 									model: "user",
 									where: [{ field: "id", value: ownerMember.userId }]
-								});
+								}) as User | null;
 
 								if (ownerUser?.email !== undefined && ownerUser?.email !== null && ownerUser?.email !== "") {
 									targetEmail = ownerUser.email;
@@ -585,12 +585,12 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				(ctx as unknown as { context: { logger: { error: (msg: string, err: unknown) => void } } }).context.logger.error("Failed to initialize Paystack transaction", error);
 				throw new APIError("BAD_REQUEST", {
 					code: "FAILED_TO_INITIALIZE_TRANSACTION",
-					message: (error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_INITIALIZE_TRANSACTION,
+					message: (error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_INITIALIZE_TRANSACTION.message,
 				});
 			}
 
 			// 6. Record Transaction & Subscription
-			await ctx.context.adapter.create<InputPaystackTransaction, PaystackTransaction>({
+			await (ctx.context.adapter).create({
 				model: "paystackTransaction",
 				data: {
 					reference: reference!,
@@ -612,7 +612,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 				// For now, use what we have (user's or org's)
 				let storedCustomerCode = (user as unknown as { paystackCustomerCode?: string }).paystackCustomerCode;
 				if (options.organization?.enabled === true && referenceId !== user.id) {
-					const org = await ctx.context.adapter.findOne<Organization>({
+					const org = await  (ctx.context.adapter).findOne({
 						model: "organization",
 						where: [{ field: "id", value: referenceId }],
 					});
@@ -621,7 +621,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 					}
 				}
 
-				const newSubscription = await ctx.context.adapter.create<InputSubscription, Subscription>({
+				const newSubscription = await (ctx.context.adapter).create({
 					model: "subscription",
 					data: {
 						plan: plan.name.toLowerCase(),
@@ -633,7 +633,7 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
 						trialStart,
 						trialEnd,
 					},
-				});
+				}) as Subscription | null;
 
 				// Call trial start hook if trial was granted
 				if ((trialStart !== undefined && trialStart !== null) && newSubscription !== null && plan.freeTrial?.onTrialStart !== undefined && plan.freeTrial?.onTrialStart !== null) {
@@ -683,7 +683,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 			body: verifyBodySchema,
 			use: useMiddlewares,
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			const paystack = getPaystackOps(options.paystackClient);
 			let verifyRes: unknown;
 			try {
@@ -694,7 +694,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 				throw new APIError("BAD_REQUEST", {
 					code: "FAILED_TO_VERIFY_TRANSACTION",
 					message:
-						(error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION,
+						(error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_VERIFY_TRANSACTION.message,
 				});
 			}
 			const data = unwrapSdkResult<Record<string, unknown>>(verifyRes);
@@ -707,10 +707,10 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 				const session = await getSessionFromCtx(ctx);
 
 				// Get the local transaction record to know the intended referenceId (Org or User)
-				const txRecord = await ctx.context.adapter.findOne<Record<string, unknown> & { referenceId?: string }>({
+				const txRecord = await (ctx.context.adapter).findOne({
 					model: "paystackTransaction",
 					where: [{ field: "reference", value: reference }],
-				});
+				}) as (Record<string, unknown> & { referenceId?: string }) | null;
 
 				// Trust the referenceId from the record, fallback to session user if missing
 				const referenceId = txRecord?.referenceId ?? (session?.user as unknown as { id: string })?.id;
@@ -727,13 +727,13 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 							action: "verify-transaction"
 						}, ctx);
 					} else if (options.organization?.enabled === true) {
-						const member = await ctx.context.adapter.findOne({
+						const member = await (ctx.context.adapter).findOne({
 							model: "member",
 							where: [
 								{ field: "userId", value: session.user.id },
 								{ field: "organizationId", value: referenceId }
 							]
-						});
+						}) as Member | null;
 						if (member !== null && member !== undefined) authorized = true;
 					}
 
@@ -744,7 +744,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 
 				try {
 
-					await ctx.context.adapter.update({
+					await (ctx.context.adapter).update({
 						model: "paystackTransaction",
 						update: {
 							status: "success",
@@ -765,13 +765,13 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 						const isOrg = options.organization?.enabled === true && ((referenceId.startsWith("org_")) || (await ctx.context.adapter.findOne({ model: "organization", where: [{ field: "id", value: referenceId }] }) !== null));
 
 						if (isOrg === true) {
-							await ctx.context.adapter.update({
+							await (ctx.context.adapter).update({
 								model: "organization",
 								update: { paystackCustomerCode: paystackCustomerCodeFromPaystack },
 								where: [{ field: "id", value: referenceId }],
 							});
 						} else {
-							await ctx.context.adapter.update({
+							await (ctx.context.adapter).update({
 								model: "user",
 								update: { paystackCustomerCode: paystackCustomerCodeFromPaystack },
 								where: [{ field: "id", value: referenceId }],
@@ -780,12 +780,12 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 					}
 
 					// Decrement product quantity if applicable
-					const transaction = await ctx.context.adapter.findOne<PaystackTransaction>({
+					const transaction = await (ctx.context.adapter).findOne({
 						model: "paystackTransaction",
 						where: [{ field: "reference", value: reference }],
-					});
+					}) as PaystackTransaction | null;
 					if (transaction?.product) {
-						await syncProductQuantityFromPaystack(ctx as GenericEndpointContext, transaction.product, options.paystackClient);
+						await syncProductQuantityFromPaystack(ctx, transaction.product, options.paystackClient);
 					}
 
 					// Check for trial activation
@@ -844,10 +844,10 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 					}
 
 
-					const existingSubs = await ctx.context.adapter.findMany<Subscription>({
+					const existingSubs = await (ctx.context.adapter).findMany({
 						model: "subscription",
 						where: [{ field: "paystackTransactionReference", value: reference }],
-					});
+					}) as Subscription[];
 					let targetSub: Subscription | undefined;
 					if (existingSubs && existingSubs.length > 0) {
 						targetSub = existingSubs.find(s =>
@@ -857,7 +857,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 
 					let updatedSubscription: Subscription | null = null;
 					if (targetSub !== undefined && targetSub !== null) {
-						updatedSubscription = await ctx.context.adapter.update<Subscription>({
+						updatedSubscription = await (ctx.context.adapter).update({
 							model: "subscription",
 							update: {
 								status: isTrial === true ? "trialing" : "active",
@@ -872,7 +872,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 								...(authorizationCode !== undefined && authorizationCode !== null && authorizationCode !== "" ? { paystackAuthorizationCode: authorizationCode } : {}),
 							},
 							where: [{ field: "id", value: targetSub.id }],
-						});
+						}) as Subscription | null;
 					}
 
 					if (updatedSubscription && subscriptionOptions?.enabled === true && "onSubscriptionComplete" in subscriptionOptions && typeof (subscriptionOptions as unknown as Record<string, unknown>).onSubscriptionComplete === "function") {
@@ -895,7 +895,7 @@ export const verifyTransaction = <P extends string = "/paystack/verify-transacti
 				}
 			} else if (status === "failed" || status === "abandoned") {
 				try {
-					await ctx.context.adapter.update({
+					await (ctx.context.adapter).update({
 						model: "paystackTransaction",
 						update: {
 							status,
@@ -934,7 +934,7 @@ export const listSubscriptions = (options: AnyPaystackOptions) => {
 			query: listQuerySchema,
 			use: useMiddlewares,
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			if (subscriptionOptions?.enabled !== true) {
 				throw new APIError("BAD_REQUEST", {
 					message: "Subscriptions are not enabled in the Paystack options.",
@@ -949,10 +949,10 @@ export const listSubscriptions = (options: AnyPaystackOptions) => {
 				: (queryRefId !== undefined && queryRefId !== null && queryRefId !== "")
 					? queryRefId
 					: (session.user as unknown as { id: string }).id;
-			const res = await ctx.context.adapter.findMany<Subscription>({
+			const res = await (ctx.context.adapter).findMany({
 				model: "subscription",
 				where: [{ field: "referenceId", value: referenceId }],
-			});
+			}) as Subscription[];
 			return ctx.json({ subscriptions: res });
 		},
 	);
@@ -975,17 +975,17 @@ export const listTransactions = <P extends string = "/paystack/list-transactions
 			query: listQuerySchema,
 			use: useMiddlewares,
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			const session = await getSessionFromCtx(ctx);
 			if (!session) throw new APIError("UNAUTHORIZED");
 			const referenceId =
 				((ctx.context as Record<string, unknown>).referenceId as string | undefined) ??
 				(ctx.query?.referenceId) ??
 				((session.user as unknown as { id: string }).id);
-			const res = await ctx.context.adapter.findMany<PaystackTransaction>({
+			const res = await (ctx.context.adapter).findMany({
 				model: "paystackTransaction",
 				where: [{ field: "referenceId", value: referenceId }],
-			});
+			}) as PaystackTransaction[];
 			// Sort by createdAt desc locally if adapter doesn't support it well, 
 			// but Better Auth adapters usually return in insertion order.
 			// Let's sort to be sure.
@@ -1035,18 +1035,18 @@ export const disablePaystackSubscription = <P extends string = "/paystack/disabl
 	return createAuthEndpoint(
 		path,
 		{ method: "POST", body: enableDisableBodySchema, use: useMiddlewares },
-		async (ctx) => {
+		async (ctx: any) => {
 			const { subscriptionCode } = ctx.body;
 			const paystack = getPaystackOps(options.paystackClient);
 			try {
 				if (subscriptionCode.startsWith("LOC_")) {
-					const sub = await ctx.context.adapter.findOne<Subscription>({
+					const sub = await (ctx.context.adapter).findOne({
 						model: "subscription",
 						where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
-					});
+					}) as Subscription | null;
 
 					if (sub) {
-						await ctx.context.adapter.update({
+						await (ctx.context.adapter).update({
 							model: "subscription",
 							update: {
 								status: "active",
@@ -1113,13 +1113,13 @@ export const disablePaystackSubscription = <P extends string = "/paystack/disabl
 
 				const periodEnd = (nextPaymentDate !== undefined && nextPaymentDate !== null && nextPaymentDate !== "") ? new Date(nextPaymentDate) : undefined;
 
-				const sub = await ctx.context.adapter.findOne<Subscription>({
+				const sub = await (ctx.context.adapter).findOne({
 					model: "subscription",
 					where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
-				});
+				}) as Subscription | null;
 
 				if (sub) {
-					await ctx.context.adapter.update({
+					await (ctx.context.adapter).update({
 						model: "subscription",
 						update: {
 							status: "active", // Keep active until period end
@@ -1140,7 +1140,7 @@ export const disablePaystackSubscription = <P extends string = "/paystack/disabl
 				throw new APIError("BAD_REQUEST", {
 					code: "FAILED_TO_DISABLE_SUBSCRIPTION",
 					message:
-						(error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_DISABLE_SUBSCRIPTION,
+						(error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_DISABLE_SUBSCRIPTION.message,
 				});
 			}
 		},
@@ -1156,7 +1156,7 @@ export const enablePaystackSubscription = <P extends string = "/paystack/enable-
 	return createAuthEndpoint(
 		path,
 		{ method: "POST", body: enableDisableBodySchema, use: useMiddlewares },
-		async (ctx) => {
+		async (ctx: any) => {
 			const { subscriptionCode } = ctx.body;
 			const paystack = getPaystackOps(options.paystackClient);
 			try {
@@ -1200,7 +1200,7 @@ export const enablePaystackSubscription = <P extends string = "/paystack/enable-
 				await paystack.subscriptionEnable({ code: subscriptionCode, token: emailToken });
 
 				// Update local status immediately
-				await ctx.context.adapter.update({
+				await (ctx.context.adapter).update({
 					model: "subscription",
 					update: {
 						status: "active",
@@ -1215,7 +1215,7 @@ export const enablePaystackSubscription = <P extends string = "/paystack/enable-
 				throw new APIError("BAD_REQUEST", {
 					code: "FAILED_TO_ENABLE_SUBSCRIPTION",
 					message:
-						(error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_ENABLE_SUBSCRIPTION,
+						(error as Error)?.message ?? PAYSTACK_ERROR_CODES.FAILED_TO_ENABLE_SUBSCRIPTION.message,
 				});
 			}
 		},
@@ -1231,7 +1231,7 @@ export const getSubscriptionManageLink = <P extends string = "/paystack/get-subs
 		? [sessionMiddleware, originCheck, referenceMiddleware(options, "get-subscription-manage-link")]
 		: [sessionMiddleware, originCheck];
 
-	const handler = async (ctx: GenericEndpointContext) => {
+	const handler = async (ctx: any) => {
 		const { subscriptionCode } = ctx.query;
 
 		// If it's a local mock subscription, return null link instead of error
@@ -1281,7 +1281,7 @@ export const syncProducts = (options: AnyPaystackOptions) => {
 			disableBody: true,
 			use: [sessionMiddleware],
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			console.error("DEBUG: syncProducts endpoint hit!");
 			const paystack = getPaystackOps(options.paystackClient);
 			try {
@@ -1296,10 +1296,10 @@ export const syncProducts = (options: AnyPaystackOptions) => {
 
 				for (const product of productsData) {
 					const paystackId = String(product.id);
-					const existing = await ctx.context.adapter.findOne<PaystackProduct>({
+					const existing = await (ctx.context.adapter).findOne({
 						model: "paystackProduct",
 						where: [{ field: "paystackId", value: paystackId }],
-					});
+					}) as PaystackProduct | null;
 
 					const productData = {
 						name: product.name,
@@ -1315,13 +1315,13 @@ export const syncProducts = (options: AnyPaystackOptions) => {
 					};
 
 					if (existing) {
-						await ctx.context.adapter.update({
+						await (ctx.context.adapter).update({
 							model: "paystackProduct",
 							update: productData,
 							where: [{ field: "id", value: existing.id }],
 						});
 					} else {
-						await ctx.context.adapter.create({
+						await (ctx.context.adapter).create({
 							model: "paystackProduct",
 							data: {
 								...productData,
@@ -1353,10 +1353,10 @@ export const listProducts = (_options: AnyPaystackOptions) => {
 				},
 			},
 		},
-		async (ctx) => {
-			const res = await ctx.context.adapter.findMany<PaystackProduct>({
+		async (ctx: any) => {
+			const res = await (ctx.context.adapter).findMany({
 				model: "paystackProduct",
-			});
+			}) as PaystackProduct[];
 			const sorted = res.sort((a, b) => a.name.localeCompare(b.name));
 			return ctx.json({ products: sorted });
 		}
@@ -1374,7 +1374,7 @@ export const syncPlans = (options: AnyPaystackOptions) => {
 			disableBody: true,
 			use: [sessionMiddleware],
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			const paystack = getPaystackOps(options.paystackClient);
 			try {
 				const raw = await paystack.planList();
@@ -1388,7 +1388,7 @@ export const syncPlans = (options: AnyPaystackOptions) => {
 
 				for (const plan of plansData) {
 					const paystackId = String(plan.id);
-					const existing = await ctx.context.adapter.findOne<any>({
+					const existing = await (ctx.context.adapter).findOne({
 						model: "paystackPlan",
 						where: [{ field: "paystackId", value: paystackId }],
 					});
@@ -1406,13 +1406,13 @@ export const syncPlans = (options: AnyPaystackOptions) => {
 					};
 
 					if (existing) {
-						await ctx.context.adapter.update({
+						await (ctx.context.adapter).update({
 							model: "paystackPlan",
 							update: planData,
 							where: [{ field: "id", value: existing.id }],
 						});
 					} else {
-						await ctx.context.adapter.create({
+						await (ctx.context.adapter).create({
 							model: "paystackPlan",
 							data: {
 								...planData,
@@ -1443,11 +1443,11 @@ export const listPlans = (_options: AnyPaystackOptions) => {
 			},
 			use: [sessionMiddleware],
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			try {
-				const plans = await ctx.context.adapter.findMany<any>({
+				const plans = await (ctx.context.adapter).findMany({
 					model: "paystackPlan",
-				});
+				}) as any[];
 				return ctx.json({ plans });
 			} catch (error: unknown) {
 				ctx.context.logger.error("Failed to list plans", error);
@@ -1470,7 +1470,7 @@ export const getConfig = (options: AnyPaystackOptions) => {
 				},
 			},
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			const plans = options.subscription?.enabled === true
 				? await getPlans(options.subscription)
 				: [];
@@ -1494,12 +1494,12 @@ export const chargeRecurringSubscription = (options: AnyPaystackOptions) => {
 				amount: z.number().optional(),
 			}),
 		},
-		async (ctx) => {
+		async (ctx: any) => {
 			const { subscriptionId, amount: bodyAmount } = ctx.body;
-			const subscription = await ctx.context.adapter.findOne<Subscription>({
+			const subscription = await (ctx.context.adapter).findOne({
 				model: "subscription",
 				where: [{ field: "id", value: subscriptionId }],
-			});
+			}) as Subscription | null;
 
 			if (subscription === null || subscription === undefined) {
 				throw new APIError("NOT_FOUND", { message: "Subscription not found" });
@@ -1524,26 +1524,26 @@ export const chargeRecurringSubscription = (options: AnyPaystackOptions) => {
 			let email: string | null | undefined;
 			if (subscription.referenceId !== undefined && subscription.referenceId !== null && subscription.referenceId !== "") {
 				// Try to find user or org
-				const user = await ctx.context.adapter.findOne<User>({
+				const user = await (ctx.context.adapter).findOne({
 					model: "user",
 					where: [{ field: "id", value: subscription.referenceId }],
-				});
+				}) as User | null;
 				if (user !== undefined && user !== null) {
 					email = user.email;
 				} else if (options.organization?.enabled === true) {
 					// Check org owner email if referenceId is organizationId
-					const ownerMember = await ctx.context.adapter.findOne<Member>({
+					const ownerMember = await (ctx.context.adapter).findOne({
 						model: "member",
 						where: [
 							{ field: "organizationId", value: subscription.referenceId },
 							{ field: "role", value: "owner" },
 						],
-					});
+					}) as Member | null;
 					if (ownerMember !== undefined && ownerMember !== null) {
-						const ownerUser = await ctx.context.adapter.findOne<User>({
+						const ownerUser = await (ctx.context.adapter).findOne({
 							model: "user",
 							where: [{ field: "id", value: ownerMember.userId }],
-						});
+						}) as User | null;
 						email = ownerUser?.email;
 					}
 				}
@@ -1583,7 +1583,7 @@ export const chargeRecurringSubscription = (options: AnyPaystackOptions) => {
 				const now = new Date();
 				const nextPeriodEnd = getNextPeriodEnd(now, plan.interval ?? "monthly");
 
-				await ctx.context.adapter.update({
+				await (ctx.context.adapter).update({
 					model: "subscription",
 					update: {
 						periodStart: now,

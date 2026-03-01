@@ -1,4 +1,4 @@
-import type { GenericEndpointContext, PaystackClientLike, PaystackOptions, PaystackProduct } from "./types";
+import type { PaystackClientLike, PaystackOptions, PaystackProduct } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
 export async function getPlans(subscriptionOptions: PaystackOptions["subscription"]) {
@@ -102,28 +102,28 @@ export function validateMinAmount(amount: number, currency: string): boolean {
 }
 
 export async function syncProductQuantityFromPaystack(
-	ctx: GenericEndpointContext,
+	ctx: any,
 	productName: string,
 	paystackClient: PaystackClientLike,
 ): Promise<void> {
 	// Find the local product record (by name or slug)
-	let localProduct = await ctx.context.adapter.findOne<PaystackProduct>({
+	let localProduct = await (ctx.context.adapter).findOne({
 		model: "paystackProduct",
 		where: [{ field: "name", value: productName }],
-	});
+	}) as PaystackProduct | null;
 
-	localProduct ??= await ctx.context.adapter.findOne<PaystackProduct>({
+	localProduct ??= await (ctx.context.adapter).findOne({
 		model: "paystackProduct",
 		where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
-	});
+	}) as PaystackProduct | null;
 
 	if (localProduct?.paystackId === undefined || localProduct?.paystackId === null || localProduct?.paystackId === "") {
 		// No local record with a Paystack ID — fall back to local decrement
-		if (localProduct && localProduct.unlimited !== true && localProduct.quantity !== undefined && localProduct.quantity > 0) {
-			await ctx.context.adapter.update({
+		if (localProduct && (localProduct as any).unlimited !== true && (localProduct as any).quantity !== undefined && (localProduct as any).quantity > 0) {
+			await (ctx.context.adapter).update({
 				model: "paystackProduct",
-				update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
-				where: [{ field: "id", value: localProduct.id }],
+				update: { quantity: (localProduct as any).quantity - 1, updatedAt: new Date() },
+				where: [{ field: "id", value: (localProduct as any).id }],
 			});
 		}
 		return;
@@ -137,45 +137,45 @@ export async function syncProductQuantityFromPaystack(
 		const remoteQuantity = data?.quantity as number | undefined;
 
 		if (remoteQuantity !== undefined) {
-			await ctx.context.adapter.update({
+			await (ctx.context.adapter).update({
 				model: "paystackProduct",
 				update: { quantity: remoteQuantity, updatedAt: new Date() },
-				where: [{ field: "id", value: localProduct.id }],
+				where: [{ field: "id", value: (localProduct as any).id }],
 			});
 		}
 	} catch {
 		// If API call fails, fall back to local decrement
-		if (localProduct.unlimited !== true && localProduct.quantity !== undefined && localProduct.quantity > 0) {
-			await ctx.context.adapter.update({
+		if ((localProduct as any).unlimited !== true && (localProduct as any).quantity !== undefined && (localProduct as any).quantity > 0) {
+			await (ctx.context.adapter).update({
 				model: "paystackProduct",
-				update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
-				where: [{ field: "id", value: localProduct.id }],
+				update: { quantity: (localProduct as any).quantity - 1, updatedAt: new Date() },
+				where: [{ field: "id", value: (localProduct as any).id }],
 			});
 		}
 	}
 }
 
 /** @deprecated Use syncProductQuantityFromPaystack instead */
-export async function decrementProductQuantity(ctx: GenericEndpointContext, productName: string) {
-	let product = await ctx.context.adapter.findOne<PaystackProduct>({
+export async function decrementProductQuantity(ctx: any, productName: string) {
+	let product = await (ctx.context.adapter).findOne({
 		model: "paystackProduct",
 		where: [{ field: "name", value: productName }],
-	});
+	}) as PaystackProduct | null;
 
-	product ??= await ctx.context.adapter.findOne<PaystackProduct>({
+	product ??= await (ctx.context.adapter).findOne({
 		model: "paystackProduct",
 		where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
-	});
+	}) as PaystackProduct | null;
 
 	if (product) {
 		if (product.unlimited !== true && product.quantity !== undefined && product.quantity > 0) {
-			await ctx.context.adapter.update({
+			await (ctx.context.adapter).update({
 				model: "paystackProduct",
 				update: {
-					quantity: product.quantity - 1,
+					quantity: (product as any).quantity - 1,
 					updatedAt: new Date(),
 				},
-				where: [{ field: "id", value: product.id }],
+				where: [{ field: "id", value: (product as any).id }],
 			});
 		}
 	}

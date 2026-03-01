@@ -67,7 +67,7 @@ export const referenceMiddleware = (
 		// 2. Fallback: Organization Check
 		if (options.organization?.enabled === true) {
 			// Check if referenceId indicates an organization the user is a member of
-			const member = await ctx.context.adapter.findOne<{ id: string }>({
+			const member = await  (ctx.context.adapter as any).findOne({
 				model: "member",
 				where: [
 					{ field: "userId", value: session.user.id },

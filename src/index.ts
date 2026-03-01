@@ -1,4 +1,4 @@
-import { defineErrorCodes } from "@better-auth/core/utils";
+import { defineErrorCodes } from "@better-auth/core/utils/error-codes";
 import type { AuthContext, GenericEndpointContext } from "better-auth";
 import { defu } from "defu";
 
@@ -41,7 +41,12 @@ import type {
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
 const INTERNAL_ERROR_CODES = defineErrorCodes({
-	...PAYSTACK_ERROR_CODES,
+	...Object.fromEntries(
+		Object.entries(PAYSTACK_ERROR_CODES).map(([key, value]) => [
+			key,
+			typeof value === "string" ? value : (value as { message: string }).message,
+		]),
+	),
 });
 
 export const paystack = <
@@ -102,7 +107,7 @@ export const paystack = <
 									if (customerCode === undefined || customerCode === null) {
 										return;
 									}
-									await ctx.adapter.update({
+									await (ctx.adapter as any).update({
 										model: "user",
 										where: [{ field: "id", value: user.id }],
 										update: {
@@ -123,7 +128,7 @@ export const paystack = <
 
 											let targetEmail = org.email;
 											if (targetEmail === undefined || targetEmail === null) {
-												const ownerMember = await ctx.adapter.findOne<Member>({
+												const ownerMember = await  (ctx.adapter as any).findOne({
 													model: "member",
 													where: [
 														{ field: "organizationId", value: org.id },
@@ -131,7 +136,7 @@ export const paystack = <
 													]
 												});
 												if (ownerMember !== null && ownerMember !== undefined) {
-													const ownerUser = await ctx.adapter.findOne<User>({
+													const ownerUser = await  (ctx.adapter as any).findOne({
 														model: "user",
 														where: [{ field: "id", value: ownerMember.userId }]
 													});
