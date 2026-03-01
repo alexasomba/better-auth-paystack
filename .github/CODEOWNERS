@@ -1,4 +1,7 @@
 * @alexasomba
+
+# CODEOWNERS for better-auth-paystack
+# Owners listed below will be requested for changes to matching paths.
+
 /examples/ @alexasomba
 /.github/ @alexasomba
-. @alexasomba
