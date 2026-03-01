@@ -1,6 +1,6 @@
 {
   "name": "@alexasomba/better-auth-paystack",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "license": "MIT",
   "author": "alexasomba",
@@ -71,7 +71,7 @@
     "test": "vitest run",
     "test:integration": "RUN_INTEGRATION_TESTS=1 vitest run",
     "coverage": "vitest run --coverage",
-    "lint": "eslint src",
+    "lint": "eslint src examples/tanstack",
     "lint:package": "publint run --strict",
     "lint:types": "attw --profile esm-only --pack .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
