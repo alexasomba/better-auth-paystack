@@ -552,7 +552,7 @@ export declare const paystack: <TPaystackClient extends PaystackClientLike = Pay
                     create: {
                         after(user: {
                             id: string;
-                            email: string;
+                            email?: string | null;
                             name?: string | null;
                         }, hookCtx?: GenericEndpointContext | null): Promise<void>;
                     };

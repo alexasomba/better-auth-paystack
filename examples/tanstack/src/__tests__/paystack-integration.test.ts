@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { betterAuth } from 'better-auth';
 import { memoryAdapter } from 'better-auth/adapters/memory';
 import { anonymous, organization } from "better-auth/plugins";
@@ -66,7 +66,7 @@ describe('TanStack Example - Paystack Integration', () => {
     });
 
     it('should have paystack plugin endpoints registered', () => {
-        const endpoints = (auth as any).api;
+        const endpoints = (auth).api;
         expect(endpoints.initializeTransaction).toBeDefined();
         expect(endpoints.listProducts).toBeDefined();
         expect(endpoints.verifyTransaction).toBeDefined();

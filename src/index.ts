@@ -87,8 +87,8 @@ export const paystack = <
 					databaseHooks: {
 						user: {
 							create: {
-								async after(user: { id: string; email: string; name?: string | null }, hookCtx?: GenericEndpointContext | null) {
-									if (hookCtx === undefined || hookCtx === null || options.createCustomerOnSignUp !== true) return;
+								async after(user: { id: string; email?: string | null; name?: string | null }, hookCtx?: GenericEndpointContext | null) {
+									if (hookCtx === undefined || hookCtx === null || options.createCustomerOnSignUp !== true || !user.email) return;
 
 									const paystackOps = getPaystackOps(options.paystackClient as PaystackClientLike);
 									const raw = await paystackOps.customerCreate({

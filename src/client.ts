@@ -15,7 +15,8 @@ export const paystackClient = <
 	return {
 		id: "paystack",
 		$InferServerPlugin: {} as ReturnType<typeof paystack>,
-		getActions: ($fetch: BetterFetch) => {
+		getActions: ($fetch: any, _$store: any, _options: any) => {
+			const fetch = $fetch as BetterFetch;
 			const initializeTransaction = async (data: {
 				plan?: string;
 				email?: string;
@@ -37,7 +38,7 @@ export const paystackClient = <
 				accessCode: string;
 				redirect: boolean;
 			}>> => {
-				return $fetch<{
+				return fetch<{
 					url: string;
 					reference: string;
 					accessCode: string;
@@ -54,7 +55,7 @@ export const paystackClient = <
 				reference: string;
 				data: unknown;
 			}>> => {
-				return $fetch<{
+				return fetch<{
 					status: string;
 					reference: string;
 					data: unknown;
@@ -68,7 +69,7 @@ export const paystackClient = <
 			const listTransactions = async (data: { query?: Record<string, unknown> } = {}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				transactions: PaystackTransaction[];
 			}>> => {
-				return $fetch<{
+				return fetch<{
 					transactions: PaystackTransaction[];
 				}>("paystack/list-transactions", {
 					method: "GET",
@@ -80,7 +81,7 @@ export const paystackClient = <
 			const listSubscriptions = async (data: { query?: Record<string, unknown> } = {}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				subscriptions: Subscription[];
 			}>> => {
-				return $fetch<{
+				return fetch<{
 					subscriptions: Subscription[];
 				}>("paystack/list-subscriptions", {
 					method: "GET",
@@ -92,7 +93,7 @@ export const paystackClient = <
 			const getSubscriptionManageLink = async (data: { subscriptionCode: string }, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				link: string;
 			}>> => {
-				return $fetch<{
+				return fetch<{
 					link: string;
 				}>("paystack/get-subscription-manage-link", {
 					method: "GET",
@@ -108,7 +109,7 @@ export const paystackClient = <
 			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				status: string;
 			}>> => {
-				return $fetch<{
+				return fetch<{
 					status: string;
 				}>("paystack/disable-subscription", {
 					method: "POST",
@@ -123,7 +124,7 @@ export const paystackClient = <
 			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
 				status: string;
 			}>> => {
-				return $fetch<{
+				return fetch<{
 					status: string;
 				}>("paystack/enable-subscription", {
 					method: "POST",
@@ -190,24 +191,24 @@ export const paystackClient = <
 					listSubscriptions,
 					getSubscriptionManageLink,
 					getConfig: async (): Promise<BetterFetchResponse<Record<string, unknown>>> => {
-						return $fetch<Record<string, unknown>>("paystack/get-config", {
+						return fetch<Record<string, unknown>>("paystack/get-config", {
 							method: "GET",
 						});
 					},
 					syncProducts: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
-						return $fetch<{ status: string; count: number }>("paystack/sync-products", {
+						return fetch<{ status: string; count: number }>("paystack/sync-products", {
 							method: "POST",
 						});
 					},
 					syncPlans: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
-						return $fetch<{ status: string; count: number }>("paystack/sync-plans", {
+						return fetch<{ status: string; count: number }>("paystack/sync-plans", {
 							method: "POST",
 						});
 					},
 					listProducts: async (options?: BetterFetchOption): Promise<BetterFetchResponse<{
 						products: PaystackProduct[];
 					}>> => {
-						return $fetch<{
+						return fetch<{
 							products: PaystackProduct[];
 						}>("paystack/list-products", {
 							method: "GET",
@@ -217,7 +218,7 @@ export const paystackClient = <
 					listPlans: async (options?: BetterFetchOption): Promise<BetterFetchResponse<{
 						plans: unknown[];
 					}>> => {
-						return $fetch<{
+						return fetch<{
 							plans: unknown[];
 						}>("paystack/list-plans", {
 							method: "GET",

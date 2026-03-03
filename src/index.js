@@ -45,7 +45,7 @@ export const paystack = (options) => {
                         user: {
                             create: {
                                 async after(user, hookCtx) {
-                                    if (hookCtx === undefined || hookCtx === null || options.createCustomerOnSignUp !== true)
+                                    if (hookCtx === undefined || hookCtx === null || options.createCustomerOnSignUp !== true || !user.email)
                                         return;
                                     const paystackOps = getPaystackOps(options.paystackClient);
                                     const raw = await paystackOps.customerCreate({

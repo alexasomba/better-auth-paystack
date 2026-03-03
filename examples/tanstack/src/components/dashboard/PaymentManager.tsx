@@ -510,14 +510,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     );
 
     function PlanCard({ plan, variant }: { plan: PaystackPlan, variant: 'local' | 'native' }) {
-        const activeSubscription = subscriptions.find((sub: Subscription) => ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status));
-        const isCurrentPlan = activeSubscription?.plan.toLowerCase() === plan.name.toLowerCase();
+        const currentPlanSubscription = subscriptions.find((sub: Subscription) => ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status));
+        const isCurrentPlan = currentPlanSubscription?.plan.toLowerCase() === plan.name.toLowerCase();
         
         // Dynamic amount based on quantity for organizations, but only for local/custom plans
         // Native plans have fixed pricing on Paystack.
         const isNative = variant === 'native' || !!plan.planCode;
         const displayAmount = (selectedBillingTarget !== "personal" && !isNative) 
-            ? (plan.amount ?? 0) * quantity 
+            ? plan.amount * quantity 
             : plan.amount;
 
         return (

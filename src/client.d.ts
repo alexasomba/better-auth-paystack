@@ -1,4 +1,4 @@
-import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
+import type { BetterFetchResponse, BetterFetchOption } from "@better-fetch/fetch";
 import type { PaystackProduct, PaystackTransaction, Subscription } from "./types";
 import type { paystack } from "./index";
 export declare const paystackClient: <O extends {
@@ -6,7 +6,7 @@ export declare const paystackClient: <O extends {
 }>(_options?: O) => {
     id: "paystack";
     $InferServerPlugin: ReturnType<typeof paystack>;
-    getActions: ($fetch: BetterFetch) => {
+    getActions: ($fetch: any, _$store: any, _options: any) => {
         subscription: {
             /**
              * Initialize a transaction to upgrade or creating a subscription.
