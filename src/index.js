@@ -12,7 +12,6 @@ const INTERNAL_ERROR_CODES = defineErrorCodes({
     ])),
 });
 export const paystack = (options) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const routeOptions = options;
     const res = {
         id: "paystack",
@@ -45,7 +44,7 @@ export const paystack = (options) => {
                         user: {
                             create: {
                                 async after(user, hookCtx) {
-                                    if (hookCtx === undefined || hookCtx === null || options.createCustomerOnSignUp !== true || !user.email)
+                                    if (!hookCtx || options.createCustomerOnSignUp !== true || user.email === null || user.email === undefined || user.email === "")
                                         return;
                                     const paystackOps = getPaystackOps(options.paystackClient);
                                     const raw = await paystackOps.customerCreate({
@@ -58,7 +57,7 @@ export const paystack = (options) => {
                                     const sdkRes = unwrapSdkResult(raw);
                                     const customerCode = sdkRes?.customer_code
                                         ?? sdkRes?.data?.customer_code;
-                                    if (customerCode === undefined || customerCode === null) {
+                                    if (!customerCode) {
                                         return;
                                     }
                                     await ctx.adapter.update({
@@ -88,7 +87,7 @@ export const paystack = (options) => {
                                                         { field: "role", value: "owner" }
                                                     ]
                                                 });
-                                                if (ownerMember !== null && ownerMember !== undefined) {
+                                                if (ownerMember) {
                                                     const ownerUser = await ctx.adapter.findOne({
                                                         model: "user",
                                                         where: [{ field: "id", value: ownerMember.userId }]
@@ -108,9 +107,8 @@ export const paystack = (options) => {
                                             const sdkRes = unwrapSdkResult(raw);
                                             const customerCode = sdkRes?.customer_code
                                                 ?? sdkRes?.data?.customer_code;
-                                            if (customerCode === undefined || customerCode === null)
+                                            if (!customerCode || !sdkRes)
                                                 return;
-                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                             await ctx.internalAdapter.updateOrganization(org.id, {
                                                 paystackCustomerCode: customerCode,
                                             });
@@ -138,15 +136,15 @@ export const paystack = (options) => {
                                 }
                             },
                             after: async (member, ctx) => {
-                                if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-                                    await syncSubscriptionSeats(ctx, member.organizationId, options);
+                                if (options.subscription?.enabled === true && typeof member?.organizationId === "string" && ctx) {
+                                    await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
                                 }
                             },
                         },
                         delete: {
                             after: async (member, ctx) => {
-                                if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-                                    await syncSubscriptionSeats(ctx, member.organizationId, options);
+                                if (options.subscription?.enabled === true && typeof member?.organizationId === "string" && ctx) {
+                                    await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
                                 }
                             },
                         }
@@ -159,15 +157,15 @@ export const paystack = (options) => {
                                 }
                             },
                             after: async (invitation, ctx) => {
-                                if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-                                    await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+                                if (options.subscription?.enabled === true && typeof invitation?.organizationId === "string" && ctx) {
+                                    await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
                                 }
                             },
                         },
                         delete: {
                             after: async (invitation, ctx) => {
-                                if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-                                    await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+                                if (options.subscription?.enabled === true && typeof invitation?.organizationId === "string" && ctx) {
+                                    await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
                                 }
                             },
                         }
@@ -175,10 +173,10 @@ export const paystack = (options) => {
                     team: {
                         create: {
                             before: async (team, ctx) => {
-                                if (options.subscription?.enabled === true && team.organizationId && ctx !== null && ctx !== undefined) {
+                                if (options.subscription?.enabled === true && team.organizationId && ctx) {
                                     const subscription = await getOrganizationSubscription(ctx, team.organizationId);
-                                    if (subscription !== null && subscription !== undefined) {
-                                        const plan = await getPlanByName(options, subscription.plan);
+                                    if (subscription) {
+                                        const plan = await getPlanByName(routeOptions, subscription.plan);
                                         const limits = plan?.limits;
                                         const maxTeams = limits?.teams;
                                         if (typeof maxTeams === "number") {

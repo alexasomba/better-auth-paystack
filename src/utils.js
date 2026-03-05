@@ -7,7 +7,6 @@ export async function getPlans(subscriptionOptions) {
     }
     throw new Error("Subscriptions are not enabled in the Paystack options.");
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getPlan = async (options, planId) => {
     if (options.subscription?.enabled === true) {
         const plans = await getPlans(options.subscription);
@@ -15,7 +14,6 @@ export const getPlan = async (options, planId) => {
     }
     return null;
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getPlanByName(options, name) {
     if (options.subscription?.enabled === true) {
         const plans = await getPlans(options.subscription);
@@ -23,7 +21,6 @@ export async function getPlanByName(options, name) {
     }
     return null;
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getPlanByPriceId(options, priceId) {
     if (options.subscription?.enabled === true) {
         const plans = await getPlans(options.subscription);
@@ -39,7 +36,6 @@ export async function getProducts(productOptions) {
     }
     return [];
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getProductByName(options, name) {
     return await getProducts(options.products).then((products) => products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null);
 }
@@ -88,18 +84,18 @@ export function validateMinAmount(amount, currency) {
 }
 export async function syncProductQuantityFromPaystack(ctx, productName, paystackClient) {
     // Find the local product record (by name or slug)
-    let localProduct = await (ctx.context.adapter).findOne({
+    let localProduct = await ctx.context.adapter.findOne({
         model: "paystackProduct",
         where: [{ field: "name", value: productName }],
     });
-    localProduct ??= await (ctx.context.adapter).findOne({
+    localProduct ??= await ctx.context.adapter.findOne({
         model: "paystackProduct",
         where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
     });
-    if (localProduct?.paystackId === undefined || localProduct?.paystackId === null || localProduct?.paystackId === "") {
+    if (localProduct?.paystackId === undefined || localProduct.paystackId === null || localProduct.paystackId === "") {
         // No local record with a Paystack ID — fall back to local decrement
-        if (localProduct && localProduct.unlimited !== true && localProduct.quantity !== undefined && localProduct.quantity > 0) {
-            await (ctx.context.adapter).update({
+        if (localProduct !== null && localProduct.unlimited !== true && typeof localProduct.quantity === "number" && localProduct.quantity > 0) {
+            await ctx.context.adapter.update({
                 model: "paystackProduct",
                 update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
                 where: [{ field: "id", value: localProduct.id }],
@@ -111,10 +107,10 @@ export async function syncProductQuantityFromPaystack(ctx, productName, paystack
     try {
         const ops = getPaystackOps(paystackClient);
         const raw = await ops.productFetch(localProduct.paystackId);
-        const data = unwrapSdkResult(raw);
-        const remoteQuantity = data?.quantity;
+        const sdkRes = unwrapSdkResult(raw);
+        const remoteQuantity = sdkRes?.quantity;
         if (remoteQuantity !== undefined) {
-            await (ctx.context.adapter).update({
+            await ctx.context.adapter.update({
                 model: "paystackProduct",
                 update: { quantity: remoteQuantity, updatedAt: new Date() },
                 where: [{ field: "id", value: localProduct.id }],
@@ -123,8 +119,8 @@ export async function syncProductQuantityFromPaystack(ctx, productName, paystack
     }
     catch {
         // If API call fails, fall back to local decrement
-        if (localProduct.unlimited !== true && localProduct.quantity !== undefined && localProduct.quantity > 0) {
-            await (ctx.context.adapter).update({
+        if (localProduct !== null && localProduct.unlimited !== true && typeof localProduct.quantity === "number" && localProduct.quantity > 0) {
+            await ctx.context.adapter.update({
                 model: "paystackProduct",
                 update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
                 where: [{ field: "id", value: localProduct.id }],
@@ -132,19 +128,18 @@ export async function syncProductQuantityFromPaystack(ctx, productName, paystack
         }
     }
 }
-/** @deprecated Use syncProductQuantityFromPaystack instead */
 export async function decrementProductQuantity(ctx, productName) {
-    let product = await (ctx.context.adapter).findOne({
+    let product = await ctx.context.adapter.findOne({
         model: "paystackProduct",
         where: [{ field: "name", value: productName }],
     });
-    product ??= await (ctx.context.adapter).findOne({
+    product ??= await ctx.context.adapter.findOne({
         model: "paystackProduct",
         where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
     });
     if (product) {
-        if (product.unlimited !== true && product.quantity !== undefined && product.quantity > 0) {
-            await (ctx.context.adapter).update({
+        if (product.unlimited !== true && typeof product.quantity === "number" && product.quantity > 0) {
+            await ctx.context.adapter.update({
                 model: "paystackProduct",
                 update: {
                     quantity: product.quantity - 1,
@@ -158,12 +153,12 @@ export async function decrementProductQuantity(ctx, productName) {
 export async function syncSubscriptionSeats(ctx, organizationId, options) {
     if (options.subscription?.enabled !== true)
         return;
-    const adapter = ctx.context?.adapter ?? ctx.adapter;
-    const subscription = await (adapter).findOne({
+    const adapter = ctx.context.adapter;
+    const subscription = await adapter.findOne({
         model: "subscription",
         where: [{ field: "referenceId", value: organizationId }],
     });
-    if (subscription === null || subscription.paystackSubscriptionCode === undefined || subscription.paystackSubscriptionCode === null)
+    if (subscription?.paystackSubscriptionCode === undefined || subscription.paystackSubscriptionCode === null || subscription.paystackSubscriptionCode === "")
         return;
     const plan = await getPlanByName(options, subscription.plan);
     if (plan === null)
@@ -176,7 +171,7 @@ export async function syncSubscriptionSeats(ctx, organizationId, options) {
     });
     const quantity = members.length;
     let totalAmount = plan.amount ?? 0;
-    if (plan.seatAmount !== undefined && plan.seatAmount !== null) {
+    if (plan.seatAmount !== undefined && plan.seatAmount !== null && typeof plan.seatAmount === "number") {
         totalAmount += (quantity * plan.seatAmount);
     }
     const ops = getPaystackOps(options.paystackClient);
@@ -198,7 +193,7 @@ export async function syncSubscriptionSeats(ctx, organizationId, options) {
         });
     }
     catch (e) {
-        const log = ctx.context?.logger ?? ctx.logger;
+        const log = ctx.context.logger;
         if (log !== undefined && log !== null) {
             log.error("Failed to sync subscription seats with Paystack", e);
         }

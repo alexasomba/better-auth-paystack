@@ -6,7 +6,7 @@ export declare const paystackClient: <O extends {
 }>(_options?: O) => {
     id: "paystack";
     $InferServerPlugin: ReturnType<typeof paystack>;
-    getActions: ($fetch: any, _$store: any, _options: any) => {
+    getActions: ($fetch: unknown, _$store: unknown, _options: unknown) => {
         subscription: {
             /**
              * Initialize a transaction to upgrade or creating a subscription.

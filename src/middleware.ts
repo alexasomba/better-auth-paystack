@@ -2,7 +2,6 @@ import { createAuthMiddleware } from "@better-auth/core/api";
 import { logger } from "better-auth";
 import { APIError } from "better-auth/api";
 
-
 import type { PaystackClientLike, PaystackOptions, Session, User } from "./types";
 
 export const referenceMiddleware = (
@@ -67,7 +66,7 @@ export const referenceMiddleware = (
 		// 2. Fallback: Organization Check
 		if (options.organization?.enabled === true) {
 			// Check if referenceId indicates an organization the user is a member of
-			const member = await  (ctx.context.adapter as any).findOne({
+			const member = await ctx.context.adapter.findOne({
 				model: "member",
 				where: [
 					{ field: "userId", value: session.user.id },
