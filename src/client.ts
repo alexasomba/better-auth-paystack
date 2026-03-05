@@ -15,7 +15,7 @@ export const paystackClient = <
 	return {
 		id: "paystack",
 		$InferServerPlugin: {} as ReturnType<typeof paystack>,
-		getActions: ($fetch: any, _$store: any, _options: any) => {
+		getActions: ($fetch: unknown, _$store: unknown, _options: unknown) => {
 			const fetch = $fetch as BetterFetch;
 			const initializeTransaction = async (data: {
 				plan?: string;

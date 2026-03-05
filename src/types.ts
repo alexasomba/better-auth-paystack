@@ -4,11 +4,16 @@ import type {
 	User,
 } from "better-auth";
 import type { createPaystack } from "@alexasomba/paystack-node";
+import type { GenericEndpointContext } from "@better-auth/core";
+import type { DBAdapter } from "@better-auth/core/db/adapter";
 
 import type { organization, subscriptions, user } from "./schema";
 
-export type GenericEndpointContext = any;
+export type { GenericEndpointContext, DBAdapter };
 export type { InferOptionSchema, Session, User };
+export interface PaystackUser extends User {
+	paystackCustomerCode?: string;
+}
 
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
 export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
@@ -53,31 +58,99 @@ export interface PaystackTransactionResponse {
     domain: string;
     status: string;
     reference: string;
+    receipt_number?: string | null;
     amount: number;
-    message: string | null;
+    message?: string | null;
     gateway_response: string;
+    helpdesk_link?: string | null;
     paid_at: string;
     created_at: string;
     channel: string;
     currency: PaystackCurrency;
     ip_address: string;
-    metadata: PaystackMetadata | string | null;
+    metadata: PaystackMetadata | { custom_fields: Record<string, unknown>[] } | string | null;
     authorization_url?: string;
     access_code?: string;
     customer: PaystackCustomerResponse;
+    authorization?: {
+        authorization_code: string;
+        bin: string;
+        last4: string;
+        exp_month: string;
+        exp_year: string;
+        channel: string;
+        card_type: string;
+        bank: string;
+        country_code: string;
+        brand: string;
+        reusable: boolean;
+        signature: string;
+        account_name?: string | null;
+    };
+    [key: string]: unknown;
+}
+
+export interface PaystackProductResponse {
+    id: number;
+    name: string;
+    description: string;
+    product_code: string;
+    price: number;
+    currency: string;
+    quantity: number;
+    quantity_sold?: number | null;
+    type: string;
+    is_shippable: boolean;
+    unlimited: boolean;
+    domain: string;
+    active: boolean;
+    metadata?: PaystackMetadata | string | null;
+    createdAt: string;
+    updatedAt: string;
     [key: string]: unknown;
 }
 
 export interface PaystackSubscriptionResponse {
-    customer: string | number | PaystackCustomerResponse;
-    plan: string | number | Record<string, unknown>;
+    id: number;
+    domain: string;
+    status: string;
     subscription_code: string;
     email_token: string;
-    status: string;
     amount: number;
-    currency: PaystackCurrency;
+    cron_expression?: string;
+    next_payment_date: string | null;
+    open_invoice?: unknown;
+    createdAt: string;
+    cancelledAt?: string | null;
+    integration?: number;
+    plan: {
+        id: number;
+        name: string;
+        plan_code: string;
+        description?: string | null;
+        amount: number;
+        interval: string;
+        send_invoices: boolean;
+        send_sms: boolean;
+        currency: string;
+    };
+    authorization?: {
+        authorization_code: string;
+        bin: string;
+        last4: string;
+        exp_month: string;
+        exp_year: string;
+        channel: string;
+        card_type: string;
+        bank: string;
+        country_code: string;
+        brand: string;
+        reusable: boolean;
+        signature: string;
+        account_name?: string | null;
+    };
+    customer: PaystackCustomerResponse;
     metadata?: PaystackMetadata | string | null;
-    next_payment_date?: string | null;
     [key: string]: unknown;
 }
 
@@ -139,6 +212,23 @@ export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit
 export type PaystackSubscriptionFetchInit =
     | { params: { path: { code: string } } }
     | { params: { path: { id_or_code: string } } };
+
+export interface PaystackPlanResponse {
+    id: number;
+    name: string;
+    plan_code: string;
+    description: string | null;
+    amount: number;
+    interval: string;
+    send_invoices: boolean;
+    send_sms: boolean;
+    currency: string;
+    integration: number;
+    domain: string;
+    createdAt: string;
+    updatedAt: string;
+    [key: string]: unknown;
+}
 
 export type PaystackClientLike = Partial<PaystackNodeClient> & {
     // Some older SDKs use snake_case for manage link
@@ -419,8 +509,8 @@ export interface OrganizationOptions<TMetadata = Record<string, unknown>> {
 
 export interface PaystackOptions<
     TPaystackClient extends PaystackClientLike = PaystackNodeClient,
-    TMetadata = Record<string, unknown>,
-    TLimits = Record<string, unknown>,
+    TMetadata extends Record<string, unknown> = Record<string, unknown>,
+    TLimits extends Record<string, unknown> = Record<string, unknown>,
 > {
     /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
     paystackClient: NoInfer<TPaystackClient>;
@@ -477,3 +567,6 @@ export interface Member {
     updatedAt: Date;
     [key: string]: unknown;
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyPaystackOptions = PaystackOptions<PaystackClientLike, any, any>;

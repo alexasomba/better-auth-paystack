@@ -1,7 +1,9 @@
-import type { PaystackClientLike, PaystackOptions, PaystackProduct } from "./types";
+import type { GenericEndpointContext } from "better-auth";
+
+import type { AnyPaystackOptions, PaystackClientLike, PaystackProduct, Subscription, PaystackProductResponse } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
-export async function getPlans(subscriptionOptions: PaystackOptions["subscription"]) {
+export async function getPlans(subscriptionOptions: AnyPaystackOptions["subscription"]) {
 	if (subscriptionOptions?.enabled === true) {
 		return typeof subscriptionOptions.plans === "function"
 			? subscriptionOptions.plans()
@@ -10,8 +12,7 @@ export async function getPlans(subscriptionOptions: PaystackOptions["subscriptio
 	throw new Error("Subscriptions are not enabled in the Paystack options.");
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getPlan = async (options: PaystackOptions<PaystackClientLike, any, any>, planId: string) => {
+export const getPlan = async (options: AnyPaystackOptions, planId: string) => {
 	if (options.subscription?.enabled === true) {
 		const plans = await getPlans(options.subscription);
 		return plans.find((plan) => plan.name === planId) ?? null;
@@ -19,8 +20,7 @@ export const getPlan = async (options: PaystackOptions<PaystackClientLike, any, 
 	return null;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getPlanByName(options: PaystackOptions<PaystackClientLike, any, any>, name: string) {
+export async function getPlanByName(options: AnyPaystackOptions, name: string) {
 	if (options.subscription?.enabled === true) {
 		const plans = await getPlans(options.subscription);
 		return plans.find(
@@ -30,8 +30,7 @@ export async function getPlanByName(options: PaystackOptions<PaystackClientLike,
 	return null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getPlanByPriceId(options: PaystackOptions<PaystackClientLike, any, any>, priceId: string) {
+export async function getPlanByPriceId(options: AnyPaystackOptions, priceId: string) {
 	if (options.subscription?.enabled === true) {
 		const plans = await getPlans(options.subscription);
 		return plans.find((plan) => plan.name === priceId) ?? null;
@@ -40,7 +39,7 @@ export async function getPlanByPriceId(options: PaystackOptions<PaystackClientLi
 }
 
 
-export async function getProducts(productOptions: PaystackOptions["products"]) {
+export async function getProducts(productOptions: AnyPaystackOptions["products"]) {
 	if (productOptions?.products) {
 		return typeof productOptions.products === "function"
 			? await productOptions.products()
@@ -49,8 +48,7 @@ export async function getProducts(productOptions: PaystackOptions["products"]) {
 	return [];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getProductByName(options: PaystackOptions<PaystackClientLike, any, any>, name: string) {
+export async function getProductByName(options: AnyPaystackOptions, name: string) {
 	return await getProducts(options.products).then((products) =>
 		products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null,
 	);
@@ -102,28 +100,28 @@ export function validateMinAmount(amount: number, currency: string): boolean {
 }
 
 export async function syncProductQuantityFromPaystack(
-	ctx: any,
+	ctx: GenericEndpointContext,
 	productName: string,
 	paystackClient: PaystackClientLike,
 ): Promise<void> {
 	// Find the local product record (by name or slug)
-	let localProduct = await (ctx.context.adapter).findOne({
+	let localProduct = await ctx.context.adapter.findOne<PaystackProduct>({
 		model: "paystackProduct",
 		where: [{ field: "name", value: productName }],
-	}) as PaystackProduct | null;
+	});
 
-	localProduct ??= await (ctx.context.adapter).findOne({
+	localProduct ??= await ctx.context.adapter.findOne<PaystackProduct>({
 		model: "paystackProduct",
 		where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
-	}) as PaystackProduct | null;
+	});
 
-	if (localProduct?.paystackId === undefined || localProduct?.paystackId === null || localProduct?.paystackId === "") {
+	if (localProduct?.paystackId === undefined || localProduct.paystackId === null || localProduct.paystackId === "") {
 		// No local record with a Paystack ID — fall back to local decrement
-		if (localProduct && (localProduct as any).unlimited !== true && (localProduct as any).quantity !== undefined && (localProduct as any).quantity > 0) {
-			await (ctx.context.adapter).update({
+		if (localProduct !== null && localProduct.unlimited !== true && typeof localProduct.quantity === "number" && localProduct.quantity > 0) {
+			await ctx.context.adapter.update({
 				model: "paystackProduct",
-				update: { quantity: (localProduct as any).quantity - 1, updatedAt: new Date() },
-				where: [{ field: "id", value: (localProduct as any).id }],
+				update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
+				where: [{ field: "id", value: localProduct.id }],
 			});
 		}
 		return;
@@ -133,68 +131,67 @@ export async function syncProductQuantityFromPaystack(
 	try {
 		const ops = getPaystackOps(paystackClient);
 		const raw = await ops.productFetch(localProduct.paystackId);
-		const data = unwrapSdkResult<Record<string, unknown>>(raw);
-		const remoteQuantity = data?.quantity as number | undefined;
+		const sdkRes = unwrapSdkResult<PaystackProductResponse>(raw);
+		const remoteQuantity = sdkRes?.quantity;
 
 		if (remoteQuantity !== undefined) {
-			await (ctx.context.adapter).update({
+			await ctx.context.adapter.update({
 				model: "paystackProduct",
 				update: { quantity: remoteQuantity, updatedAt: new Date() },
-				where: [{ field: "id", value: (localProduct as any).id }],
+				where: [{ field: "id", value: localProduct.id }],
 			});
 		}
 	} catch {
 		// If API call fails, fall back to local decrement
-		if ((localProduct as any).unlimited !== true && (localProduct as any).quantity !== undefined && (localProduct as any).quantity > 0) {
-			await (ctx.context.adapter).update({
+		if (localProduct !== null && localProduct.unlimited !== true && typeof localProduct.quantity === "number" && localProduct.quantity > 0) {
+			await ctx.context.adapter.update({
 				model: "paystackProduct",
-				update: { quantity: (localProduct as any).quantity - 1, updatedAt: new Date() },
-				where: [{ field: "id", value: (localProduct as any).id }],
+				update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
+				where: [{ field: "id", value: localProduct.id }],
 			});
 		}
 	}
 }
 
-/** @deprecated Use syncProductQuantityFromPaystack instead */
-export async function decrementProductQuantity(ctx: any, productName: string) {
-	let product = await (ctx.context.adapter).findOne({
+export async function decrementProductQuantity(ctx: GenericEndpointContext, productName: string) {
+	let product = await ctx.context.adapter.findOne<PaystackProduct>({
 		model: "paystackProduct",
 		where: [{ field: "name", value: productName }],
-	}) as PaystackProduct | null;
+	});
 
-	product ??= await (ctx.context.adapter).findOne({
+	product ??= await ctx.context.adapter.findOne<PaystackProduct>({
 		model: "paystackProduct",
 		where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
-	}) as PaystackProduct | null;
+	});
 
 	if (product) {
-		if (product.unlimited !== true && product.quantity !== undefined && product.quantity > 0) {
-			await (ctx.context.adapter).update({
+		if (product.unlimited !== true && typeof product.quantity === "number" && product.quantity > 0) {
+			await ctx.context.adapter.update({
 				model: "paystackProduct",
 				update: {
-					quantity: (product as any).quantity - 1,
+					quantity: product.quantity - 1,
 					updatedAt: new Date(),
 				},
-				where: [{ field: "id", value: (product as any).id }],
+				where: [{ field: "id", value: product.id }],
 			});
 		}
 	}
 }
 
 export async function syncSubscriptionSeats(
-	ctx: any,
+	ctx: GenericEndpointContext,
 	organizationId: string,
-	options: PaystackOptions<PaystackClientLike, any, any>,
+	options: AnyPaystackOptions,
 ): Promise<void> {
 	if (options.subscription?.enabled !== true) return;
 
-	const adapter = ctx.context?.adapter ?? ctx.adapter;
-	const subscription = await (adapter).findOne({
+	const adapter = ctx.context.adapter;
+	const subscription = await adapter.findOne<Subscription>({
 		model: "subscription",
 		where: [{ field: "referenceId", value: organizationId }],
 	});
 
-	if (subscription === null || subscription.paystackSubscriptionCode === undefined || subscription.paystackSubscriptionCode === null) return;
+	if (subscription?.paystackSubscriptionCode === undefined || subscription.paystackSubscriptionCode === null || subscription.paystackSubscriptionCode === "") return;
 	const plan = await getPlanByName(options, subscription.plan);
 	if (plan === null) return;
 	if (plan.seatAmount === undefined && plan.seatPlanCode === undefined) return;
@@ -207,7 +204,7 @@ export async function syncSubscriptionSeats(
 	const quantity = members.length;
 	let totalAmount = plan.amount ?? 0;
 
-	if (plan.seatAmount !== undefined && plan.seatAmount !== null) {
+	if (plan.seatAmount !== undefined && plan.seatAmount !== null && typeof plan.seatAmount === "number") {
 		totalAmount += (quantity * plan.seatAmount);
 	}
 
@@ -230,7 +227,7 @@ export async function syncSubscriptionSeats(
 			},
 		});
 	} catch (e: unknown) {
-		const log = ctx.context?.logger ?? ctx.logger;
+		const log = ctx.context.logger;
 		if (log !== undefined && log !== null) {
 			log.error("Failed to sync subscription seats with Paystack", e);
 		}

@@ -16,11 +16,13 @@ describe("Paystack Deep Typesafety", () => {
         interface CustomMetadata {
             planId: string;
             referredBy?: string;
+            [key: string]: unknown;
         }
 
         interface CustomLimits {
             maxProjects: number;
             canExport: boolean;
+            [key: string]: unknown;
         }
 
         const options = {

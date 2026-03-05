@@ -7,7 +7,7 @@ export const getOrganizationSubscription = async (
 	ctx: GenericEndpointContext,
 	organizationId: string
 ): Promise<Subscription | null> => {
-	const subscription = await  (ctx.context.adapter as any).findOne({
+	const subscription = await ctx.context.adapter.findOne<Subscription>({
 		model: "subscription",
 		where: [{ field: "referenceId", value: organizationId }],
 	});
