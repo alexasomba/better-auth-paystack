@@ -57,7 +57,7 @@ export const paystack = (options) => {
                                     const sdkRes = unwrapSdkResult(raw);
                                     const customerCode = sdkRes?.customer_code
                                         ?? sdkRes?.data?.customer_code;
-                                    if (!customerCode) {
+                                    if (customerCode === "" || customerCode === null || customerCode === undefined) {
                                         return;
                                     }
                                     await ctx.adapter.update({
@@ -107,7 +107,7 @@ export const paystack = (options) => {
                                             const sdkRes = unwrapSdkResult(raw);
                                             const customerCode = sdkRes?.customer_code
                                                 ?? sdkRes?.data?.customer_code;
-                                            if (!customerCode || !sdkRes)
+                                            if (customerCode === "" || customerCode === null || customerCode === undefined || sdkRes === null || sdkRes === undefined)
                                                 return;
                                             await ctx.internalAdapter.updateOrganization(org.id, {
                                                 paystackCustomerCode: customerCode,

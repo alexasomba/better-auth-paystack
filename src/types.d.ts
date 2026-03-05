@@ -5,6 +5,9 @@ import type { DBAdapter } from "@better-auth/core/db/adapter";
 import type { organization, subscriptions, user } from "./schema";
 export type { GenericEndpointContext, DBAdapter };
 export type { InferOptionSchema, Session, User };
+export interface PaystackUser extends User {
+    paystackCustomerCode?: string;
+}
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
 export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
 export type PaystackEvent = "charge.success" | "charge.failure" | "subscription.create" | "subscription.disable" | "subscription.not_renew" | "subscription.expiring_cards" | "invoice.create" | "invoice.payment_failed" | "invoice.update" | "transfer.success" | "transfer.failed" | "transfer.reversed" | "customeridentification.success" | "customeridentification.failed" | (string & {});
