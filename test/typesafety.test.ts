@@ -40,15 +40,15 @@ describe("Paystack Deep Typesafety", () => {
         		onSubscriptionComplete: async (_data, _ctx) => {
         			await Promise.resolve();
         			// Verify event metadata generic
-        			expectTypeOf(_data.event).toMatchTypeOf<PaystackWebhookPayload<any, CustomMetadata>>();
+        			expectTypeOf(_data.event).toExtend<PaystackWebhookPayload<any, CustomMetadata>>();
         			// Verify plan limits generic
-        			expectTypeOf(_data.plan.limits).toMatchTypeOf<CustomLimits | undefined>();
+        			expectTypeOf(_data.plan.limits).toExtend<CustomLimits | undefined>();
         		}
         	},
         	onCustomerCreate: async (_data, _ctx) => {
         		await Promise.resolve();
         		// Verify data.paystackCustomer is PaystackCustomerResponse
-        		expectTypeOf(_data.paystackCustomer).toMatchTypeOf<PaystackCustomerResponse>();
+        		expectTypeOf(_data.paystackCustomer).toExtend<PaystackCustomerResponse>();
         	},
         } satisfies PaystackOptions<PaystackClientLike, CustomMetadata, CustomLimits>;
 
@@ -59,7 +59,7 @@ describe("Paystack Deep Typesafety", () => {
         });
 
         // Verify the plugin inference
-        expectTypeOf(auth.api.paystackWebhook).toMatchTypeOf<(...args: any[]) => any>();
+        expectTypeOf(auth.api.paystackWebhook).toExtend<(...args: any[]) => any>();
 	});
 
 	it("should handle specialized response types in unwrapSdkResult", () => {
