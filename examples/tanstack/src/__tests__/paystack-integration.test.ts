@@ -20,7 +20,7 @@ describe('TanStack Example - Paystack Integration', () => {
         invitation: [],
     };
 
-    beforeAll(async () => {
+    beforeAll(() => {
         vi.stubEnv('PAYSTACK_SECRET_KEY', 'sk_test_mock');
         vi.stubEnv('PAYSTACK_WEBHOOK_SECRET', 'whsec_test_mock');
 

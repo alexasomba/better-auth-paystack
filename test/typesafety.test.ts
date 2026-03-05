@@ -59,7 +59,7 @@ describe("Paystack Deep Typesafety", () => {
         });
 
         // Verify the plugin inference
-        expectTypeOf(auth.api.paystackWebhook).toBeFunction();
+        expectTypeOf(auth.api.paystackWebhook).toMatchTypeOf<(...args: any[]) => any>();
 	});
 
 	it("should handle specialized response types in unwrapSdkResult", () => {
