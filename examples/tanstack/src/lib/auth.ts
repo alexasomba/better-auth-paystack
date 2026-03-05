@@ -176,7 +176,7 @@ export const auth = betterAuth({
 
                             // User is a member of this organization
                             if (members.length > 0) {
-                                const member = members[0] as any;
+                                const member = members[0];
                                 // Only owners and admins can manage billing
                                 return member.role === "owner" || member.role === "admin";
                             }

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import PaymentManager from '@/components/dashboard/PaymentManager'
 import { authClient } from '@/lib/auth-client'
 

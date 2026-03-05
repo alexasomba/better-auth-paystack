@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,7 +34,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 interface Transaction {
     id: string;

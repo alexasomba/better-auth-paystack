@@ -2,51 +2,52 @@ export const paystackClient = (_options) => {
     return {
         id: "paystack",
         $InferServerPlugin: {},
-        getActions: ($fetch) => {
+        getActions: ($fetch, _$store, _options) => {
+            const fetch = $fetch;
             const initializeTransaction = async (data, options) => {
-                return $fetch("paystack/initialize-transaction", {
+                return fetch("paystack/initialize-transaction", {
                     method: "POST",
                     body: data,
                     ...options,
                 });
             };
             const verifyTransaction = async (data, options) => {
-                return $fetch("paystack/verify-transaction", {
+                return fetch("paystack/verify-transaction", {
                     method: "POST",
                     body: data,
                     ...options,
                 });
             };
             const listTransactions = async (data = {}, options) => {
-                return $fetch("paystack/list-transactions", {
+                return fetch("paystack/list-transactions", {
                     method: "GET",
                     query: data.query,
                     ...options,
                 });
             };
             const listSubscriptions = async (data = {}, options) => {
-                return $fetch("paystack/list-subscriptions", {
+                return fetch("paystack/list-subscriptions", {
                     method: "GET",
                     query: data.query,
                     ...options,
                 });
             };
             const getSubscriptionManageLink = async (data, options) => {
-                return $fetch("paystack/get-subscription-manage-link", {
+                return fetch("paystack/get-subscription-manage-link", {
                     method: "GET",
                     query: data,
                     ...options,
                 });
             };
             const cancelSubscription = async (data, options) => {
-                return $fetch("paystack/disable-subscription", {
+                return fetch("paystack/disable-subscription", {
                     method: "POST",
                     body: data,
                     ...options,
                 });
             };
             const restoreSubscription = async (data, options) => {
-                return $fetch("paystack/enable-subscription", {
+                return fetch("paystack/enable-subscription", {
                     method: "POST",
                     body: data,
                     ...options,
@@ -110,28 +111,28 @@ export const paystackClient = (_options) => {
                     listSubscriptions,
                     getSubscriptionManageLink,
                     getConfig: async () => {
-                        return $fetch("paystack/get-config", {
+                        return fetch("paystack/get-config", {
                             method: "GET",
                         });
                     },
                     syncProducts: async () => {
-                        return $fetch("paystack/sync-products", {
+                        return fetch("paystack/sync-products", {
                             method: "POST",
                         });
                     },
                     syncPlans: async () => {
-                        return $fetch("paystack/sync-plans", {
+                        return fetch("paystack/sync-plans", {
                             method: "POST",
                         });
                     },
                     listProducts: async (options) => {
-                        return $fetch("paystack/list-products", {
+                        return fetch("paystack/list-products", {
                             method: "GET",
                             ...options,
                         });
                     },
                     listPlans: async (options) => {
-                        return $fetch("paystack/list-plans", {
+                        return fetch("paystack/list-plans", {
                             method: "GET",
                             ...options,
                         });

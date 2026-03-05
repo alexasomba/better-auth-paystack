@@ -33,15 +33,15 @@ describe("paystack type", () => {
 	});
 
 	it("should api endpoint exist", () => {
-		expectTypeOf(auth.api.paystackWebhook).toBeFunction();
+		expectTypeOf(auth.api.paystackWebhook).toExtend<(...args: any[]) => any>();
 	});
 
 	it("should expose typed transaction routes on authClient", () => {
-		expectTypeOf(authClient.paystack.initializeTransaction).toBeFunction();
-		expectTypeOf(authClient.paystack.verifyTransaction).toBeFunction();
-		expectTypeOf(authClient.subscription.upgrade).toBeFunction();
-		expectTypeOf(authClient.subscription.cancel).toBeFunction();
-		expectTypeOf(authClient.subscription.list).toBeFunction();
+		expectTypeOf(authClient.paystack.initializeTransaction).toExtend<(...args: any[]) => any>();
+		expectTypeOf(authClient.paystack.verifyTransaction).toExtend<(...args: any[]) => any>();
+		expectTypeOf(authClient.subscription.upgrade).toExtend<(...args: any[]) => any>();
+		expectTypeOf(authClient.subscription.cancel).toExtend<(...args: any[]) => any>();
+		expectTypeOf(authClient.subscription.list).toExtend<(...args: any[]) => any>();
 	});
 });
 

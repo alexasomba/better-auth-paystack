@@ -542,7 +542,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                     // 2. Fetch old plan/amount
                     let oldAmount = 0;
                     if (existingSub.plan) {
-                        const oldPlan = await getPlanByName(options, existingSub.plan) || await (ctx.context.adapter).findOne({ model: "paystackPlan", where: [{ field: "name", value: existingSub.plan }] });
+                        const oldPlan = (await getPlanByName(options, existingSub.plan)) ?? await (ctx.context.adapter).findOne({ model: "paystackPlan", where: [{ field: "name", value: existingSub.plan }] });
                         if (oldPlan) {
                             const oldSeatCount = existingSub.seats ?? 1;
                             oldAmount = (oldPlan.amount ?? 0) + (oldSeatCount * (oldPlan.seatAmount ?? oldPlan.seatPriceId ?? 0));
@@ -562,7 +562,7 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                     // 4. Calculate Difference & Charge
                     const costDifference = newAmount - oldAmount;
                     if (costDifference > 0 && remainingDays > 0) {
-                        let proratedAmount = Math.round((costDifference / totalDays) * remainingDays);
+                        const proratedAmount = Math.round((costDifference / totalDays) * remainingDays);
                         // Ensure minimum Paystack charge limit is met (50 NGN -> 5000)
                         if (proratedAmount >= 5000) {
                             const ops = getPaystackOps(options.paystackClient);
@@ -580,11 +580,9 @@ export const initializeTransaction = (options, path = "/paystack/initialize-tran
                                 },
                             });
                             const chargeRes = unwrapSdkResult(chargeResRaw);
-                            let chargeData = chargeRes;
-                            if (chargeData !== undefined && chargeData !== null && "data" in chargeData) {
-                                chargeData = chargeData.data ?? chargeData;
-                            }
-                            if (chargeData?.status !== "success") {
+                            const chargeData = chargeRes;
+                            const actualStatus = chargeData?.data?.status ?? chargeData?.status;
+                            if (actualStatus !== "success") {
                                 throw new APIError("BAD_REQUEST", { message: "Failed to process prorated charge via saved authorization." });
                             }
                         }
