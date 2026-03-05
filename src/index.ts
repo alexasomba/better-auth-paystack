@@ -35,6 +35,9 @@ import type {
 	SubscriptionOptions,
 	PaystackProduct,
 	PaystackCustomerResponse,
+	Member,
+	AnyPaystackOptions,
+	User,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
@@ -49,14 +52,13 @@ const INTERNAL_ERROR_CODES = defineErrorCodes({
 
 export const paystack = <
 	TPaystackClient extends PaystackClientLike = PaystackNodeClient,
-	TMetadata = Record<string, unknown>,
-	TLimits = Record<string, unknown>,
+	TMetadata extends Record<string, unknown> = Record<string, unknown>,
+	TLimits extends Record<string, unknown> = Record<string, unknown>,
 	O extends PaystackOptions<TPaystackClient, TMetadata, TLimits> = PaystackOptions<TPaystackClient, TMetadata, TLimits>,
 >(
 		options: O,
 	) => {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const routeOptions = options as any;
+	const routeOptions = options as unknown as AnyPaystackOptions;
 	const res = {
 		id: "paystack",
 		endpoints: {
@@ -88,7 +90,7 @@ export const paystack = <
 						user: {
 							create: {
 								async after(user: { id: string; email?: string | null; name?: string | null }, hookCtx?: GenericEndpointContext | null) {
-									if (hookCtx === undefined || hookCtx === null || options.createCustomerOnSignUp !== true || !user.email) return;
+									if (!hookCtx || options.createCustomerOnSignUp !== true || user.email === null || user.email === undefined || user.email === "") return;
 
 									const paystackOps = getPaystackOps(options.paystackClient as PaystackClientLike);
 									const raw = await paystackOps.customerCreate({
@@ -102,10 +104,10 @@ export const paystack = <
 									const customerCode = (sdkRes?.customer_code as string | undefined)
 										?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
-									if (customerCode === undefined || customerCode === null) {
+									if (customerCode === "" || customerCode === null || customerCode === undefined) {
 										return;
 									}
-									await (ctx.adapter as any).update({
+									await ctx.adapter.update({
 										model: "user",
 										where: [{ field: "id", value: user.id }],
 										update: {
@@ -126,15 +128,15 @@ export const paystack = <
 
 											let targetEmail = org.email;
 											if (targetEmail === undefined || targetEmail === null) {
-												const ownerMember = await (ctx.adapter as any).findOne({
+												const ownerMember = await ctx.adapter.findOne<Member>({
 													model: "member",
 													where: [
 														{ field: "organizationId", value: org.id },
 														{ field: "role", value: "owner" }
 													]
 												});
-												if (ownerMember !== null && ownerMember !== undefined) {
-													const ownerUser = await (ctx.adapter as any).findOne({
+												if (ownerMember) {
+													const ownerUser = await ctx.adapter.findOne<User>({
 														model: "user",
 														where: [{ field: "id", value: ownerMember.userId }]
 													});
@@ -158,16 +160,15 @@ export const paystack = <
 											const customerCode = (sdkRes?.customer_code as string | undefined)
 												?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
-											if (customerCode === undefined || customerCode === null) return;
+											if (customerCode === "" || customerCode === null || customerCode === undefined || sdkRes === null || sdkRes === undefined) return;
 
-											// eslint-disable-next-line @typescript-eslint/no-explicit-any
-											await (ctx.internalAdapter as any).updateOrganization(org.id, {
+											await (ctx.internalAdapter as unknown as { updateOrganization: (id: string, data: Record<string, unknown>) => Promise<void> }).updateOrganization(org.id, {
 												paystackCustomerCode: customerCode,
 											});
 
 											await options.organization?.onCustomerCreate?.(
 												{
-													paystackCustomer: sdkRes as unknown as PaystackCustomerResponse,
+													paystackCustomer: sdkRes,
 													organization: {
 														...org,
 														paystackCustomerCode: customerCode,
@@ -191,15 +192,15 @@ export const paystack = <
 								}
 							},
 							after: async (member: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
-								if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-									await syncSubscriptionSeats(ctx, member.organizationId, options);
+								if (options.subscription?.enabled === true && typeof member?.organizationId === "string" && ctx) {
+									await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
 								}
 							},
 						},
 						delete: {
 							after: async (member: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
-								if (options.subscription?.enabled === true && (member?.organizationId !== undefined && member?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-									await syncSubscriptionSeats(ctx, member.organizationId, options);
+								if (options.subscription?.enabled === true && typeof member?.organizationId === "string" && ctx) {
+									await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
 								}
 							},
 						}
@@ -212,15 +213,15 @@ export const paystack = <
 								}
 							},
 							after: async (invitation: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
-								if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-									await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+								if (options.subscription?.enabled === true && typeof invitation?.organizationId === "string" && ctx) {
+									await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
 								}
 							},
 						},
 						delete: {
 							after: async (invitation: { organizationId: string | undefined }, ctx: GenericEndpointContext | null | undefined) => {
-								if (options.subscription?.enabled === true && (invitation?.organizationId !== undefined && invitation?.organizationId !== null) && (ctx !== undefined && ctx !== null)) {
-									await syncSubscriptionSeats(ctx, invitation.organizationId, options);
+								if (options.subscription?.enabled === true && typeof invitation?.organizationId === "string" && ctx) {
+									await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
 								}
 							},
 						}
@@ -228,10 +229,10 @@ export const paystack = <
 					team: {
 						create: {
 							before: async (team: { organizationId: string }, ctx: GenericEndpointContext | null | undefined) => {
-								if (options.subscription?.enabled === true && team.organizationId && ctx !== null && ctx !== undefined) {
+								if (options.subscription?.enabled === true && team.organizationId && ctx) {
 									const subscription = await getOrganizationSubscription(ctx, team.organizationId);
-									if (subscription !== null && subscription !== undefined) {
-										const plan = await getPlanByName(options, subscription.plan);
+									if (subscription) {
+										const plan = await getPlanByName(routeOptions, subscription.plan);
 										const limits = plan?.limits;
 										const maxTeams = limits?.teams as number | undefined;
 
@@ -253,11 +254,12 @@ export const paystack = <
 };
 
 export type PaystackPlugin<
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	O extends PaystackOptions<PaystackClientLike, any, any> = PaystackOptions,
+	TPaystackClient extends PaystackClientLike = PaystackNodeClient,
+	TMetadata extends Record<string, unknown> = Record<string, unknown>,
+	TLimits extends Record<string, unknown> = Record<string, unknown>,
+	O extends PaystackOptions<TPaystackClient, TMetadata, TLimits> = PaystackOptions<TPaystackClient, TMetadata, TLimits>,
 > = ReturnType<
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	typeof paystack<PaystackClientLike, any, any, O>
+	typeof paystack<TPaystackClient, TMetadata, TLimits, O>
 >;
 
 export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };

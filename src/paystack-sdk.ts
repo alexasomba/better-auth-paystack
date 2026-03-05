@@ -144,7 +144,7 @@ export function getPaystackOps(
 		},
 		subscriptionUpdate: (params: { code: string; plan?: string; authorization?: string; amount?: number }) => {
 			if (paystackClient?.subscription_update !== undefined) {
-				return (paystackClient.subscription_update as any)({
+				return (paystackClient.subscription_update as unknown as (args: Record<string, unknown>) => Promise<unknown>)({
 					params: { path: { code: params.code } },
 					body: {
 						plan: params.plan,

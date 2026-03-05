@@ -28,6 +28,10 @@ test/**/*.d.ts.map
 
 .tmp
 tmp
+src/**/*.js
+src/**/*.d.ts
+src/**/*.d.ts.map
+lint-results*
 docs/
 test_output.txt
 test_output*
