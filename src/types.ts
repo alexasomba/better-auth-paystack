@@ -11,6 +11,9 @@ import type { organization, subscriptions, user } from "./schema";
 
 export type { GenericEndpointContext, DBAdapter };
 export type { InferOptionSchema, Session, User };
+export interface PaystackUser extends User {
+	paystackCustomerCode?: string;
+}
 
 export type PaystackNodeClient = ReturnType<typeof createPaystack>;
 export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
@@ -565,4 +568,5 @@ export interface Member {
     [key: string]: unknown;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyPaystackOptions = PaystackOptions<PaystackClientLike, any, any>;

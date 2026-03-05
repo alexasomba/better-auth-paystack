@@ -7,10 +7,10 @@ import { createAuthClient } from "better-auth/client";
 import { setCookieToHeader } from "better-auth/cookies";
 import { bearer, organization } from "better-auth/plugins";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import type { DBAdapter } from "@better-auth/core/db/adapter";
 
 import { paystackClient } from "./client";
-import type { PaystackClientLike, PaystackOptions, User, Subscription } from "./types";
-
+import type { Subscription, PaystackOptions, PaystackClientLike, PaystackUser } from "./types";
 
 import { paystack } from ".";
 
@@ -154,8 +154,8 @@ describe("paystack", () => {
 		});
 
 		const ctx = await auth.$context;
-		const authBase = ((ctx as Record<string, unknown>).baseURL as string | undefined) ?? "http://localhost:3000/api/auth";
-		const _authBaseUrl = authBase.endsWith("/") ? authBase : `${authBase}/`;
+		const authBase = (ctx.baseURL as string | undefined) ?? "http://localhost:3000/api/auth";
+		const _authBaseUrl = authBase.endsWith("/") === true ? authBase : `${authBase}/`;
 		const authClient = createAuthClient({
 			baseURL: "http://localhost:3000",
 			plugins: [bearer(), paystackClient({ subscription: false })],
@@ -174,11 +174,11 @@ describe("paystack", () => {
 		expect(res.user.id).toBeDefined();
 		expect(paystackSdk.customer_create).toHaveBeenCalledTimes(1);
 
-		const dbUser = await (ctx.adapter as any).findOne({
+		const dbUser = await (ctx.adapter as unknown as DBAdapter).findOne({
 			model: "user",
 			where: [{ field: "id", value: res.user.id }],
-		}) as User | null;
-		expect((dbUser as Record<string, unknown>)?.paystackCustomerCode).toBe("CUS_test_123");
+		});
+		expect((dbUser as PaystackUser | null)?.paystackCustomerCode).toBe("CUS_test_123");
 	});
 
 	it("should disable subscription without emailToken by fetching it", async () => {
@@ -245,7 +245,7 @@ describe("paystack", () => {
 			headers
 		});
 
-		if (res.error) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
+		if (res.error !== null) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
 		expect(res.data?.status).toBe("success");
 		expect(paystackSdk.subscription_fetch).toHaveBeenCalledTimes(1);
 		expect(paystackSdk.subscription_disable).toHaveBeenCalledWith({
@@ -317,7 +317,7 @@ describe("paystack", () => {
 			headers
 		});
 
-		if (res.error) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
+		if (res.error !== null) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
 		expect(res.data?.status).toBe("success");
 		expect(paystackSdk.subscription_fetch).toHaveBeenCalledTimes(1);
 		expect(paystackSdk.subscription_enable).toHaveBeenCalledWith({
@@ -366,7 +366,7 @@ describe("paystack", () => {
 
 		// Manually create a subscription in DB
 		const ctx = await auth.$context;
-		await (ctx.adapter as any).create({
+		await (ctx.adapter as unknown as DBAdapter).create({
 			model: "subscription",
 			data: {
 				plan: "starter",
@@ -563,8 +563,8 @@ describe("paystack", () => {
 		});
 
 		const ctx = await auth.$context;
-		const authBase = ((ctx as Record<string, unknown>).baseURL as string | undefined) ?? "http://localhost:3000/api/auth";
-		const authBaseUrl = authBase.endsWith("/") ? authBase : `${authBase}/`;
+		const authBase = (ctx.baseURL as string | undefined) ?? "http://localhost:3000/api/auth";
+		const authBaseUrl = authBase.endsWith("/") === true ? authBase : `${authBase}/`;
 
 		const authClient = createAuthClient({
 			baseURL: "http://localhost:3000",
@@ -632,7 +632,7 @@ describe("paystack", () => {
 		expect(initRes.status).toBe(200);
 
 		const subA0 = (
-			await (ctx.adapter as any).findMany({
+			await (ctx.adapter as unknown as DBAdapter).findMany({
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: aRes.user.id },
@@ -667,7 +667,7 @@ describe("paystack", () => {
 		expect(verifyResB.status).toBe(401);
 
 		const subA1 = (
-			await (ctx.adapter as any).findMany({
+			await (ctx.adapter as unknown as DBAdapter).findMany({
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: aRes.user.id },
@@ -701,7 +701,7 @@ describe("paystack", () => {
 		expect(verifyResA.status).toBe(200);
 
 		const subA2 = (
-			await (ctx.adapter as any).findMany({
+			await (ctx.adapter as unknown as DBAdapter).findMany({
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: aRes.user.id },
@@ -713,7 +713,7 @@ describe("paystack", () => {
 
 		// Sanity: user B doesn't have a subscription row for this reference.
 		const subB = (
-			await (ctx.adapter as any).findMany({
+			await (ctx.adapter as unknown as DBAdapter).findMany({
 				model: "subscription",
 				where: [
 					{ field: "referenceId", value: bRes.user.id },

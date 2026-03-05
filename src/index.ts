@@ -104,7 +104,7 @@ export const paystack = <
 									const customerCode = (sdkRes?.customer_code as string | undefined)
 										?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
-									if (!customerCode) {
+									if (customerCode === "" || customerCode === null || customerCode === undefined) {
 										return;
 									}
 									await ctx.adapter.update({
@@ -160,7 +160,7 @@ export const paystack = <
 											const customerCode = (sdkRes?.customer_code as string | undefined)
 												?? (sdkRes?.data as Record<string, unknown>)?.customer_code as string | undefined;
 
-											if (!customerCode || !sdkRes) return;
+											if (customerCode === "" || customerCode === null || customerCode === undefined || sdkRes === null || sdkRes === undefined) return;
 
 											await (ctx.internalAdapter as unknown as { updateOrganization: (id: string, data: Record<string, unknown>) => Promise<void> }).updateOrganization(org.id, {
 												paystackCustomerCode: customerCode,
