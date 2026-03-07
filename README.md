@@ -4,7 +4,7 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 
 <div align="center">
 
-![npm downloads](https://img.shields.io/npm/dm/better-auth-paystack.svg)
+![npm downloads](https://img.shields.io/npm/dm/@alexasomba/better-auth-paystack.svg)
 [![GitHub stars](https://img.shields.io/github/stars/alexasomba/better-auth-paystack.svg?style=social&label=Star)](https://github.com/alexasomba/better-auth-paystack/stargazers)
 [![GitHub release](https://img.shields.io/github/v/release/alexasomba/better-auth-paystack)](https://github.com/alexasomba/better-auth-paystack/releases)
 [![Follow on Twitter](https://img.shields.io/twitter/follow/alexasomba?style=social)](https://twitter.com/alexasomba)
