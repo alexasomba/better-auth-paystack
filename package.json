@@ -103,7 +103,7 @@
     "@better-auth/core": "^1.5.3",
     "@better-fetch/fetch": "^1.1.21",
     "@eslint/compat": "^2.0.2",
-    "@eslint/js": "^9.39.3",
+    "@eslint/js": "^10.0.1",
     "@rollup/rollup-linux-x64-gnu": "^4.59.0",
     "@types/node": "^22.19.13",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
