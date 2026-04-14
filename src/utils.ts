@@ -1,6 +1,12 @@
 import type { GenericEndpointContext } from "better-auth";
 
-import type { AnyPaystackOptions, PaystackClientLike, PaystackProduct, Subscription, PaystackProductResponse } from "./types";
+import type {
+	AnyPaystackOptions,
+	PaystackClientLike,
+	PaystackProduct,
+	Subscription,
+	PaystackProductResponse,
+} from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
 export async function getPlans(subscriptionOptions: AnyPaystackOptions["subscription"]) {
@@ -23,9 +29,7 @@ export const getPlan = async (options: AnyPaystackOptions, planId: string) => {
 export async function getPlanByName(options: AnyPaystackOptions, name: string) {
 	if (options.subscription?.enabled === true) {
 		const plans = await getPlans(options.subscription);
-		return plans.find(
-			(plan) => plan.name.toLowerCase() === name.toLowerCase(),
-		) ?? null;
+		return plans.find((plan) => plan.name.toLowerCase() === name.toLowerCase()) ?? null;
 	}
 	return null;
 }
@@ -38,7 +42,6 @@ export async function getPlanByPriceId(options: AnyPaystackOptions, priceId: str
 	return null;
 }
 
-
 export async function getProducts(productOptions: AnyPaystackOptions["products"]) {
 	if (productOptions?.products) {
 		return typeof productOptions.products === "function"
@@ -49,8 +52,9 @@ export async function getProducts(productOptions: AnyPaystackOptions["products"]
 }
 
 export async function getProductByName(options: AnyPaystackOptions, name: string) {
-	return await getProducts(options.products).then((products) =>
-		products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null,
+	return await getProducts(options.products).then(
+		(products) =>
+			products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null,
 	);
 }
 
@@ -89,11 +93,11 @@ export function getNextPeriodEnd(startDate: Date, interval: string): Date {
 export function validateMinAmount(amount: number, currency: string): boolean {
 	const minAmounts: Record<string, number> = {
 		NGN: 5000, // 50.00
-		GHS: 10,   // 0.10
-		ZAR: 100,  // 1.00
-		KES: 300,  // 3.00
-		USD: 200,  // 2.00
-		XOF: 100,  // 1.00
+		GHS: 10, // 0.10
+		ZAR: 100, // 1.00
+		KES: 300, // 3.00
+		USD: 200, // 2.00
+		XOF: 100, // 1.00
 	};
 	const min = minAmounts[currency.toUpperCase()];
 	return min !== undefined ? amount >= min : true;
@@ -115,9 +119,18 @@ export async function syncProductQuantityFromPaystack(
 		where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
 	});
 
-	if (localProduct?.paystackId === undefined || localProduct.paystackId === null || localProduct.paystackId === "") {
+	if (
+		localProduct?.paystackId === undefined ||
+    localProduct.paystackId === null ||
+    localProduct.paystackId === ""
+	) {
 		// No local record with a Paystack ID — fall back to local decrement
-		if (localProduct !== null && localProduct.unlimited !== true && typeof localProduct.quantity === "number" && localProduct.quantity > 0) {
+		if (
+			localProduct !== null &&
+      localProduct.unlimited !== true &&
+      typeof localProduct.quantity === "number" &&
+      localProduct.quantity > 0
+		) {
 			await ctx.context.adapter.update({
 				model: "paystackProduct",
 				update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
@@ -143,7 +156,12 @@ export async function syncProductQuantityFromPaystack(
 		}
 	} catch {
 		// If API call fails, fall back to local decrement
-		if (localProduct !== null && localProduct.unlimited !== true && typeof localProduct.quantity === "number" && localProduct.quantity > 0) {
+		if (
+			localProduct !== null &&
+      localProduct.unlimited !== true &&
+      typeof localProduct.quantity === "number" &&
+      localProduct.quantity > 0
+		) {
 			await ctx.context.adapter.update({
 				model: "paystackProduct",
 				update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
@@ -165,7 +183,11 @@ export async function decrementProductQuantity(ctx: GenericEndpointContext, prod
 	});
 
 	if (product) {
-		if (product.unlimited !== true && typeof product.quantity === "number" && product.quantity > 0) {
+		if (
+			product.unlimited !== true &&
+      typeof product.quantity === "number" &&
+      product.quantity > 0
+		) {
 			await ctx.context.adapter.update({
 				model: "paystackProduct",
 				update: {
@@ -191,12 +213,17 @@ export async function syncSubscriptionSeats(
 		where: [{ field: "referenceId", value: organizationId }],
 	});
 
-	if (subscription?.paystackSubscriptionCode === undefined || subscription.paystackSubscriptionCode === null || subscription.paystackSubscriptionCode === "") return;
+	if (
+		subscription?.paystackSubscriptionCode === undefined ||
+    subscription.paystackSubscriptionCode === null ||
+    subscription.paystackSubscriptionCode === ""
+	)
+		return;
 	const plan = await getPlanByName(options, subscription.plan);
 	if (plan === null) return;
 	if (plan.seatAmount === undefined && plan.seatPlanCode === undefined) return;
 
-	const members = await (adapter).findMany({
+	const members = await adapter.findMany({
 		model: "member",
 		where: [{ field: "organizationId", value: organizationId }],
 	});
@@ -204,8 +231,12 @@ export async function syncSubscriptionSeats(
 	const quantity = members.length;
 	let totalAmount = plan.amount ?? 0;
 
-	if (plan.seatAmount !== undefined && plan.seatAmount !== null && typeof plan.seatAmount === "number") {
-		totalAmount += (quantity * plan.seatAmount);
+	if (
+		plan.seatAmount !== undefined &&
+    plan.seatAmount !== null &&
+    typeof plan.seatAmount === "number"
+	) {
+		totalAmount += quantity * plan.seatAmount;
 	}
 
 	const ops = getPaystackOps(options.paystackClient);
@@ -218,7 +249,7 @@ export async function syncSubscriptionSeats(
 		});
 
 		// Update local DB to reflect current seat count
-		await (adapter).update({
+		await adapter.update({
 			model: "subscription",
 			where: [{ field: "id", value: subscription.id }],
 			update: {

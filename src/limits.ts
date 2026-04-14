@@ -5,7 +5,7 @@ import type { Subscription } from "./types";
 
 export const getOrganizationSubscription = async (
 	ctx: GenericEndpointContext,
-	organizationId: string
+	organizationId: string,
 ): Promise<Subscription | null> => {
 	const subscription = await ctx.context.adapter.findOne<Subscription>({
 		model: "subscription",
@@ -17,10 +17,10 @@ export const getOrganizationSubscription = async (
 export const checkSeatLimit = async (
 	ctx: GenericEndpointContext,
 	organizationId: string,
-	seatsToAdd = 1
+	seatsToAdd = 1,
 ) => {
 	const subscription = await getOrganizationSubscription(ctx, organizationId);
-    
+
 	if (subscription?.seats === undefined || subscription.seats === null) {
 		return true; // No explicit seat limit found
 	}
@@ -32,7 +32,7 @@ export const checkSeatLimit = async (
 
 	if (members.length + seatsToAdd > subscription.seats) {
 		throw new APIError("FORBIDDEN", {
-			message: `Organization member limit reached. Used: ${members.length}, Max: ${subscription.seats}`
+			message: `Organization member limit reached. Used: ${members.length}, Max: ${subscription.seats}`,
 		});
 	}
 
@@ -42,7 +42,7 @@ export const checkSeatLimit = async (
 export const checkTeamLimit = async (
 	ctx: GenericEndpointContext,
 	organizationId: string,
-	maxTeams: number
+	maxTeams: number,
 ) => {
 	const teams = await ctx.context.adapter.findMany({
 		model: "team",
@@ -51,7 +51,7 @@ export const checkTeamLimit = async (
 
 	if (teams.length >= maxTeams) {
 		throw new APIError("FORBIDDEN", {
-			message: `Organization team limit reached. Max teams: ${maxTeams}`
+			message: `Organization team limit reached. Max teams: ${maxTeams}`,
 		});
 	}
 

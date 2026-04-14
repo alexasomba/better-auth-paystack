@@ -32,8 +32,8 @@ describe("Local Custom Subscriptions", () => {
 					name: "native-starter",
 					amount: 500000,
 					interval: "monthly",
-					planCode: "PLN_native_123"
-				}
+					planCode: "PLN_native_123",
+				},
 			],
 		},
 	} satisfies PaystackOptions<PaystackClientLike>;
@@ -76,7 +76,7 @@ describe("Local Custom Subscriptions", () => {
 		const signUp = await authClient.signUp.email(testUser, { throw: true });
 		const headers = new Headers();
 		await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
-		
+
 		// Mock transaction verify response
 		paystackSdk.transaction_verify.mockResolvedValue({
 			data: {
@@ -130,7 +130,7 @@ describe("Local Custom Subscriptions", () => {
 
 		await authClient.paystack.verifyTransaction({ reference: "ref_local_123" }, { headers });
 
-		const sub = data.subscription.find(s => (s as any).id === subRecord.id) as any;
+		const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
 
 		expect(sub.status).toBe("active");
 		expect(sub.paystackAuthorizationCode).toBe("AUTH_local_token_123");
@@ -141,7 +141,7 @@ describe("Local Custom Subscriptions", () => {
 		const testUser = { email: "recurring@test.com", password: "password", name: "Recurring User" };
 		const signUp = await authClient.signUp.email(testUser, { throw: true });
 		const userId = signUp.user.id;
-        
+
 		const ctx = await auth.$context;
 		const sub = await (ctx.adapter as any).create({
 			model: "subscription",
@@ -166,17 +166,19 @@ describe("Local Custom Subscriptions", () => {
 			},
 		});
 
-		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/charge-recurring", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ subscriptionId: sub.id }),
-		}));
+		const res = await auth.handler(
+			new Request("http://localhost:3000/api/auth/paystack/charge-recurring", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ subscriptionId: sub.id }),
+			}),
+		);
 
 		expect(res.status).toBe(200);
 		const json = await res.json();
 		expect(json.status).toBe("success");
 
-		const updatedSub = data.subscription.find(s => (s as any).id === sub.id) as any;
+		const updatedSub = data.subscription.find((s) => (s as any).id === sub.id) as any;
 		expect(updatedSub.paystackTransactionReference).toBe("ref_recurring_456");
 		expect(new Date(updatedSub.periodEnd).getTime()).toBeGreaterThan(Date.now());
 	});
@@ -184,7 +186,7 @@ describe("Local Custom Subscriptions", () => {
 	it("should reject recurring charge if amount is below minimum", async () => {
 		const testUser = { email: "below-min@test.com", password: "password", name: "Min User" };
 		const signUp = await authClient.signUp.email(testUser, { throw: true });
-        
+
 		const ctx = await auth.$context;
 		const sub = await (ctx.adapter as any).create({
 			model: "subscription",
@@ -199,17 +201,19 @@ describe("Local Custom Subscriptions", () => {
 			},
 		});
 
-		// Local starter is 500000 kobo (5000 NGN). 
+		// Local starter is 500000 kobo (5000 NGN).
 		// Let's try to charge 1000 kobo (10 NGN) which is below 5000 kobo (50 NGN) minimum.
 		// Note: The plan defined in options has amount: 500000.
 		// Our charge-recurring uses the plan's amount.
 		// To test this effectively, we'd need a plan with a very low amount in its definition.
-		
-		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/charge-recurring", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ subscriptionId: sub.id, amount: 1000 }), // Override amount to be below min
-		}));
+
+		const res = await auth.handler(
+			new Request("http://localhost:3000/api/auth/paystack/charge-recurring", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ subscriptionId: sub.id, amount: 1000 }), // Override amount to be below min
+			}),
+		);
 
 		expect(res.status).toBe(400); // BAD_REQUEST
 		const json = await res.json();
@@ -272,7 +276,7 @@ describe("Local Custom Subscriptions", () => {
 
 		await authClient.paystack.verifyTransaction({ reference: "ref_local_trial_123" }, { headers });
 
-		const sub = data.subscription.find(s => (s as any).id === subRecord.id) as any;
+		const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
 
 		expect(sub.status).toBe("trialing");
 		expect(sub.paystackSubscriptionCode).toBe("LOC_ref_local_trial_123");
@@ -285,7 +289,7 @@ describe("Local Custom Subscriptions", () => {
 		const testUser = { email: "cancel-local@test.com", password: "password", name: "Cancel User" };
 		const signUp = await authClient.signUp.email(testUser, { throw: true });
 		const userId = signUp.user.id;
-		
+
 		const headers = new Headers();
 		await authClient.signIn.email(testUser, {
 			throw: true,
@@ -306,13 +310,16 @@ describe("Local Custom Subscriptions", () => {
 			},
 		});
 
-		await authClient.paystack.subscription.cancel({
-			subscriptionCode: "LOC_ref_999",
-		}, { headers });
+		await authClient.paystack.subscription.cancel(
+			{
+				subscriptionCode: "LOC_ref_999",
+			},
+			{ headers },
+		);
 
 		expect(paystackSdk.subscription_disable).not.toHaveBeenCalled();
-		
-		const updatedSub = data.subscription.find(s => (s as any).id === subRecord.id) as any;
+
+		const updatedSub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
 		expect(updatedSub.status).toBe("active");
 		expect(updatedSub.cancelAtPeriodEnd).toBe(true);
 	});

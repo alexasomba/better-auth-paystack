@@ -71,7 +71,7 @@ describe("Issue #60: Subscription Cancellation Logic", () => {
 		};
 
 		const signUpRes = await authClient.signUp.email(testUser, { throw: true });
-		
+
 		const headers = new Headers();
 		await authClient.signIn.email(testUser, {
 			throw: true,
@@ -89,28 +89,29 @@ describe("Issue #60: Subscription Cancellation Logic", () => {
 				paystackSubscriptionCode: "SUB_cancel_test",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			} as unknown as Subscription
+			} as unknown as Subscription,
 		});
 
-		const res = await authClient.paystack.subscription.cancel({
-			subscriptionCode: "SUB_cancel_test",
-		}, {
-			headers
-		});
+		const res = await authClient.paystack.subscription.cancel(
+			{
+				subscriptionCode: "SUB_cancel_test",
+			},
+			{
+				headers,
+			},
+		);
 
 		console.log(res);
 		const sub = (
-			await (ctx.adapter as any).findMany({
-				model: "subscription",
-				where: [
-					{ field: "paystackSubscriptionCode", value: "SUB_cancel_test" },
-				],
-			})
-		)?.[0] as Subscription | undefined;
+      await (ctx.adapter as any).findMany({
+      	model: "subscription",
+      	where: [{ field: "paystackSubscriptionCode", value: "SUB_cancel_test" }],
+      })
+    )?.[0] as Subscription | undefined;
 
 		expect(sub).toBeDefined();
 		// FAILURE EXPECTED HERE with current code:
-		expect(sub?.status).toBe("active"); 
+		expect(sub?.status).toBe("active");
 		expect(sub?.cancelAtPeriodEnd).toBe(true);
 		expect(sub?.periodEnd).toEqual(nextPaymentDate);
 		console.log("FETCH CALLS:", paystackSdk.subscription_fetch.mock.calls);

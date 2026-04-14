@@ -38,11 +38,11 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={async () => {
-                   await authClient.signIn.anonymous();
-                   router.navigate({ to: "/dashboard" });
+                  await authClient.signIn.anonymous();
+                  router.navigate({ to: "/dashboard" });
                 }}
               >
                 Guest Sign In

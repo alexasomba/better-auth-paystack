@@ -7,19 +7,19 @@ import type { PaystackClientLike, PaystackOptions, Session, User } from "./types
 export const referenceMiddleware = (
 	options: PaystackOptions<PaystackClientLike>,
 	action:
-        | "initialize-transaction"
-        | "verify-transaction"
-        | "list-subscriptions"
-        | "list-transactions"
-        | "disable-subscription"
-        | "enable-subscription"
-        | "get-subscription-manage-link",
+    | "initialize-transaction"
+    | "verify-transaction"
+    | "list-subscriptions"
+    | "list-transactions"
+    | "disable-subscription"
+    | "enable-subscription"
+    | "get-subscription-manage-link",
 ) =>
 	createAuthMiddleware(async (ctx) => {
 		const session = ctx.context.session as {
-			user: User;
-			session: Session;
-		} | null;
+      user: User;
+      session: Session;
+    } | null;
 
 		if (session === null || session === undefined) {
 			throw new APIError("UNAUTHORIZED");
@@ -27,11 +27,11 @@ export const referenceMiddleware = (
 		const body = (ctx.body ?? {}) as Record<string, unknown>;
 		const query = (ctx.query ?? {}) as Record<string, unknown>;
 		const referenceId =
-            (body.referenceId as string | undefined) ?? (query.referenceId as string | undefined) ?? session.user.id;
-        
+      (body.referenceId as string | undefined) ??
+      (query.referenceId as string | undefined) ??
+      session.user.id;
+
 		const subscriptionOptions = options.subscription;
-
-
 
 		if (referenceId === session.user.id) {
 			return {
@@ -39,10 +39,12 @@ export const referenceMiddleware = (
 			};
 		}
 
-
-        
 		// 1. Try custom authorization first if provided
-		if (subscriptionOptions?.enabled === true && 'authorizeReference' in subscriptionOptions && subscriptionOptions.authorizeReference) {
+		if (
+			subscriptionOptions?.enabled === true &&
+      "authorizeReference" in subscriptionOptions &&
+      subscriptionOptions.authorizeReference
+		) {
 			const authorized = await subscriptionOptions.authorizeReference(
 				{
 					user: session.user,
@@ -70,10 +72,10 @@ export const referenceMiddleware = (
 				model: "member",
 				where: [
 					{ field: "userId", value: session.user.id },
-					{ field: "organizationId", value: referenceId }
-				]
+					{ field: "organizationId", value: referenceId },
+				],
 			});
-            
+
 			if (member !== null && member !== undefined) {
 				logger.debug("DEBUG MIDDLEWARE MEMBER FOUND:", member);
 				// User is a member of the organization.
@@ -89,6 +91,6 @@ export const referenceMiddleware = (
 		);
 		throw new APIError("BAD_REQUEST", {
 			message:
-                "Passing referenceId isn't allowed without subscription.authorizeReference or valid organization membership.",
+        "Passing referenceId isn't allowed without subscription.authorizeReference or valid organization membership.",
 		});
 	});

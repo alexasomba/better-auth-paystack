@@ -6,9 +6,9 @@ import { paystack } from "../src/index";
 async function run() {
 	const auth = betterAuth({
 		databaseHooks: {},
-		 
+
 		plugins: [paystack({ paystackWebhookSecret: "test", paystackClient: {} as any })],
-		databaseConfig: { adapter: memoryAdapter({}) }
+		databaseConfig: { adapter: memoryAdapter({}) },
 	});
 	const ctx = await auth.$context;
 
@@ -29,15 +29,14 @@ async function run() {
 	const updated = await ctx.adapter.update({
 		model: "subscription",
 		update: { status: "active" },
-		where: [{ field: "paystackTransactionReference", value: "ref_local_123" }]
+		where: [{ field: "paystackTransactionReference", value: "ref_local_123" }],
 	});
 	// eslint-disable-next-line no-console
 	console.log("Updated returned:", updated);
 
-	 
 	const check = await ctx.adapter.findOne<any>({
 		model: "subscription",
-		where: [{ field: "id", value: subRecord.id }]
+		where: [{ field: "id", value: subRecord.id }],
 	});
 	// eslint-disable-next-line no-console
 	console.log("Final check:", check?.status);

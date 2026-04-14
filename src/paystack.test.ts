@@ -1,4 +1,3 @@
-
 import { createHmac } from "node:crypto";
 
 import { betterAuth } from "better-auth";
@@ -46,7 +45,6 @@ describe("paystack type", () => {
 });
 
 describe("paystack", () => {
-	 
 	const data: Record<string, any[]> = {
 		user: [],
 		session: [],
@@ -238,12 +236,15 @@ describe("paystack", () => {
 			onSuccess: setCookieToHeader(headers),
 		});
 
-		const res = await authClient.paystack.subscription.disable({
-			subscriptionCode: "SUB_test_123",
-			// emailToken intentionally omitted to test fetching
-		}, {
-			headers
-		});
+		const res = await authClient.paystack.subscription.disable(
+			{
+				subscriptionCode: "SUB_test_123",
+				// emailToken intentionally omitted to test fetching
+			},
+			{
+				headers,
+			},
+		);
 
 		if (res.error !== null) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
 		expect(res.data?.status).toBe("success");
@@ -310,12 +311,15 @@ describe("paystack", () => {
 			onSuccess: setCookieToHeader(headers),
 		});
 
-		const res = await authClient.paystack.subscription.enable({
-			subscriptionCode: "SUB_test_123",
-			// emailToken intentionally omitted to test fetching
-		}, {
-			headers
-		});
+		const res = await authClient.paystack.subscription.enable(
+			{
+				subscriptionCode: "SUB_test_123",
+				// emailToken intentionally omitted to test fetching
+			},
+			{
+				headers,
+			},
+		);
 
 		if (res.error !== null) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
 		expect(res.data?.status).toBe("success");
@@ -375,12 +379,15 @@ describe("paystack", () => {
 				paystackSubscriptionCode: "SUB_list_123",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			} as unknown as Subscription
+			} as unknown as Subscription,
 		});
 
-		const res = await authClient.subscription.list({}, {
-			headers,
-		});
+		const res = await authClient.subscription.list(
+			{},
+			{
+				headers,
+			},
+		);
 
 		expect(res.data?.subscriptions).toHaveLength(1);
 		expect(res.data?.subscriptions[0].paystackSubscriptionCode).toBe("SUB_list_123");
@@ -436,18 +443,23 @@ describe("paystack", () => {
 			onSuccess: setCookieToHeader(headers),
 		});
 
-		const res = await authClient.subscription.billingPortal({
-			subscriptionCode: "SUB_123",
-			// headers removed from data
-		}, {
-			headers
-		});
+		const res = await authClient.subscription.billingPortal(
+			{
+				subscriptionCode: "SUB_123",
+				// headers removed from data
+			},
+			{
+				headers,
+			},
+		);
 
 		// The endpoint returns { link: string }
 		expect(res.data?.link).toBe("https://paystack.com/manage/SUB_123/token");
-		expect(paystackSdk.subscription_manageLink).toHaveBeenCalledWith(expect.objectContaining({
-			params: { path: { code: "SUB_123" } }
-		}));
+		expect(paystackSdk.subscription_manageLink).toHaveBeenCalledWith(
+			expect.objectContaining({
+				params: { path: { code: "SUB_123" } },
+			}),
+		);
 	});
 	it("should reject untrusted callbackURL", async () => {
 		const paystackSdk = {
@@ -504,17 +516,14 @@ describe("paystack", () => {
 		reqHeaders.set("content-type", "application/json");
 		reqHeaders.set("origin", "http://localhost:3000");
 
-		const req = new Request(
-			"http://localhost:3000/api/auth/paystack/initialize-transaction",
-			{
-				method: "POST",
-				headers: reqHeaders,
-				body: JSON.stringify({
-					plan: "starter",
-					callbackURL: "http://evil.com/callback",
-				}),
-			},
-		);
+		const req = new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+			method: "POST",
+			headers: reqHeaders,
+			body: JSON.stringify({
+				plan: "starter",
+				callbackURL: "http://evil.com/callback",
+			}),
+		});
 
 		const res = await auth.handler(req);
 		expect(res.status).toBe(403);
@@ -617,29 +626,26 @@ describe("paystack", () => {
 		});
 
 		// User A initializes a transaction, creating an incomplete local subscription row.
-		const initReq = new Request(
-			new URL("paystack/initialize-transaction", authBaseUrl),
-			{
-				method: "POST",
-				headers: aHeaders,
-				body: JSON.stringify({
-					plan: "starter",
-					callbackURL: "http://localhost:3000/callback",
-				}),
-			},
-		);
+		const initReq = new Request(new URL("paystack/initialize-transaction", authBaseUrl), {
+			method: "POST",
+			headers: aHeaders,
+			body: JSON.stringify({
+				plan: "starter",
+				callbackURL: "http://localhost:3000/callback",
+			}),
+		});
 		const initRes = await auth.handler(initReq);
 		expect(initRes.status).toBe(200);
 
 		const subA0 = (
-			await (ctx.adapter as unknown as DBAdapter).findMany({
-				model: "subscription",
-				where: [
-					{ field: "referenceId", value: aRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
-				],
-			})
-		)?.[0] as Subscription | undefined;
+      await (ctx.adapter as unknown as DBAdapter).findMany({
+      	model: "subscription",
+      	where: [
+      		{ field: "referenceId", value: aRes.user.id },
+      		{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+      	],
+      })
+    )?.[0] as Subscription | undefined;
 		expect(subA0?.status).toBe("incomplete");
 
 		paystackSdk.transaction_verify.mockResolvedValueOnce({
@@ -655,26 +661,23 @@ describe("paystack", () => {
 
 		// User B tries to verify the same Paystack reference; should NOT update User A's row.
 		const bHeaders = await signInWithCookies(userB);
-		const verifyReqB = new Request(
-			new URL("paystack/verify-transaction", authBaseUrl),
-			{
-				method: "POST",
-				headers: bHeaders,
-				body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
-			},
-		);
+		const verifyReqB = new Request(new URL("paystack/verify-transaction", authBaseUrl), {
+			method: "POST",
+			headers: bHeaders,
+			body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
+		});
 		const verifyResB = await auth.handler(verifyReqB);
 		expect(verifyResB.status).toBe(401);
 
 		const subA1 = (
-			await (ctx.adapter as unknown as DBAdapter).findMany({
-				model: "subscription",
-				where: [
-					{ field: "referenceId", value: aRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
-				],
-			})
-		)?.[0] as Subscription | undefined;
+      await (ctx.adapter as unknown as DBAdapter).findMany({
+      	model: "subscription",
+      	where: [
+      		{ field: "referenceId", value: aRes.user.id },
+      		{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+      	],
+      })
+    )?.[0] as Subscription | undefined;
 		expect(subA1?.status).toBe("incomplete");
 
 		paystackSdk.transaction_verify.mockResolvedValueOnce({
@@ -689,38 +692,35 @@ describe("paystack", () => {
 		});
 
 		// User A verifies; should update their own subscription.
-		const verifyReqA = new Request(
-			new URL("paystack/verify-transaction", authBaseUrl),
-			{
-				method: "POST",
-				headers: aHeaders,
-				body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
-			},
-		);
+		const verifyReqA = new Request(new URL("paystack/verify-transaction", authBaseUrl), {
+			method: "POST",
+			headers: aHeaders,
+			body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
+		});
 		const verifyResA = await auth.handler(verifyReqA);
 		expect(verifyResA.status).toBe(200);
 
 		const subA2 = (
-			await (ctx.adapter as unknown as DBAdapter).findMany({
-				model: "subscription",
-				where: [
-					{ field: "referenceId", value: aRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
-				],
-			})
-		)?.[0] as Subscription | undefined;
+      await (ctx.adapter as unknown as DBAdapter).findMany({
+      	model: "subscription",
+      	where: [
+      		{ field: "referenceId", value: aRes.user.id },
+      		{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+      	],
+      })
+    )?.[0] as Subscription | undefined;
 		expect(subA2?.status).toBe("active");
 
 		// Sanity: user B doesn't have a subscription row for this reference.
 		const subB = (
-			await (ctx.adapter as unknown as DBAdapter).findMany({
-				model: "subscription",
-				where: [
-					{ field: "referenceId", value: bRes.user.id },
-					{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
-				],
-			})
-		)?.[0] as Subscription | undefined;
+      await (ctx.adapter as unknown as DBAdapter).findMany({
+      	model: "subscription",
+      	where: [
+      		{ field: "referenceId", value: bRes.user.id },
+      		{ field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+      	],
+      })
+    )?.[0] as Subscription | undefined;
 		expect(subB).toBeUndefined();
 	});
 
@@ -750,9 +750,9 @@ describe("paystack", () => {
 						slug: "credits",
 						createdAt: new Date(),
 						updatedAt: new Date(),
-					}
-				]
-			}
+					},
+				],
+			},
 		} satisfies PaystackOptions<PaystackClientLike>;
 
 		const auth = betterAuth({
@@ -775,7 +775,7 @@ describe("paystack", () => {
 						merged.set(k, v);
 					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+					return await auth.handler(new Request(url, { ...init, headers: merged }));
 				},
 			},
 		});
@@ -787,18 +787,23 @@ describe("paystack", () => {
 			onSuccess: setCookieToHeader(cookieHeaders),
 		});
 
-		const res = await authClient.paystack.initializeTransaction({
-			product: "credits",
-			callbackURL: "http://localhost:3000/done"
-		}, { throw: true });
+		const res = (await authClient.paystack.initializeTransaction(
+			{
+				product: "credits",
+				callbackURL: "http://localhost:3000/done",
+			},
+			{ throw: true },
+		)) as any;
 
 		expect(res.url).toBe("https://paystack.test/buy");
-		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
-			body: expect.objectContaining({
-				amount: 5000,
-				email: "product@test.com",
-			})
-		}));
+		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: expect.objectContaining({
+					amount: 5000,
+					email: "product@test.com",
+				}),
+			}),
+		);
 	}, 30000);
 
 	it("should authorize reference access via authorizeReference for listLocal", async () => {
@@ -810,7 +815,7 @@ describe("paystack", () => {
 				enabled: true,
 				plans: [],
 				authorizeReference,
-			}
+			},
 		} satisfies PaystackOptions<PaystackClientLike>;
 
 		const auth = betterAuth({
@@ -827,7 +832,6 @@ describe("paystack", () => {
 			plugins: [bearer(), paystackClient({ subscription: true })],
 			fetchOptions: {
 				customFetchImpl: async (url, init) => {
-
 					const merged = new Headers(cookieHeaders);
 					const initHeaders = new Headers(init?.headers ?? {});
 					initHeaders.forEach((v, k) => {
@@ -835,7 +839,7 @@ describe("paystack", () => {
 					});
 
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+					return await auth.handler(new Request(url, { ...init, headers: merged }));
 				},
 			},
 		});
@@ -849,17 +853,20 @@ describe("paystack", () => {
 
 		await authClient.subscription.list({ query: { referenceId: "org_1" } }, { throw: true });
 
-		expect(authorizeReference).toHaveBeenCalledWith(expect.objectContaining({
-			referenceId: "org_1",
-			action: "list-subscriptions"
-		}), expect.any(Object));
+		expect(authorizeReference).toHaveBeenCalledWith(
+			expect.objectContaining({
+				referenceId: "org_1",
+				action: "list-subscriptions",
+			}),
+			expect.any(Object),
+		);
 	}, 30000);
 
 	it("should update subscription status to canceled via webhook events", async () => {
 		const options = {
 			paystackClient: {},
 			paystackWebhookSecret: "test_secret",
-			subscription: { enabled: true, plans: [] }
+			subscription: { enabled: true, plans: [] },
 		} satisfies PaystackOptions<PaystackClientLike>;
 
 		const auth = betterAuth({
@@ -885,21 +892,21 @@ describe("paystack", () => {
 			data: {
 				subscription_code: "SUB_ABC",
 				status: "disabled",
-			}
+			},
 		});
 		const signature = createHmac("sha512", "test_secret").update(payload).digest("hex");
 
 		const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
 			method: "POST",
 			headers: { "x-paystack-signature": signature },
-			body: payload
+			body: payload,
 		});
 
 		await auth.handler(req);
 
-		const updatedSub = await  (ctx.adapter as any).findOne({
+		const updatedSub = await (ctx.adapter as any).findOne({
 			model: "subscription",
-			where: [{ field: "paystackSubscriptionCode", value: "SUB_ABC" }]
+			where: [{ field: "paystackSubscriptionCode", value: "SUB_ABC" }],
 		});
 		expect(updatedSub?.status).toBe("canceled");
 	});
@@ -913,7 +920,7 @@ describe("paystack", () => {
 				enabled: true,
 				plans: [{ name: "pro", amount: 5000, currency: "NGN", planCode: "PLN_pro" }],
 				onSubscriptionCreated,
-			}
+			},
 		} satisfies PaystackOptions<PaystackClientLike>;
 
 		const auth = betterAuth({
@@ -933,7 +940,7 @@ describe("paystack", () => {
 				status: "incomplete",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			} as any
+			} as any,
 		});
 
 		const payload = JSON.stringify({
@@ -944,14 +951,14 @@ describe("paystack", () => {
 				plan: { plan_code: "PLN_pro" },
 				customer: { customer_code: "CUS_hook" },
 				metadata: { referenceId: "user_hook_123", plan: "pro" },
-			}
+			},
 		});
 		const signature = createHmac("sha512", "test_secret").update(payload).digest("hex");
 
 		const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
 			method: "POST",
 			headers: { "x-paystack-signature": signature },
-			body: payload
+			body: payload,
 		});
 
 		await auth.handler(req);
@@ -966,7 +973,7 @@ describe("paystack", () => {
 				}),
 				plan: expect.objectContaining({ name: "pro" }),
 			}),
-			expect.any(Object)
+			expect.any(Object),
 		);
 	});
 
@@ -979,7 +986,7 @@ describe("paystack", () => {
 				enabled: true,
 				plans: [{ name: "pro", amount: 5000, currency: "NGN" }],
 				onSubscriptionCancel,
-			}
+			},
 		} satisfies PaystackOptions<PaystackClientLike>;
 
 		const auth = betterAuth({
@@ -1005,14 +1012,14 @@ describe("paystack", () => {
 			data: {
 				subscription_code: "SUB_CANCEL_123",
 				status: "disabled",
-			}
+			},
 		});
 		const signature = createHmac("sha512", "test_secret").update(payload).digest("hex");
 
 		const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
 			method: "POST",
 			headers: { "x-paystack-signature": signature },
-			body: payload
+			body: payload,
 		});
 
 		await auth.handler(req);
@@ -1025,7 +1032,7 @@ describe("paystack", () => {
 					status: "canceled",
 				}),
 			}),
-			expect.any(Object)
+			expect.any(Object),
 		);
 	});
 
@@ -1073,7 +1080,7 @@ describe("paystack", () => {
 						merged.set(k, v);
 					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+					return await auth.handler(new Request(url, { ...init, headers: merged }));
 				},
 			},
 		});
@@ -1101,20 +1108,23 @@ describe("paystack", () => {
 		});
 
 		// Now initialize a new subscription - should NOT get a trial
-		const res = await authClient.paystack.initializeTransaction({
-			plan: "starter",
-			callbackURL: "http://localhost:3000/done"
-		}, { throw: true });
+		const res = (await authClient.paystack.initializeTransaction(
+			{
+				plan: "starter",
+				callbackURL: "http://localhost:3000/done",
+			},
+			{ throw: true },
+		)) as any;
 
 		expect(res.url).toBe("https://paystack.test/trial");
 
 		// Check the subscription was created without trial dates
-		const newSub = await  (ctx.adapter as any).findOne({
+		const newSub = await (ctx.adapter as any).findOne({
 			model: "subscription",
 			where: [
 				{ field: "referenceId", value: signUpRes.user.id },
-				{ field: "paystackTransactionReference", value: "REF_TRIAL_ABUSE" }
-			]
+				{ field: "paystackTransactionReference", value: "REF_TRIAL_ABUSE" },
+			],
 		});
 		expect(newSub?.trialStart).toBeUndefined();
 		expect(newSub?.trialEnd).toBeUndefined();
@@ -1140,7 +1150,9 @@ describe("paystack", () => {
 			paystackWebhookSecret: "whsec_test",
 			subscription: {
 				enabled: true,
-				plans: [{ name: "pro", amount: 5000, currency: "NGN", freeTrial: { days: 14, onTrialStart } }],
+				plans: [
+					{ name: "pro", amount: 5000, currency: "NGN", freeTrial: { days: 14, onTrialStart } },
+				],
 			},
 		} satisfies PaystackOptions<PaystackClientLike>;
 
@@ -1165,7 +1177,7 @@ describe("paystack", () => {
 						merged.set(k, v);
 					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+					return await auth.handler(new Request(url, { ...init, headers: merged }));
 				},
 			},
 		});
@@ -1178,18 +1190,21 @@ describe("paystack", () => {
 		});
 
 		// Initialize subscription - should get trial (no previous subs)
-		await authClient.paystack.initializeTransaction({
-			plan: "pro",
-			callbackURL: "http://localhost:3000/done"
-		}, { throw: true });
+		await authClient.paystack.initializeTransaction(
+			{
+				plan: "pro",
+				callbackURL: "http://localhost:3000/done",
+			},
+			{ throw: true },
+		);
 
 		// Check subscription has trial dates
-		const sub = await  (ctx.adapter as any).findOne({
+		const sub = await (ctx.adapter as any).findOne({
 			model: "subscription",
 			where: [
 				{ field: "referenceId", value: signUpRes.user.id },
-				{ field: "paystackTransactionReference", value: "REF_FIRST_TRIAL" }
-			]
+				{ field: "paystackTransactionReference", value: "REF_FIRST_TRIAL" },
+			],
 		});
 		expect(sub?.trialStart).toBeDefined();
 		expect(sub?.trialEnd).toBeDefined();
@@ -1234,9 +1249,16 @@ describe("paystack", () => {
 		};
 
 		// Simulate the hook being called
-		const paystackPlugin = (auth as Record<string, any>).options?.plugins?.find((p: any) => p.id === "paystack");
+		const paystackPlugin = (auth as Record<string, any>).options?.plugins?.find(
+			(p: any) => p.id === "paystack",
+		);
 		const hooks = paystackPlugin?.hooks;
-		if (hooks !== undefined && hooks !== null && typeof hooks === "object" && "organization.create" in hooks) {
+		if (
+			hooks !== undefined &&
+      hooks !== null &&
+      typeof hooks === "object" &&
+      "organization.create" in hooks
+		) {
 			const orgHook = (hooks as Record<string, any>)["organization.create"];
 			if (orgHook?.after !== undefined && orgHook?.after !== null) {
 				await orgHook.after({
@@ -1296,7 +1318,7 @@ describe("paystack", () => {
 						merged.set(k, v);
 					});
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-					return await auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+					return await auth.handler(new Request(url, { ...init, headers: merged }));
 				},
 			},
 		});
@@ -1306,8 +1328,6 @@ describe("paystack", () => {
 		await client.signIn.email(user, {
 			onSuccess: setCookieToHeader(cookieHeaders),
 		});
-
-
 
 		// Create Org & Add Member
 		const orgRes = await (ctx.adapter as any).create({
@@ -1319,7 +1339,7 @@ describe("paystack", () => {
 				paystackCustomerCode: "CUS_ORG_EXISTING",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			} as any
+			} as any,
 		});
 		const actualOrgId = orgRes.id;
 
@@ -1332,7 +1352,7 @@ describe("paystack", () => {
 				role: "owner",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			} as any
+			} as any,
 		});
 
 		// Initialize for Org
@@ -1349,8 +1369,8 @@ describe("paystack", () => {
 				body: expect.objectContaining({
 					email: "billing@enterprise.com",
 					amount: 100000,
-				})
-			})
+				}),
+			}),
 		);
 	});
 
@@ -1426,7 +1446,7 @@ describe("paystack", () => {
 				slug: "no-email-corp",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			} as any
+			} as any,
 		});
 		const actualOrgId = orgRes.id;
 
@@ -1439,27 +1459,29 @@ describe("paystack", () => {
 				role: "owner",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			} as any
+			} as any,
 		});
 
 		// Initialize for Org
 
-		const { data } = await client.subscription.create({
-			referenceId: actualOrgId,
-			plan: "enterprise",
-			callbackURL: "http://localhost:3000/callback",
-		}, {
-			headers: cookieHeaders,
-		});
-
+		const { data } = await client.subscription.create(
+			{
+				referenceId: actualOrgId,
+				plan: "enterprise",
+				callbackURL: "http://localhost:3000/callback",
+			},
+			{
+				headers: cookieHeaders,
+			},
+		);
 
 		expect(data).toBeDefined();
 		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
 			expect.objectContaining({
 				body: expect.objectContaining({
 					email: "owner@org.com",
-				})
-			})
+				}),
+			}),
 		);
 	});
 
@@ -1477,9 +1499,9 @@ describe("paystack", () => {
 						quantity: 50,
 						unlimited: false,
 						slug: "sync-product",
-						metadata: { foo: "bar" }
-					}
-				]
+						metadata: { foo: "bar" },
+					},
+				],
 			}),
 		};
 
@@ -1496,17 +1518,21 @@ describe("paystack", () => {
 		});
 
 		// Sign up and sign in to get a session cookie
-		await auth.handler(new Request("http://localhost:3000/api/auth/sign-up/email", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ email: "syncer@test.com", password: "password123", name: "Syncer" }),
-		}));
+		await auth.handler(
+			new Request("http://localhost:3000/api/auth/sign-up/email", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ email: "syncer@test.com", password: "password123", name: "Syncer" }),
+			}),
+		);
 
-		const signInRes = await auth.handler(new Request("http://localhost:3000/api/auth/sign-in/email", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ email: "syncer@test.com", password: "password123" }),
-		}));
+		const signInRes = await auth.handler(
+			new Request("http://localhost:3000/api/auth/sign-in/email", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ email: "syncer@test.com", password: "password123" }),
+			}),
+		);
 
 		// Extract session cookie from sign-in response
 		const setCookieHeader = signInRes.headers.get("set-cookie") ?? "";
@@ -1518,14 +1544,14 @@ describe("paystack", () => {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
-				"cookie": sessionCookie,
+				cookie: sessionCookie,
 			},
 		});
 
 		const res = await auth.handler(req);
 		expect(res.status).toBe(200);
 
-		const json = await res.json() as { status: string; count: number };
+		const json = (await res.json()) as { status: string; count: number };
 		expect(json.status).toBe("success");
 		expect(json.count).toBe(1);
 

@@ -84,7 +84,7 @@ describe("examples/nextjs integration - paystack flow", () => {
 					const initHeaders = new Headers((init as any)?.headers ?? {});
 					for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
 					if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-					return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+					return auth.handler(new Request(url, { ...init, headers: merged }));
 				},
 			},
 		});
@@ -98,17 +98,13 @@ describe("examples/nextjs integration - paystack flow", () => {
 			onSuccess: setCookieToHeader(cookieHeaders),
 		});
 
-		const init = await authClient.paystack.transaction.initialize(
-			{ plan: "starter" }
-		);
+		const init = await authClient.paystack.transaction.initialize({ plan: "starter" });
 		if (init.error) throw new Error("Initialization failed");
 		expect(init.data.url).toBe("https://paystack/checkout");
 		const reference = init.data.reference;
 		expect(reference).toBe("ref_123");
 
-		const verify = await authClient.paystack.transaction.verify(
-			{ reference }
-		);
+		const verify = await authClient.paystack.transaction.verify({ reference });
 		if (verify.error) throw new Error("Verification failed");
 		expect(verify.data.status).toBe("success");
 

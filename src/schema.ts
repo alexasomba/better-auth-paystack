@@ -301,10 +301,13 @@ export const getSchema = (options: PaystackOptions<PaystackClientLike, any, any>
 
 	if (
 		options.schema !== undefined &&
-		options.subscription?.enabled !== true &&
-		"subscription" in options.schema
+    options.subscription?.enabled !== true &&
+    "subscription" in options.schema
 	) {
-		const { subscription: _subscription, ...restSchema } = options.schema as Record<string, unknown>;
+		const { subscription: _subscription, ...restSchema } = options.schema as Record<
+      string,
+      unknown
+    >;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		return mergeSchema(baseSchema, restSchema as any);
 	}

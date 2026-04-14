@@ -1,41 +1,35 @@
-import {
-  HeadContent,
-  Link,
-  Scripts,
-  createRootRouteWithContext,
-} from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
+import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { TanStackDevtools } from "@tanstack/react-devtools";
 
+import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+import appCss from "../styles.css?url";
 
-import appCss from '../styles.css?url'
-
-import type { QueryClient } from '@tanstack/react-query'
+import type { QueryClient } from "@tanstack/react-query";
 
 interface MyRouterContext {
-  queryClient: QueryClient
-  session?: any
+  queryClient: QueryClient;
+  session?: any;
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
   head: () => ({
     meta: [
       {
-        charSet: 'utf-8',
+        charSet: "utf-8",
       },
       {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
       },
       {
-        title: 'Better Auth Paystack - TanStack Start',
+        title: "Better Auth Paystack - TanStack Start",
       },
     ],
     links: [
       {
-        rel: 'stylesheet',
+        rel: "stylesheet",
         href: appCss,
       },
     ],
@@ -53,7 +47,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
           Go back home
         </Link>
       </div>
-    )
+    );
   },
   notFoundComponent: () => {
     return (
@@ -64,9 +58,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
           Go back home
         </Link>
       </div>
-    )
+    );
   },
-})
+});
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
@@ -78,11 +72,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {children}
         <TanStackDevtools
           config={{
-            position: 'bottom-right',
+            position: "bottom-right",
           }}
           plugins={[
             {
-              name: 'Tanstack Router',
+              name: "Tanstack Router",
               render: <TanStackRouterDevtoolsPanel />,
             },
             TanStackQueryDevtools,
@@ -91,5 +85,5 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
-  )
+  );
 }

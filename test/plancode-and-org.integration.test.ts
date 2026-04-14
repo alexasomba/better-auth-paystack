@@ -9,8 +9,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { paystack } from "../src";
 import { paystackClient } from "../src/client";
+import type { Member } from "../src/types";
 
- 
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 // Polyfill for Zod: ensure schema.parseAsync exists and delegates to safeParseAsync.
 
@@ -98,13 +98,17 @@ describe("planCode and organization referenceId tests", () => {
 						const initHeaders = new Headers((init as any)?.headers ?? {});
 						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
 						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+						return auth.handler(new Request(url, { ...init, headers: merged }));
 					},
 				},
 			});
 
 			// Create user and sign in
-			const user = { email: "plancode.user@example.com", password: "password", name: "PlanCode User" };
+			const user = {
+				email: "plancode.user@example.com",
+				password: "password",
+				name: "PlanCode User",
+			};
 			const signUp = await authClient.signUp.email(user, { throw: true });
 			expect(signUp.user.id).toBeDefined();
 
@@ -113,9 +117,7 @@ describe("planCode and organization referenceId tests", () => {
 			});
 
 			// Initialize transaction with planCode plan
-			const init = await authClient.paystack.transaction.initialize(
-				{ plan: "starter" }
-			);
+			const init = await authClient.paystack.transaction.initialize({ plan: "starter" });
 			if (init.error) throw new Error("Initialization failed");
 			expect(init.data.url).toBe("https://paystack/checkout");
 			expect(init.data.reference).toBe("ref_plancode_123");
@@ -196,7 +198,7 @@ describe("planCode and organization referenceId tests", () => {
 						const initHeaders = new Headers((init as any)?.headers ?? {});
 						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
 						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+						return auth.handler(new Request(url, { ...init, headers: merged }));
 					},
 				},
 			});
@@ -208,9 +210,7 @@ describe("planCode and organization referenceId tests", () => {
 				onSuccess: setCookieToHeader(cookieHeaders),
 			});
 
-			const init = await authClient.paystack.transaction.initialize(
-				{ plan: "team" }
-			);
+			const init = await authClient.paystack.transaction.initialize({ plan: "team" });
 
 			if (init.error) throw new Error("Initialization failed");
 			expect(init.data.url).toBe("https://paystack/checkout");
@@ -284,13 +284,13 @@ describe("planCode and organization referenceId tests", () => {
 									return true;
 								}
 								// Check org membership
-								const members = await ctx.context.adapter.findMany({
+								const members = (await ctx.context.adapter.findMany({
 									model: "member",
 									where: [
 										{ field: "userId", value: user.id },
 										{ field: "organizationId", value: referenceId },
 									],
-								});
+								}));
 								if (members && members.length > 0) {
 									const member = members[0];
 									return member.role === "owner" || member.role === "admin";
@@ -314,7 +314,7 @@ describe("planCode and organization referenceId tests", () => {
 						const initHeaders = new Headers((init as any)?.headers ?? {});
 						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
 						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+						return auth.handler(new Request(url, { ...init, headers: merged }));
 					},
 				},
 			});
@@ -338,9 +338,10 @@ describe("planCode and organization referenceId tests", () => {
 			expect(orgId).toBeDefined();
 
 			// Initialize transaction with org referenceId
-			const init = await authClient.paystack.transaction.initialize(
-				{ plan: "team", referenceId: orgId }
-			);
+			const init = await authClient.paystack.transaction.initialize({
+				plan: "team",
+				referenceId: orgId,
+			});
 			if (init.error) throw new Error("Initialization failed");
 			expect(init.data.url).toBe("https://paystack/checkout");
 			expect(init.data.reference).toBe("ref_org_123");
@@ -395,13 +396,13 @@ describe("planCode and organization referenceId tests", () => {
 								if (!referenceId || referenceId === user.id) {
 									return true;
 								}
-								const members = await ctx.context.adapter.findMany({
+								const members = (await ctx.context.adapter.findMany({
 									model: "member",
 									where: [
 										{ field: "userId", value: user.id },
 										{ field: "organizationId", value: referenceId },
 									],
-								});
+								}));
 								if (members && members.length > 0) {
 									const member = members[0];
 									return member.role === "owner" || member.role === "admin";
@@ -424,7 +425,7 @@ describe("planCode and organization referenceId tests", () => {
 						const initHeaders = new Headers((init as any)?.headers ?? {});
 						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
 						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
+						return auth.handler(new Request(url, { ...init, headers: merged }));
 					},
 				},
 			});

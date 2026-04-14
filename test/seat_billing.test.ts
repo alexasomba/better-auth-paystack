@@ -32,12 +32,12 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 					amount: 100000, // 1000 NGN base
 					interval: "monthly",
 					seatAmount: 50000, // 500 NGN per seat
-				}
+				},
 			],
 		},
 		organization: {
 			enabled: true,
-		}
+		},
 	} satisfies PaystackOptions<PaystackClientLike>;
 
 	const data = {
@@ -55,18 +55,12 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		database: adapter,
 		baseURL: "http://localhost:3000",
 		emailAndPassword: { enabled: true },
-		plugins: [
-			organization(),
-			paystack<PaystackClientLike>(options)
-		],
+		plugins: [organization(), paystack<PaystackClientLike>(options)],
 	});
 
 	const authClient = createAuthClient({
 		baseURL: "http://localhost:3000",
-		plugins: [
-			organizationClient(),
-			paystackClient({ subscription: true })
-		],
+		plugins: [organizationClient(), paystackClient({ subscription: true })],
 		fetchOptions: {
 			customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
 		},
@@ -89,10 +83,13 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		const headers = new Headers();
 		await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-		const orgRes = await authClient.organization.create({
-			name: "Test Org",
-			slug: "test-org",
-		}, { headers });
+		const orgRes = await authClient.organization.create(
+			{
+				name: "Test Org",
+				slug: "test-org",
+			},
+			{ headers },
+		);
 		const orgId = orgRes.data?.id ?? "";
 
 		// Add another member
@@ -104,7 +101,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 				organizationId: orgId,
 				role: "member",
 				createdAt: new Date(),
-			}
+			},
 		});
 
 		(paystackSdk.transaction_initialize as any).mockResolvedValue({
@@ -118,17 +115,22 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		});
 
 		// 2 members total (owner should be auto-added + 1 added manually)
-		await authClient.paystack.initializeTransaction({
-			plan: "team-plan",
-			referenceId: orgId,
-		}, { headers });
+		await authClient.paystack.initializeTransaction(
+			{
+				plan: "team-plan",
+				referenceId: orgId,
+			},
+			{ headers },
+		);
 
-		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
-			body: expect.objectContaining({
-				amount: 200000,
-				quantity: 1,
-			})
-		}));
+		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: expect.objectContaining({
+					amount: 200000,
+					quantity: 1,
+				}),
+			}),
+		);
 	});
 
 	it("should calculate correct amount when quantity is provided in request with seatAmount", async () => {
@@ -137,10 +139,13 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		const headers = new Headers();
 		await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-		const orgRes = await authClient.organization.create({
-			name: "Qty Org",
-			slug: "qty-org",
-		}, { headers });
+		const orgRes = await authClient.organization.create(
+			{
+				name: "Qty Org",
+				slug: "qty-org",
+			},
+			{ headers },
+		);
 		const orgId = orgRes.data?.id ?? "";
 
 		(paystackSdk.transaction_initialize as any).mockResolvedValue({
@@ -154,18 +159,23 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		});
 
 		// Request with explicit quantity: 3. Base 1000 + (3 * 500) = 2500.
-		await authClient.paystack.initializeTransaction({
-			plan: "team-plan",
-			referenceId: orgId,
-			quantity: 3,
-		}, { headers });
+		await authClient.paystack.initializeTransaction(
+			{
+				plan: "team-plan",
+				referenceId: orgId,
+				quantity: 3,
+			},
+			{ headers },
+		);
 
-		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(expect.objectContaining({
-			body: expect.objectContaining({
-				amount: 250000,
-				quantity: 1, // Plugin forces 1 to avoid Paystack double-multiplication
-			})
-		}));
+		expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: expect.objectContaining({
+					amount: 250000,
+					quantity: 1, // Plugin forces 1 to avoid Paystack double-multiplication
+				}),
+			}),
+		);
 	});
 
 	it("should store pendingPlan when scheduleAtPeriodEnd is true", async () => {
@@ -183,23 +193,25 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 				status: "active",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			}
+			},
 		});
 
 		// Initialize with scheduleAtPeriodEnd
-		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"Authorization": headers.get("Authorization") ?? "",
-				"Cookie": headers.get("Cookie") ?? "",
-			},
-			body: JSON.stringify({
-				plan: "team-plan",
-				referenceId: signUp.user.id,
-				scheduleAtPeriodEnd: true,
+		const res = await auth.handler(
+			new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: headers.get("Authorization") ?? "",
+					Cookie: headers.get("Cookie") ?? "",
+				},
+				body: JSON.stringify({
+					plan: "team-plan",
+					referenceId: signUp.user.id,
+					scheduleAtPeriodEnd: true,
+				}),
 			}),
-		}));
+		);
 
 		const json = await res.json();
 
@@ -224,7 +236,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 				pendingPlan: "team-plan",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			}
+			},
 		});
 
 		// Mock webhook payload
@@ -234,31 +246,41 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 				status: "success",
 				subscription: {
 					subscription_code: "SUB_123",
-				}
-			}
+				},
+			},
 		};
 
 		const signature = await (async () => {
 			const encoder = new TextEncoder();
-			const key = await crypto.subtle.importKey("raw", encoder.encode("whsec_test"), { name: "HMAC", hash: "SHA-512" }, false, ["sign"]);
+			const key = await crypto.subtle.importKey(
+				"raw",
+				encoder.encode("whsec_test"),
+				{ name: "HMAC", hash: "SHA-512" },
+				false,
+				["sign"],
+			);
 			const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(JSON.stringify(payload)));
-			return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+			return Array.from(new Uint8Array(sig))
+				.map((b) => b.toString(16).padStart(2, "0"))
+				.join("");
 		})();
 
-		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/webhook", {
-			method: "POST",
-			headers: {
-				"x-paystack-signature": signature,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(payload),
-		}));
+		const res = await auth.handler(
+			new Request("http://localhost:3000/api/auth/paystack/webhook", {
+				method: "POST",
+				headers: {
+					"x-paystack-signature": signature,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(payload),
+			}),
+		);
 
 		expect(res.status).toBe(200);
 
 		const updatedSub = await (ctx.adapter as any).findOne({
 			model: "subscription",
-			where: [{ field: "id", value: (sub).id }],
+			where: [{ field: "id", value: sub.id }],
 		});
 		expect(updatedSub.plan).toBe("team-plan");
 		expect(updatedSub.pendingPlan).toBeNull();
@@ -280,7 +302,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 				status: "active",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			}
+			},
 		});
 
 		(paystackSdk.subscription_fetch as any).mockResolvedValue({
@@ -297,18 +319,20 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 			data: { status: true },
 		});
 
-		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/disable-subscription", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"Authorization": (headers.get("Authorization") ?? "") || (headers.get("Cookie") ?? ""),
-				"Cookie": headers.get("Cookie") ?? "",
-			},
-			body: JSON.stringify({
-				subscriptionCode: "SUB_IMMEDIATE",
-				atPeriodEnd: false,
+		const res = await auth.handler(
+			new Request("http://localhost:3000/api/auth/paystack/disable-subscription", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: (headers.get("Authorization") ?? "") || (headers.get("Cookie") ?? ""),
+					Cookie: headers.get("Cookie") ?? "",
+				},
+				body: JSON.stringify({
+					subscriptionCode: "SUB_IMMEDIATE",
+					atPeriodEnd: false,
+				}),
 			}),
-		}));
+		);
 
 		const json = await res.json();
 		expect(res.status).toBe(200);
@@ -347,33 +371,35 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 				paystackSubscriptionCode: "SUB_abc123",
 				createdAt: new Date(),
 				updatedAt: new Date(),
-			}
+			},
 		});
 
 		(paystackSdk.transaction_chargeAuthorization as any).mockResolvedValue({
 			status: true,
-			data: { status: "success", reference: "prorate_mocked" }
+			data: { status: "success", reference: "prorate_mocked" },
 		});
 
 		(paystackSdk.subscription_update as any).mockResolvedValue({
 			status: true,
-			data: { status: "success" }
+			data: { status: "success" },
 		});
 
-		const res = await auth.handler(new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"Authorization": headers.get("Authorization") ?? "",
-				"Cookie": headers.get("Cookie") ?? "",
-			},
-			body: JSON.stringify({
-				plan: "team-plan",
-				referenceId: signUp.user.id,
-				quantity: 3, // Upgrading from 1 seat to 3 seats
-				prorateAndCharge: true,
+		const res = await auth.handler(
+			new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: headers.get("Authorization") ?? "",
+					Cookie: headers.get("Cookie") ?? "",
+				},
+				body: JSON.stringify({
+					plan: "team-plan",
+					referenceId: signUp.user.id,
+					quantity: 3, // Upgrading from 1 seat to 3 seats
+					prorateAndCharge: true,
+				}),
 			}),
-		}));
+		);
 
 		const json = await res.json();
 		expect(res.status).toBe(200);
@@ -385,23 +411,30 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 		// Difference: 100000
 		// Prorated: (100000 / 30) * 15 = 50000 exactly
 
-		expect(paystackSdk.transaction_chargeAuthorization).toHaveBeenCalledWith(expect.objectContaining({
-			body: expect.objectContaining({
-				authorization_code: "AUTH_abc123",
-				amount: 50000,
-			})
-		}));
-
-		expect(paystackSdk.subscription_update).toHaveBeenCalledWith(expect.objectContaining({
-			params: expect.objectContaining({
-				path: { code: "SUB_abc123" }
+		expect(paystackSdk.transaction_chargeAuthorization).toHaveBeenCalledWith(
+			expect.objectContaining({
+				body: expect.objectContaining({
+					authorization_code: "AUTH_abc123",
+					amount: 50000,
+				}),
 			}),
-			body: expect.objectContaining({
-				amount: 250000
-			})
-		}));
+		);
 
-		const subs = await (ctx.adapter as any).findMany({ model: "subscription", where: [{ field: "referenceId", value: signUp.user.id }] });
+		expect(paystackSdk.subscription_update).toHaveBeenCalledWith(
+			expect.objectContaining({
+				params: expect.objectContaining({
+					path: { code: "SUB_abc123" },
+				}),
+				body: expect.objectContaining({
+					amount: 250000,
+				}),
+			}),
+		);
+
+		const subs = await (ctx.adapter as any).findMany({
+			model: "subscription",
+			where: [{ field: "referenceId", value: signUp.user.id }],
+		});
 		expect(subs[0].seats).toBe(3);
 	});
 });

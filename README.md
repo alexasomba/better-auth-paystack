@@ -214,8 +214,7 @@ if (data?.accessCode) {
   const paystack = createPaystack({ publicKey: "pk_test_..." });
   paystack.checkout({
     accessCode: data.accessCode,
-    onSuccess: (res) =>
-      authClient.paystack.transaction.verify({ reference: res.reference }),
+    onSuccess: (res) => authClient.paystack.transaction.verify({ reference: res.reference }),
   });
 }
 ```
@@ -223,6 +222,7 @@ if (data?.accessCode) {
 ### Scheduled Changes & Cancellation
 
 Defer changes to the end of the current billing cycle:
+
 - **Upgrades**: Pass `scheduleAtPeriodEnd: true` in `initializeTransaction()`.
 - **Cancellations**: Use `authClient.subscription.cancel({ atPeriodEnd: true })` to keep the subscription active until the period ends.
 
@@ -439,36 +439,36 @@ The plugin extends your database with the following fields and tables.
 
 ### `paystackTransaction`
 
-| Field         | Type     | Required | Description                                       |
-| :------------ | :------- | :------- | :------------------------------------------------ |
-| `reference`   | `string` | Yes      | Unique transaction reference.                     |
-| `referenceId` | `string` | Yes      | Associated User ID or Organization ID.            |
-| `userId`      | `string` | Yes      | The ID of the user who initiated the transaction. |
-| `amount`      | `number` | Yes      | Transaction amount in smallest currency unit.     |
-| `currency`    | `string` | Yes      | Currency code (e.g., "NGN").                      |
-| `status`      | `string` | Yes      | `success`, `pending`, `failed`, `abandoned`.      |
-| `plan`        | `string` | No       | Name of the plan associated with the transaction. |
+| Field         | Type     | Required | Description                                          |
+| :------------ | :------- | :------- | :--------------------------------------------------- |
+| `reference`   | `string` | Yes      | Unique transaction reference.                        |
+| `referenceId` | `string` | Yes      | Associated User ID or Organization ID.               |
+| `userId`      | `string` | Yes      | The ID of the user who initiated the transaction.    |
+| `amount`      | `number` | Yes      | Transaction amount in smallest currency unit.        |
+| `currency`    | `string` | Yes      | Currency code (e.g., "NGN").                         |
+| `status`      | `string` | Yes      | `success`, `pending`, `failed`, `abandoned`.         |
+| `plan`        | `string` | No       | Name of the plan associated with the transaction.    |
 | `product`     | `string` | No       | Name of the product associated with the transaction. |
-| `metadata`    | `string` | No       | JSON string of extra transaction metadata.        |
-| `paystackId`  | `string` | No       | The internal Paystack ID for the transaction.     |
-| `createdAt`   | `Date`   | Yes      | Transaction creation timestamp.                   |
-| `updatedAt`   | `Date`   | Yes      | Transaction last update timestamp.                |
+| `metadata`    | `string` | No       | JSON string of extra transaction metadata.           |
+| `paystackId`  | `string` | No       | The internal Paystack ID for the transaction.        |
+| `createdAt`   | `Date`   | Yes      | Transaction creation timestamp.                      |
+| `updatedAt`   | `Date`   | Yes      | Transaction last update timestamp.                   |
 
 ### `paystackProduct`
 
-| Field         | Type      | Required | Description                                       |
-| :------------ | :-------- | :------- | :------------------------------------------------ |
-| `name`        | `string`  | Yes      | Product name.                                     |
-| `description` | `string`  | No       | Product description.                              |
-| `price`       | `number`  | Yes      | Price in smallest currency unit.                  |
-| `currency`    | `string`  | Yes      | Currency code (e.g., "NGN").                      |
-| `quantity`    | `number`  | No       | Available stock quantity.                         |
-| `unlimited`   | `boolean` | No       | Whether the product has unlimited stock.          |
-| `paystackId`  | `string`  | No       | The internal Paystack Product ID.                 |
-| `slug`        | `string`  | Yes      | Unique slug for the product.                      |
-| `metadata`    | `string`  | No       | JSON string of extra product metadata.            |
-| `createdAt`   | `Date`    | Yes      | Product creation timestamp.                       |
-| `updatedAt`   | `Date`    | Yes      | Product last update timestamp.                    |
+| Field         | Type      | Required | Description                              |
+| :------------ | :-------- | :------- | :--------------------------------------- |
+| `name`        | `string`  | Yes      | Product name.                            |
+| `description` | `string`  | No       | Product description.                     |
+| `price`       | `number`  | Yes      | Price in smallest currency unit.         |
+| `currency`    | `string`  | Yes      | Currency code (e.g., "NGN").             |
+| `quantity`    | `number`  | No       | Available stock quantity.                |
+| `unlimited`   | `boolean` | No       | Whether the product has unlimited stock. |
+| `paystackId`  | `string`  | No       | The internal Paystack Product ID.        |
+| `slug`        | `string`  | Yes      | Unique slug for the product.             |
+| `metadata`    | `string`  | No       | JSON string of extra product metadata.   |
+| `createdAt`   | `Date`    | Yes      | Product creation timestamp.              |
+| `updatedAt`   | `Date`    | Yes      | Product last update timestamp.           |
 
 ---
 
@@ -485,6 +485,7 @@ The plugin extends your database with the following fields and tables.
 The plugin's schema definition includes recommended indexes and uniqueness constraints for performance. When you run `npx better-auth migrate`, these will be automatically applied to your database.
 
 The following fields are indexed:
+
 - **`paystackTransaction`**: `reference` (unique), `userId`, `referenceId`.
 - **`subscription`**: `paystackSubscriptionCode` (unique), `referenceId`, `paystackTransactionReference`, `paystackCustomerCode`, `plan`.
 - **`user` & `organization`**: `paystackCustomerCode`.
@@ -495,9 +496,11 @@ The following fields are indexed:
 The plugin provides two ways to keep your product inventory in sync with Paystack:
 
 #### 1. Automated Inventory Sync (New)
+
 Whenever a successful one-time payment is made (via webhook or manual verification), the plugin automatically calls **`syncProductQuantityFromPaystack`**. This fetches the real-time remaining quantity from the Paystack API and updates your local database record, ensuring your inventory is always accurate.
 
 #### 2. Manual Bulk Sync
+
 You can synchronize all products with your local database using the `/paystack/sync-products` endpoint.
 
 ```bash

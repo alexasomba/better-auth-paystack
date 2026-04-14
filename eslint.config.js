@@ -21,7 +21,7 @@ function cleanPlugin(plugin) {
 
 /** @param {any[]} configs */
 function cleanConfigs(configs) {
-  return configs.map(c => {
+  return configs.map((c) => {
     if (c?.plugins) {
       const cleanedPlugins = {};
       for (const [name, plugin] of Object.entries(c.plugins)) {
@@ -82,14 +82,15 @@ export default cleanConfigs([
     },
     rules: {
       // --- Biome-style Adjustments ---
-      "indent": ["error", "tab"], // Biome indentStyle: tab
+      indent: ["error", "tab"], // Biome indentStyle: tab
       "prefer-const": "error", // Biome useConst: error
       "no-debugger": "error", // Biome noDebugger: error
       "no-restricted-syntax": [
         "error",
         {
           selector: "UnaryExpression[operator='delete']",
-          message: "Performance: Using 'delete' on object properties is discouraged. Set properties to undefined instead.", // Biome performance.noDelete: error
+          message:
+            "Performance: Using 'delete' on object properties is discouraged. Set properties to undefined instead.", // Biome performance.noDelete: error
         },
       ],
       "no-restricted-properties": [
@@ -100,7 +101,7 @@ export default cleanConfigs([
           message: "Complexity: Use 'Date.now()' instead of 'new Date().getTime()'.", // Biome complexity.useDateNow: error
         },
       ],
-      
+
       // --- TypeScript & Type Safety ---
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": [
@@ -114,7 +115,7 @@ export default cleanConfigs([
       "@typescript-eslint/strict-boolean-expressions": "warn",
       "@typescript-eslint/ban-ts-comment": [
         "error",
-        { "ts-ignore": "allow-with-description" } // Biome noTsIgnore: error (but allowing desc is safer)
+        { "ts-ignore": "allow-with-description" }, // Biome noTsIgnore: error (but allowing desc is safer)
       ],
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
@@ -139,7 +140,7 @@ export default cleanConfigs([
             {
               name: "zod",
               importNames: ["z"],
-              message: "Use `import * as z from \"zod\"` instead of `import { z }`.",
+              message: 'Use `import * as z from "zod"` instead of `import { z }`.',
             },
           ],
         },

@@ -1,4 +1,3 @@
- 
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 // Polyfill for Zod: ensure schema.parseAsync exists and delegates to safeParseAsync.
 // Some zod runtime shapes (CJS/ESM) don't expose the base class constructor in exports,
@@ -7,15 +6,15 @@ void (async () => {
 	try {
 		const mod = await import("zod");
 		// Support both default and named exports
-		 
-		const z: any = (mod && (mod as any).default) ? (mod as any).default : mod;
+
+		const z: any = mod && (mod as any).default ? (mod as any).default : mod;
 
 		// Try to find the base prototype from exports, otherwise derive it from an instance.
 		let proto: any =
-            z?.ZodSchema?.prototype ??
-            z?.ZodType?.prototype ??
-            z?.default?.ZodSchema?.prototype ??
-            z?.default?.ZodType?.prototype;
+      z?.ZodSchema?.prototype ??
+      z?.ZodType?.prototype ??
+      z?.default?.ZodSchema?.prototype ??
+      z?.default?.ZodType?.prototype;
 
 		if (!proto && typeof z?.object === "function") {
 			const schema = z.object({});
@@ -26,10 +25,13 @@ void (async () => {
 			}
 		}
 
-		if (proto && typeof proto.parseAsync !== "function" && typeof proto.safeParseAsync === "function") {
-			 
+		if (
+			proto &&
+      typeof proto.parseAsync !== "function" &&
+      typeof proto.safeParseAsync === "function"
+		) {
 			proto.parseAsync = function (...args: any[]) {
-				return (this).safeParseAsync(...args).then((res: any) => {
+				return this.safeParseAsync(...args).then((res: any) => {
 					if (res?.success) return res.data;
 					throw res?.error ?? new Error("Zod parseAsync failed");
 				});

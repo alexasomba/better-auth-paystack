@@ -11,21 +11,21 @@ import type {
 	PaystackTransactionChargeAuthorizationInput,
 } from "./types";
 
-function isOpenApiFetchResponse(
-	value: unknown,
-): value is PaystackOpenApiFetchResponse {
+function isOpenApiFetchResponse(value: unknown): value is PaystackOpenApiFetchResponse {
 	return (
 		value !== null &&
-		value !== undefined &&
-		typeof value === "object" &&
-		("data" in value || "error" in value || "response" in value)
+    value !== undefined &&
+    typeof value === "object" &&
+    ("data" in value || "error" in value || "response" in value)
 	);
 }
 
 export function unwrapSdkResult<T = unknown>(result: unknown): T {
 	if (isOpenApiFetchResponse(result)) {
 		if (result.error !== undefined && result.error !== null) {
-			throw new Error(typeof result.error === "string" ? result.error : JSON.stringify(result.error));
+			throw new Error(
+				typeof result.error === "string" ? result.error : JSON.stringify(result.error),
+			);
 		}
 		return (result.data as T) ?? (result as T);
 	}
@@ -40,23 +40,23 @@ export function unwrapSdkResult<T = unknown>(result: unknown): T {
 	return result as T;
 }
 
-
-
-
-
-type TransactionInitializeBody = Parameters<PaystackNodeClient["transaction_initialize"]>[0] extends {
-	body?: infer B;
+type TransactionInitializeBody = Parameters<
+  PaystackNodeClient["transaction_initialize"]
+>[0] extends {
+  body?: infer B;
 }
-	? B
-	: never;
+  ? B
+  : never;
 
-export function getPaystackOps(
-	paystackClient: PaystackClientLike,
-) {
+export function getPaystackOps(paystackClient: PaystackClientLike) {
 	return {
 		customerCreate: (params: PaystackCustomerCreateInput) => {
 			if (paystackClient?.customer_create !== undefined) {
-				return paystackClient.customer_create({ body: params as unknown as NonNullable<Parameters<PaystackNodeClient["customer_create"]>[0]>["body"] });
+				return paystackClient.customer_create({
+					body: params as unknown as NonNullable<
+            Parameters<PaystackNodeClient["customer_create"]>[0]
+          >["body"],
+				});
 			}
 			return paystackClient?.customer?.create?.(params);
 		},
@@ -64,7 +64,9 @@ export function getPaystackOps(
 			if (paystackClient?.customer_update !== undefined) {
 				return paystackClient.customer_update({
 					params: { path: { code } },
-					body: params as unknown as NonNullable<Parameters<PaystackNodeClient["customer_update"]>[0]>["body"],
+					body: params as unknown as NonNullable<
+            Parameters<PaystackNodeClient["customer_update"]>[0]
+          >["body"],
 				});
 			}
 			return paystackClient?.customer?.update?.(code, params);
@@ -111,8 +113,8 @@ export function getPaystackOps(
 					});
 				} catch {
 					const compatFetch = paystackClient.subscription_fetch as unknown as (
-						init: PaystackSubscriptionFetchInit,
-					) => Promise<unknown>;
+            init: PaystackSubscriptionFetchInit,
+          ) => Promise<unknown>;
 					return compatFetch({
 						params: { path: { id_or_code: idOrCode } },
 					});
@@ -142,9 +144,18 @@ export function getPaystackOps(
 			}
 			return paystackClient?.subscription?.manage?.email?.(code, email);
 		},
-		subscriptionUpdate: (params: { code: string; plan?: string; authorization?: string; amount?: number }) => {
+		subscriptionUpdate: (params: {
+      code: string;
+      plan?: string;
+      authorization?: string;
+      amount?: number;
+    }) => {
 			if (paystackClient?.subscription_update !== undefined) {
-				return (paystackClient.subscription_update as unknown as (args: Record<string, unknown>) => Promise<unknown>)({
+				return (
+          paystackClient.subscription_update as unknown as (
+            args: Record<string, unknown>,
+          ) => Promise<unknown>
+				)({
 					params: { path: { code: params.code } },
 					body: {
 						plan: params.plan,
@@ -159,7 +170,6 @@ export function getPaystackOps(
 		transactionChargeAuthorization: (body: PaystackTransactionChargeAuthorizationInput) => {
 			if (paystackClient?.transaction_chargeAuthorization !== undefined) {
 				return paystackClient.transaction_chargeAuthorization({
-
 					// casting to avoid deep type issues with metadata
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					body: body as any, // casting to avoid deep type issues with metadata

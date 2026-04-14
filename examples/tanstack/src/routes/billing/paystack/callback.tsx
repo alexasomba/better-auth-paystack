@@ -30,7 +30,7 @@ function CallbackPage() {
         console.error(e);
         setStatus("error");
         if (e instanceof Error) {
-           setError(e.message || "Verification failed");
+          setError(e.message || "Verification failed");
         }
       }
     };
@@ -39,15 +39,13 @@ function CallbackPage() {
   }, [reference, router]);
 
   if (!reference) {
-      return (
-          <div className="flex min-h-[50vh] items-center justify-center">
-             <Card>
-                 <CardContent className="p-6">
-                     No reference provided.
-                 </CardContent>
-             </Card>
-          </div>
-      )
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card>
+          <CardContent className="p-6">No reference provided.</CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -55,21 +53,15 @@ function CallbackPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-center">
-             {status === "verifying" && "Verifying Payment..."}
-             {status === "success" && "Payment Successful!"}
-             {status === "error" && "Verification Failed"}
+            {status === "verifying" && "Verifying Payment..."}
+            {status === "success" && "Payment Successful!"}
+            {status === "error" && "Verification Failed"}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center text-muted-foreground">
-          {status === "verifying" && (
-            <p>Please wait while we confirm your transaction.</p>
-          )}
-          {status === "success" && (
-            <p>Redirecting you to dashboard...</p>
-          )}
-          {status === "error" && (
-            <p className="text-red-500">{error}</p>
-          )}
+          {status === "verifying" && <p>Please wait while we confirm your transaction.</p>}
+          {status === "success" && <p>Redirecting you to dashboard...</p>}
+          {status === "error" && <p className="text-red-500">{error}</p>}
         </CardContent>
       </Card>
     </div>

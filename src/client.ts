@@ -6,9 +6,9 @@ import type { PaystackProduct, PaystackTransaction, Subscription } from "./types
 import type { paystack } from "./index";
 
 export const paystackClient = <
-	O extends {
-		subscription: boolean;
-	},
+  O extends {
+    subscription: boolean;
+  },
 >(
 		_options?: O,
 	) => {
@@ -17,151 +17,186 @@ export const paystackClient = <
 		$InferServerPlugin: {} as ReturnType<typeof paystack>,
 		getActions: ($fetch: unknown, _$store: unknown, _options: unknown) => {
 			const fetch = $fetch as BetterFetch;
-			const initializeTransaction = async (data: {
-				plan?: string;
-				email?: string;
-				amount?: number;
-				reference?: string;
-				metadata?: Record<string, unknown>;
-				callbackUrl?: string;
-				callbackURL?: string;
-				currency?: string;
-				quantity?: number;
-				referenceId?: string;
-				product?: string;
-				scheduleAtPeriodEnd?: boolean;
-				cancelAtPeriodEnd?: boolean;
-				prorateAndCharge?: boolean;
-			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
-				url: string;
-				reference: string;
-				accessCode: string;
-				redirect: boolean;
-			}>> => {
+			const initializeTransaction = async (
+				data: {
+          plan?: string;
+          email?: string;
+          amount?: number;
+          reference?: string;
+          metadata?: Record<string, unknown>;
+          callbackUrl?: string;
+          callbackURL?: string;
+          currency?: string;
+          quantity?: number;
+          referenceId?: string;
+          product?: string;
+          scheduleAtPeriodEnd?: boolean;
+          cancelAtPeriodEnd?: boolean;
+          prorateAndCharge?: boolean;
+        },
+				options?: BetterFetchOption,
+			): Promise<
+        BetterFetchResponse<{
+          url: string;
+          reference: string;
+          accessCode: string;
+          redirect: boolean;
+        }>
+      > => {
 				return fetch<{
-					url: string;
-					reference: string;
-					accessCode: string;
-					redirect: boolean;
-				}>("paystack/initialize-transaction", {
-					method: "POST",
-					body: data,
-					...options,
-				});
+          url: string;
+          reference: string;
+          accessCode: string;
+          redirect: boolean;
+        }>("paystack/initialize-transaction", {
+        	method: "POST",
+        	body: data,
+        	...options,
+        });
 			};
 
-			const verifyTransaction = async (data: { reference: string }, options?: BetterFetchOption): Promise<BetterFetchResponse<{
-				status: string;
-				reference: string;
-				data: unknown;
-			}>> => {
+			const verifyTransaction = async (
+				data: { reference: string },
+				options?: BetterFetchOption,
+			): Promise<
+        BetterFetchResponse<{
+          status: string;
+          reference: string;
+          data: unknown;
+        }>
+      > => {
 				return fetch<{
-					status: string;
-					reference: string;
-					data: unknown;
-				}>("paystack/verify-transaction", {
-					method: "POST",
-					body: data,
-					...options,
-				});
+          status: string;
+          reference: string;
+          data: unknown;
+        }>("paystack/verify-transaction", {
+        	method: "POST",
+        	body: data,
+        	...options,
+        });
 			};
 
-			const listTransactions = async (data: { query?: Record<string, unknown> } = {}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
-				transactions: PaystackTransaction[];
-			}>> => {
+			const listTransactions = async (
+				data: { query?: Record<string, unknown> } = {},
+				options?: BetterFetchOption,
+			): Promise<
+        BetterFetchResponse<{
+          transactions: PaystackTransaction[];
+        }>
+      > => {
 				return fetch<{
-					transactions: PaystackTransaction[];
-				}>("paystack/list-transactions", {
-					method: "GET",
-					query: data.query,
-					...options,
-				});
+          transactions: PaystackTransaction[];
+        }>("paystack/list-transactions", {
+        	method: "GET",
+        	query: data.query,
+        	...options,
+        });
 			};
 
-			const listSubscriptions = async (data: { query?: Record<string, unknown> } = {}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
-				subscriptions: Subscription[];
-			}>> => {
+			const listSubscriptions = async (
+				data: { query?: Record<string, unknown> } = {},
+				options?: BetterFetchOption,
+			): Promise<
+        BetterFetchResponse<{
+          subscriptions: Subscription[];
+        }>
+      > => {
 				return fetch<{
-					subscriptions: Subscription[];
-				}>("paystack/list-subscriptions", {
-					method: "GET",
-					query: data.query,
-					...options,
-				});
+          subscriptions: Subscription[];
+        }>("paystack/list-subscriptions", {
+        	method: "GET",
+        	query: data.query,
+        	...options,
+        });
 			};
 
-			const getSubscriptionManageLink = async (data: { subscriptionCode: string }, options?: BetterFetchOption): Promise<BetterFetchResponse<{
-				link: string;
-			}>> => {
+			const getSubscriptionManageLink = async (
+				data: { subscriptionCode: string },
+				options?: BetterFetchOption,
+			): Promise<
+        BetterFetchResponse<{
+          link: string;
+        }>
+      > => {
 				return fetch<{
-					link: string;
-				}>("paystack/get-subscription-manage-link", {
-					method: "GET",
-					query: data,
-					...options,
-				});
+          link: string;
+        }>("paystack/get-subscription-manage-link", {
+        	method: "GET",
+        	query: data,
+        	...options,
+        });
 			};
 
-			const cancelSubscription = async (data: {
-				subscriptionCode: string;
-				emailToken?: string;
-				atPeriodEnd?: boolean;
-			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
-				status: string;
-			}>> => {
+			const cancelSubscription = async (
+				data: {
+          subscriptionCode: string;
+          emailToken?: string;
+          atPeriodEnd?: boolean;
+        },
+				options?: BetterFetchOption,
+			): Promise<
+        BetterFetchResponse<{
+          status: string;
+        }>
+      > => {
 				return fetch<{
-					status: string;
-				}>("paystack/disable-subscription", {
-					method: "POST",
-					body: data,
-					...options,
-				});
+          status: string;
+        }>("paystack/disable-subscription", {
+        	method: "POST",
+        	body: data,
+        	...options,
+        });
 			};
 
-			const restoreSubscription = async (data: {
-				subscriptionCode: string;
-				emailToken?: string;
-			}, options?: BetterFetchOption): Promise<BetterFetchResponse<{
-				status: string;
-			}>> => {
+			const restoreSubscription = async (
+				data: {
+          subscriptionCode: string;
+          emailToken?: string;
+        },
+				options?: BetterFetchOption,
+			): Promise<
+        BetterFetchResponse<{
+          status: string;
+        }>
+      > => {
 				return fetch<{
-					status: string;
-				}>("paystack/enable-subscription", {
-					method: "POST",
-					body: data,
-					...options,
-				});
+          status: string;
+        }>("paystack/enable-subscription", {
+        	method: "POST",
+        	body: data,
+        	...options,
+        });
 			};
 
 			return {
 				subscription: {
 					/**
-					 * Initialize a transaction to upgrade or creating a subscription.
-					 */
+           * Initialize a transaction to upgrade or creating a subscription.
+           */
 					upgrade: initializeTransaction,
 					/**
-					 * Initialize a payment to create a subscription.
-					 */
+           * Initialize a payment to create a subscription.
+           */
 					create: initializeTransaction,
 					/**
-					 * Disable a subscription.
-					 */
+           * Disable a subscription.
+           */
 					cancel: cancelSubscription,
 					/**
-					 * Enable a subscription.
-					 */
+           * Enable a subscription.
+           */
 					restore: restoreSubscription,
 					/**
-					 * List subscriptions for the user.
-					 */
+           * List subscriptions for the user.
+           */
 					list: listSubscriptions,
 					/**
-					 * Get a link to manage the subscription on Paystack.
-					 */
+           * Get a link to manage the subscription on Paystack.
+           */
 					billingPortal: getSubscriptionManageLink,
 					/**
-					 * Aliases for legacy/demo usage.
-					 */
+           * Aliases for legacy/demo usage.
+           */
 					listLocal: listSubscriptions,
 					manageLink: getSubscriptionManageLink,
 					disable: cancelSubscription,
@@ -195,7 +230,9 @@ export const paystackClient = <
 							method: "GET",
 						});
 					},
-					syncProducts: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
+					syncProducts: async (): Promise<
+            BetterFetchResponse<{ status: string; count: number }>
+          > => {
 						return fetch<{ status: string; count: number }>("paystack/sync-products", {
 							method: "POST",
 						});
@@ -205,28 +242,36 @@ export const paystackClient = <
 							method: "POST",
 						});
 					},
-					listProducts: async (options?: BetterFetchOption): Promise<BetterFetchResponse<{
-						products: PaystackProduct[];
-					}>> => {
+					listProducts: async (
+						options?: BetterFetchOption,
+					): Promise<
+            BetterFetchResponse<{
+              products: PaystackProduct[];
+            }>
+          > => {
 						return fetch<{
-							products: PaystackProduct[];
-						}>("paystack/list-products", {
-							method: "GET",
-							...options,
-						});
+              products: PaystackProduct[];
+            }>("paystack/list-products", {
+            	method: "GET",
+            	...options,
+            });
 					},
-					listPlans: async (options?: BetterFetchOption): Promise<BetterFetchResponse<{
-						plans: unknown[];
-					}>> => {
+					listPlans: async (
+						options?: BetterFetchOption,
+					): Promise<
+            BetterFetchResponse<{
+              plans: unknown[];
+            }>
+          > => {
 						return fetch<{
-							plans: unknown[];
-						}>("paystack/list-plans", {
-							method: "GET",
-							...options,
-						});
+              plans: unknown[];
+            }>("paystack/list-plans", {
+            	method: "GET",
+            	...options,
+            });
 					},
 				},
 			};
-		}
+		},
 	} satisfies BetterAuthClientPlugin;
 };
