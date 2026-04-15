@@ -255,7 +255,7 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
       email?: (code: string, email: string) => Promise<unknown>;
     };
   };
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+  /* oxlint-disable @typescript-eslint/no-explicit-any */
   plan?: {
     list?: (init?: any) => Promise<unknown>;
     fetch?: (idOrCode: string) => Promise<unknown>;
@@ -278,7 +278,7 @@ export type PaystackClientLike = Partial<PaystackNodeClient> & {
   plan_fetch?: (init: any) => Promise<unknown>;
   plan_create?: (init: any) => Promise<unknown>;
   plan_update?: (init: any) => Promise<unknown>;
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  /* oxlint-enable @typescript-eslint/no-explicit-any */
 };
 
 export interface PaystackMetadata {
@@ -583,5 +583,5 @@ export interface Member {
   [key: string]: unknown;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// oxlint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyPaystackOptions = PaystackOptions<PaystackClientLike, any, any>;

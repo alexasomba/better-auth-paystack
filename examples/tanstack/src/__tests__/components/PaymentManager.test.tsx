@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import PaymentManager from "@/components/dashboard/PaymentManager";
 import { authClient } from "@/lib/auth-client";

@@ -65,12 +65,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
-    "test": "vitest run",
-    "test:integration": "RUN_INTEGRATION_TESTS=1 vitest run",
-    "coverage": "vitest run --coverage",
-    "lint": "oxlint src",
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test run",
+    "test:integration": "RUN_INTEGRATION_TESTS=1 vp test run",
+    "coverage": "vp test run --coverage",
+    "lint": "vp lint src",
     "lint:package": "publint run --strict",
     "lint:types": "attw --profile esm-only --pack .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -93,19 +93,17 @@
     "@typescript-eslint/parser": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "better-auth": "catalog:",
-    "eslint": "catalog:",
     "eslint-plugin-import-x": "catalog:",
     "eslint-plugin-promise": "catalog:",
     "eslint-plugin-react-hooks": "catalog:",
     "eslint-plugin-unicorn": "catalog:",
     "husky": "catalog:",
     "lint-staged": "catalog:",
-    "oxlint": "catalog:",
     "publint": "catalog:",
-    "tsdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vitest": "catalog:"
+    "vite-plus": "catalog:",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.18"
   },
   "peerDependencies": {
     "better-auth": "^1.6.0"
@@ -115,19 +113,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "bash -c 'pnpm tsc --noEmit'",
-      "eslint --fix",
-      "vitest related --run"
+      "vp check"
     ]
   },
   "engines": {
     "node": ">=22.0.0"
   },
-  "packageManager": "pnpm@10.33.0",
-  "pnpm": {
-    "overrides": {
-      "esbuild": "0.28.0",
-      "rollup": "npm:@rollup/wasm-node@4.60.1"
-    }
-  }
+  "packageManager": "pnpm@10.33.0"
 }

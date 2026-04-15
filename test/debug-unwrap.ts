@@ -1,13 +1,13 @@
 import { unwrapSdkResult } from "../src/paystack-sdk";
 const mock = {
-	data: {
-		status: true,
-		message: "ok",
-		data: {
-			email_token: "tok_test_123",
-			next_payment_date: "...",
-		},
-	},
+  data: {
+    status: true,
+    message: "ok",
+    data: {
+      email_token: "tok_test_123",
+      next_payment_date: "...",
+    },
+  },
 };
 console.log("Mock Payload:", JSON.stringify(mock));
 const fetchRes = unwrapSdkResult(mock);
