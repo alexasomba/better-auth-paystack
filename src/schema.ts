@@ -270,8 +270,7 @@ export const plans = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-// oxlint-disable-next-line @typescript-eslint/no-explicit-any
-export const getSchema = (options: PaystackOptions<PaystackClientLike, any, any>) => {
+export const getSchema = (options: PaystackOptions<PaystackClientLike>) => {
   let baseSchema: BetterAuthPluginDBSchema;
 
   if (options.subscription?.enabled === true) {

@@ -1,3 +1,5 @@
+/* oxlint-disable @typescript-eslint/strict-boolean-expressions */
+
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
@@ -10,15 +12,22 @@ import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Local Custom Subscriptions", () => {
   const paystackSdk = {
-    transaction_verify: vi.fn(),
-    transaction_chargeAuthorization: vi.fn(),
-    subscription_fetch: vi.fn(),
-    subscription_disable: vi.fn(),
-  };
+    transaction: {
+      verify: vi.fn(),
+      chargeAuthorization: vi.fn(),
+    },
+    subscription: {
+      fetch: vi.fn(),
+      disable: vi.fn(),
+    },
+  } as unknown as PaystackClientLike;
 
   const options = {
     paystackClient: paystackSdk,
-    paystackWebhookSecret: "whsec_test",
+    secretKey: "test_key",
+    webhook: {
+      secret: "whsec_test",
+    },
     subscription: {
       enabled: true,
       plans: [
@@ -78,7 +87,7 @@ describe("Local Custom Subscriptions", () => {
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
     // Mock transaction verify response
-    paystackSdk.transaction_verify.mockResolvedValue({
+    paystackSdk.transaction.verify.mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -156,7 +165,7 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    paystackSdk.transaction_chargeAuthorization.mockResolvedValue({
+    paystackSdk.transaction.chargeAuthorization.mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -228,7 +237,7 @@ describe("Local Custom Subscriptions", () => {
 
     const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-    paystackSdk.transaction_verify.mockResolvedValue({
+    paystackSdk.transaction.verify.mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -317,7 +326,7 @@ describe("Local Custom Subscriptions", () => {
       { headers },
     );
 
-    expect(paystackSdk.subscription_disable).not.toHaveBeenCalled();
+    expect(paystackSdk.subscription.disable).not.toHaveBeenCalled();
 
     const updatedSub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
     expect(updatedSub.status).toBe("active");

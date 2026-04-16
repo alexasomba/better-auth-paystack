@@ -1,3 +1,5 @@
+/* oxlint-disable @typescript-eslint/strict-boolean-expressions */
+
 import { createHmac } from "node:crypto";
 
 import { betterAuth } from "better-auth";
@@ -8,16 +10,17 @@ import { bearer, organization } from "better-auth/plugins";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vite-plus/test";
 import type { DBAdapter } from "@better-auth/core/db/adapter";
 
-import { paystackClient } from "./client";
-import type { Subscription, PaystackOptions, PaystackClientLike, PaystackUser } from "./types";
+import { paystackClient } from "../src/client";
+import type { Subscription, PaystackOptions, PaystackClientLike, PaystackUser } from "../src/types";
 
-import { paystack } from ".";
+import { paystack } from "../src";
 
 describe("paystack type", () => {
   const options = {
     paystackClient: {} as PaystackClientLike,
-    paystackWebhookSecret: "whsec_test",
     subscription: { enabled: true, plans: [] },
+    secretKey: "sk_test_123",
+    webhook: { secret: "whsec_test" },
   } satisfies PaystackOptions<PaystackClientLike>;
 
   const auth = betterAuth({
@@ -36,8 +39,12 @@ describe("paystack type", () => {
   });
 
   it("should expose typed transaction routes on authClient", () => {
-    expectTypeOf(authClient.paystack.initializeTransaction).toExtend<(...args: any[]) => any>();
-    expectTypeOf(authClient.paystack.verifyTransaction).toExtend<(...args: any[]) => any>();
+    expectTypeOf((authClient as any).paystack.initializeTransaction).toExtend<
+      (...args: any[]) => any
+    >();
+    expectTypeOf((authClient as any).paystack.verifyTransaction).toExtend<
+      (...args: any[]) => any
+    >();
     expectTypeOf(authClient.subscription.upgrade).toExtend<(...args: any[]) => any>();
     expectTypeOf(authClient.subscription.cancel).toExtend<(...args: any[]) => any>();
     expectTypeOf(authClient.subscription.list).toExtend<(...args: any[]) => any>();
@@ -74,7 +81,8 @@ describe("paystack", () => {
   it("should reject invalid webhook signature", async () => {
     const options = {
       paystackClient: {},
-      paystackWebhookSecret: "whsec_test",
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -99,7 +107,8 @@ describe("paystack", () => {
   it("should accept valid webhook signature", async () => {
     const options = {
       paystackClient: {},
-      paystackWebhookSecret: "whsec_test",
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -110,7 +119,7 @@ describe("paystack", () => {
     });
 
     const payload = JSON.stringify({ event: "charge.success", data: {} });
-    const signature = createHmac("sha512", options.paystackWebhookSecret)
+    const signature = createHmac("sha512", options.webhook?.secret ?? options.secretKey)
       .update(payload)
       .digest("hex");
 
@@ -127,21 +136,24 @@ describe("paystack", () => {
 
   it("should create Paystack customer on sign up", async () => {
     const paystackSdk = {
-      customer_create: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+      customer: {
+        create: vi.fn().mockResolvedValue({
           data: {
-            customer_code: "CUS_test_123",
+            status: true,
+            message: "ok",
+            data: {
+              customer_code: "CUS_test_123",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       createCustomerOnSignUp: true,
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -170,7 +182,7 @@ describe("paystack", () => {
 
     const res = await authClient.signUp.email(testUser, { throw: true });
     expect(res.user.id).toBeDefined();
-    expect(paystackSdk.customer_create).toHaveBeenCalledTimes(1);
+    expect(paystackSdk.customer.create).toHaveBeenCalledTimes(1);
 
     const dbUser = await (ctx.adapter as unknown as DBAdapter).findOne({
       model: "user",
@@ -181,30 +193,33 @@ describe("paystack", () => {
 
   it("should disable subscription without emailToken by fetching it", async () => {
     const paystackSdk = {
-      subscription_fetch: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+      subscription: {
+        fetch: vi.fn().mockResolvedValue({
           data: {
-            email_token: "tok_test_123",
+            status: true,
+            message: "ok",
+            data: {
+              email_token: "tok_test_123",
+            },
           },
-        },
-      }),
-      subscription_disable: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "Subscription disabled successfully",
-        },
-      }),
+        }),
+        disable: vi.fn().mockResolvedValue({
+          data: {
+            status: true,
+            message: "Subscription disabled successfully",
+          },
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -236,7 +251,7 @@ describe("paystack", () => {
       onSuccess: setCookieToHeader(headers),
     });
 
-    const res = await authClient.paystack.subscription.disable(
+    const res = await (authClient as any).paystack.subscription.disable(
       {
         subscriptionCode: "SUB_test_123",
         // emailToken intentionally omitted to test fetching
@@ -248,38 +263,41 @@ describe("paystack", () => {
 
     if (res.error !== null) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
     expect(res.data?.status).toBe("success");
-    expect(paystackSdk.subscription_fetch).toHaveBeenCalledTimes(1);
-    expect(paystackSdk.subscription_disable).toHaveBeenCalledWith({
+    expect(paystackSdk.subscription.fetch).toHaveBeenCalledTimes(1);
+    expect(paystackSdk.subscription.disable).toHaveBeenCalledWith({
       body: { code: "SUB_test_123", token: "tok_test_123" },
     });
   });
 
   it("should enable subscription without emailToken by fetching it", async () => {
     const paystackSdk = {
-      subscription_fetch: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+      subscription: {
+        fetch: vi.fn().mockResolvedValue({
           data: {
-            email_token: "tok_test_123",
+            status: true,
+            message: "ok",
+            data: {
+              email_token: "tok_test_123",
+            },
           },
-        },
-      }),
-      subscription_enable: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "Subscription enabled successfully",
-        },
-      }),
+        }),
+        enable: vi.fn().mockResolvedValue({
+          data: {
+            status: true,
+            message: "Subscription enabled successfully",
+          },
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -311,7 +329,7 @@ describe("paystack", () => {
       onSuccess: setCookieToHeader(headers),
     });
 
-    const res = await authClient.paystack.subscription.enable(
+    const res = await (authClient as any).paystack.subscription.enable(
       {
         subscriptionCode: "SUB_test_123",
         // emailToken intentionally omitted to test fetching
@@ -323,8 +341,8 @@ describe("paystack", () => {
 
     if (res.error !== null) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
     expect(res.data?.status).toBe("success");
-    expect(paystackSdk.subscription_fetch).toHaveBeenCalledTimes(1);
-    expect(paystackSdk.subscription_enable).toHaveBeenCalledWith({
+    expect(paystackSdk.subscription.fetch).toHaveBeenCalledTimes(1);
+    expect(paystackSdk.subscription.enable).toHaveBeenCalledWith({
       body: { code: "SUB_test_123", token: "tok_test_123" },
     });
   });
@@ -332,11 +350,12 @@ describe("paystack", () => {
   it("should list subscriptions for user", async () => {
     const options = {
       paystackClient: {},
-      paystackWebhookSecret: "whsec_test",
       subscription: {
         enabled: true,
         plans: [],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -395,22 +414,25 @@ describe("paystack", () => {
 
   it("should get billing portal link", async () => {
     const paystackSdk = {
-      subscription_manageLink: vi.fn().mockResolvedValue({
-        data: {
-          link: "https://paystack.com/manage/SUB_123/token",
-        },
-        status: true,
-        message: "Link generated",
-      }),
+      subscription: {
+        manageLink: vi.fn().mockResolvedValue({
+          data: {
+            link: "https://paystack.com/manage/SUB_123/token",
+          },
+          status: true,
+          message: "Link generated",
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -455,7 +477,7 @@ describe("paystack", () => {
 
     // The endpoint returns { link: string }
     expect(res.data?.link).toBe("https://paystack.com/manage/SUB_123/token");
-    expect(paystackSdk.subscription_manageLink).toHaveBeenCalledWith(
+    expect(paystackSdk.subscription.manageLink).toHaveBeenCalledWith(
       expect.objectContaining({
         params: { path: { code: "SUB_123" } },
       }),
@@ -463,24 +485,35 @@ describe("paystack", () => {
   });
   it("should reject untrusted callbackURL", async () => {
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        status: true,
-        message: "ok",
-        data: {
-          authorization_url: "https://paystack.test/redirect",
-          reference: "REF_untrusted",
-          access_code: "ACCESS_test",
-        },
-      }),
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
+          status: true,
+          message: "ok",
+          data: {
+            authorization_url: "https://paystack.test/redirect",
+            reference: "REF_untrusted",
+            access_code: "ACCESS_test",
+          },
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: {
         enabled: true,
-        plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
+        plans: [
+          {
+            planCode: "PLN_test",
+            paystackId: "ID_test",
+            amount: 1000,
+            currency: "NGN",
+            interval: "monthly",
+          } as PaystackPlan,
+        ],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -531,36 +564,47 @@ describe("paystack", () => {
 
   it("should not verify another user's subscription by reference", async () => {
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
           data: {
-            authorization_url: "https://paystack.test/redirect",
-            reference: "REF_shared_123",
-            access_code: "ACCESS_test",
+            status: true,
+            message: "ok",
+            data: {
+              authorization_url: "https://paystack.test/redirect",
+              reference: "REF_shared_123",
+              access_code: "ACCESS_test",
+            },
           },
-        },
-      }),
-      transaction_verify: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+        }),
+        verify: vi.fn().mockResolvedValue({
           data: {
-            status: "success",
-            reference: "REF_shared_123",
+            status: true,
+            message: "ok",
+            data: {
+              status: "success",
+              reference: "REF_shared_123",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: {
         enabled: true,
-        plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
+        plans: [
+          {
+            planCode: "PLN_test",
+            paystackId: "ID_test",
+            amount: 1000,
+            currency: "NGN",
+            interval: "monthly",
+          } as PaystackPlan,
+        ],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -613,7 +657,7 @@ describe("paystack", () => {
     const aHeaders = await signInWithCookies(userA);
 
     // Need to isolate the mock so it doesn't match transactions from prior tests.
-    paystackSdk.transaction_initialize.mockResolvedValueOnce({
+    paystackSdk.transaction.initialize.mockResolvedValueOnce({
       data: {
         status: true,
         message: "ok",
@@ -648,7 +692,7 @@ describe("paystack", () => {
     )?.[0] as Subscription | undefined;
     expect(subA0?.status).toBe("incomplete");
 
-    paystackSdk.transaction_verify.mockResolvedValueOnce({
+    paystackSdk.transaction.verify.mockResolvedValueOnce({
       data: {
         status: true,
         message: "ok",
@@ -680,7 +724,7 @@ describe("paystack", () => {
     )?.[0] as Subscription | undefined;
     expect(subA1?.status).toBe("incomplete");
 
-    paystackSdk.transaction_verify.mockResolvedValueOnce({
+    paystackSdk.transaction.verify.mockResolvedValueOnce({
       data: {
         status: true,
         message: "ok",
@@ -726,20 +770,21 @@ describe("paystack", () => {
 
   it("should handle one-time product transaction initialization with comprehensive checks", async () => {
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
           data: {
-            authorization_url: "https://paystack.test/buy",
-            reference: "REF_PRODUCT_123",
+            status: true,
+            data: {
+              authorization_url: "https://paystack.test/buy",
+              reference: "REF_PRODUCT_123",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: { enabled: true, plans: [] },
       products: {
         products: [
@@ -753,6 +798,8 @@ describe("paystack", () => {
           },
         ],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -787,16 +834,16 @@ describe("paystack", () => {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
-    const res = (await authClient.paystack.initializeTransaction(
+    const res = await (authClient as any).paystack.initializeTransaction(
       {
         product: "credits",
         callbackURL: "http://localhost:3000/done",
       },
       { throw: true },
-    )) as any;
+    );
 
     expect(res.url).toBe("https://paystack.test/buy");
-    expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+    expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           amount: 5000,
@@ -810,12 +857,13 @@ describe("paystack", () => {
     const authorizeReference = vi.fn().mockResolvedValue(true);
     const options = {
       paystackClient: {},
-      paystackWebhookSecret: "whsec_test",
       subscription: {
         enabled: true,
         plans: [],
         authorizeReference,
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -865,8 +913,9 @@ describe("paystack", () => {
   it("should update subscription status to canceled via webhook events", async () => {
     const options = {
       paystackClient: {},
-      paystackWebhookSecret: "test_secret",
       subscription: { enabled: true, plans: [] },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -915,12 +964,13 @@ describe("paystack", () => {
     const onSubscriptionCreated = vi.fn();
     const options = {
       paystackClient: {},
-      paystackWebhookSecret: "test_secret",
       subscription: {
         enabled: true,
         plans: [{ name: "pro", amount: 5000, currency: "NGN", planCode: "PLN_pro" }],
         onSubscriptionCreated,
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -981,12 +1031,13 @@ describe("paystack", () => {
     const onSubscriptionCancel = vi.fn();
     const options = {
       paystackClient: {},
-      paystackWebhookSecret: "test_secret",
       subscription: {
         enabled: true,
         plans: [{ name: "pro", amount: 5000, currency: "NGN" }],
         onSubscriptionCancel,
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1038,25 +1089,28 @@ describe("paystack", () => {
 
   it("should prevent trial abuse - second subscription does not get trial", async () => {
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
           data: {
-            authorization_url: "https://paystack.test/trial",
-            reference: "REF_TRIAL_ABUSE",
-            access_code: "ACCESS_trial",
+            status: true,
+            data: {
+              authorization_url: "https://paystack.test/trial",
+              reference: "REF_TRIAL_ABUSE",
+              access_code: "ACCESS_trial",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [{ name: "starter", amount: 1000, currency: "NGN", freeTrial: { days: 7 } }],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1108,13 +1162,13 @@ describe("paystack", () => {
     });
 
     // Now initialize a new subscription - should NOT get a trial
-    const res = (await authClient.paystack.initializeTransaction(
+    const res = await (authClient as any).paystack.initializeTransaction(
       {
         plan: "starter",
         callbackURL: "http://localhost:3000/done",
       },
       { throw: true },
-    )) as any;
+    );
 
     expect(res.url).toBe("https://paystack.test/trial");
 
@@ -1133,27 +1187,30 @@ describe("paystack", () => {
   it("should grant trial to first-time subscriber", async () => {
     const onTrialStart = vi.fn();
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
           data: {
-            authorization_url: "https://paystack.test/first_trial",
-            reference: "REF_FIRST_TRIAL",
-            access_code: "ACCESS_first",
+            status: true,
+            data: {
+              authorization_url: "https://paystack.test/first_trial",
+              reference: "REF_FIRST_TRIAL",
+              access_code: "ACCESS_first",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [
           { name: "pro", amount: 5000, currency: "NGN", freeTrial: { days: 14, onTrialStart } },
         ],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1190,7 +1247,7 @@ describe("paystack", () => {
     });
 
     // Initialize subscription - should get trial (no previous subs)
-    await authClient.paystack.initializeTransaction(
+    await (authClient as any).paystack.initializeTransaction(
       {
         plan: "pro",
         callbackURL: "http://localhost:3000/done",
@@ -1213,23 +1270,26 @@ describe("paystack", () => {
 
   it("should create Paystack customer for organization on create", async () => {
     const paystackSdk = {
-      customer_create: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+      customer: {
+        create: vi.fn().mockResolvedValue({
           data: {
-            customer_code: "CUS_org_123",
+            status: true,
+            message: "ok",
+            data: {
+              customer_code: "CUS_org_123",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       organization: {
         enabled: true,
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1269,31 +1329,34 @@ describe("paystack", () => {
 
     // Organization hooks may need to be invoked via adapter hooks
     // For now, verify the SDK method exists
-    expect(paystackSdk.customer_create).toBeDefined();
+    expect(paystackSdk.customer.create).toBeDefined();
   });
 
   it("should use Organization email and attribution when initializing transaction for an Org", async () => {
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
           data: {
-            authorization_url: "https://paystack.test/org_init",
-            reference: "REF_ORG_INIT",
-            access_code: "ACCESS_org",
+            status: true,
+            data: {
+              authorization_url: "https://paystack.test/org_init",
+              reference: "REF_ORG_INIT",
+              access_code: "ACCESS_org",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       organization: { enabled: true },
       subscription: {
         enabled: true,
         plans: [{ name: "enterprise", amount: 100000, currency: "NGN" }],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1356,7 +1419,7 @@ describe("paystack", () => {
     });
 
     // Initialize for Org
-    const { data } = await client.subscription.create({
+    const { data } = await (client as any).subscription.create({
       referenceId: actualOrgId,
       plan: "enterprise",
       callbackURL: "http://localhost:3000/callback",
@@ -1364,7 +1427,7 @@ describe("paystack", () => {
 
     expect(data?.url).toBeDefined();
 
-    expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+    expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           email: "billing@enterprise.com",
@@ -1376,22 +1439,23 @@ describe("paystack", () => {
 
   it("should fallback to Organization owner email when Org email is missing", async () => {
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "Transaction initialized",
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
           data: {
-            authorization_url: "https://checkout.paystack.com/123",
-            access_code: "acc_123",
-            reference: "ref_123",
+            status: true,
+            message: "Transaction initialized",
+            data: {
+              authorization_url: "https://checkout.paystack.com/123",
+              access_code: "acc_123",
+              reference: "ref_123",
+            },
           },
-        },
-      }),
+        }),
+      },
     };
 
     const options = {
-      paystackClient: paystackSdk,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
       organization: { enabled: true },
       subscription: {
         enabled: true,
@@ -1404,6 +1468,8 @@ describe("paystack", () => {
           },
         ],
       },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1464,7 +1530,7 @@ describe("paystack", () => {
 
     // Initialize for Org
 
-    const { data } = await client.subscription.create(
+    const { data } = await (client as any).subscription.create(
       {
         referenceId: actualOrgId,
         plan: "enterprise",
@@ -1476,7 +1542,7 @@ describe("paystack", () => {
     );
 
     expect(data).toBeDefined();
-    expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+    expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           email: "owner@org.com",
@@ -1506,8 +1572,9 @@ describe("paystack", () => {
     };
 
     const options = {
-      paystackClient: paystackSdk as any,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike as any,
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1580,8 +1647,9 @@ describe("paystack", () => {
       }),
     };
     const options = {
-      paystackClient: paystackSdk as any,
-      paystackWebhookSecret: "whsec_test",
+      paystackClient: paystackSdk as unknown as PaystackClientLike as any,
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({

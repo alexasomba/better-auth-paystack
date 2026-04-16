@@ -1,0 +1,18 @@
+VITE+ - The Unified Toolchain for the Web
+
+[1m[31merror:[39m[0m Formatting could not start
+Checking formatting...
+
+
+  x Expected `,` or `)` but found `:`
+     ,-[test/paystack.test.ts:110:59]
+ 109 |     const payload = JSON.stringify({ event: "charge.success", data: {} });
+ 110 |     const signature = createHmac("sha512", options.webhook: { secret: "test_secret" }, secretKey: "test_key", stub)
+     :                                 |                         |
+     :                                 |                         `-- `,` or `)` expected
+     :                                 `-- Opened here
+ 111 |       .update(payload)
+     `----
+Error occurred when checking code style in the above files.
+
+Formatting failed before analysis started

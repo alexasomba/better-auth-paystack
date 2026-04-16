@@ -21,7 +21,7 @@ export const checkSeatLimit = async (
 ) => {
   const subscription = await getOrganizationSubscription(ctx, organizationId);
 
-  if (subscription?.seats === undefined || subscription.seats === null) {
+  if (subscription?.seats === null) {
     return true; // No explicit seat limit found
   }
 
@@ -29,6 +29,10 @@ export const checkSeatLimit = async (
     model: "member",
     where: [{ field: "organizationId", value: organizationId }],
   });
+
+  if (!subscription) {
+    return true; // No subscription, no specific limit enforcement here (or maybe allow depending on config)
+  }
 
   if (members.length + seatsToAdd > subscription.seats) {
     throw new APIError("FORBIDDEN", {

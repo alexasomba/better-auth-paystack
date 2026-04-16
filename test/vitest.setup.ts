@@ -36,7 +36,6 @@ void (async () => {
           throw res?.error ?? new Error("Zod parseAsync failed");
         });
       };
-      // oxlint-disable-next-line no-console
       console.log("vitest.setup: injected Zod.parseAsync polyfill");
     }
   } catch {

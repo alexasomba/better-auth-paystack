@@ -1,3 +1,5 @@
+/* oxlint-disable @typescript-eslint/strict-boolean-expressions */
+
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
@@ -9,10 +11,9 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { paystack } from "../src";
 import { paystackClient } from "../src/client";
-import type { Member } from "../src/types";
+import type { Member, Subscription } from "../src/types";
 
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
-// Polyfill for Zod: ensure schema.parseAsync exists and delegates to safeParseAsync.
 
 /**
  * Tests for planCode-based subscriptions and organization referenceId billing
@@ -36,28 +37,30 @@ describe("planCode and organization referenceId tests", () => {
       const memory = memoryAdapter(data);
 
       const paystackSdk = {
-        transaction_initialize: vi.fn().mockResolvedValue({
-          data: {
-            status: true,
-            message: "ok",
+        transaction: {
+          initialize: vi.fn().mockResolvedValue({
             data: {
-              authorization_url: "https://paystack/checkout",
-              reference: "ref_plancode_123",
-              access_code: "acc_123",
+              status: true,
+              message: "ok",
+              data: {
+                authorization_url: "https://paystack/checkout",
+                reference: "ref_plancode_123",
+                access_code: "acc_123",
+              },
             },
-          },
-        }),
-        transaction_verify: vi.fn().mockResolvedValue({
-          data: {
-            status: true,
-            message: "ok",
+          }),
+          verify: vi.fn().mockResolvedValue({
             data: {
-              status: "success",
-              reference: "ref_plancode_123",
+              status: true,
+              message: "ok",
+              data: {
+                status: "success",
+                reference: "ref_plancode_123",
+              },
             },
-          },
-        }),
-      };
+          }),
+        },
+      } as any;
 
       const auth = betterAuth({
         baseURL: "http://localhost:3000",
@@ -67,18 +70,26 @@ describe("planCode and organization referenceId tests", () => {
         plugins: [
           paystack<any>({
             paystackClient: paystackSdk,
-            paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
                 {
                   name: "starter",
-                  planCode: "PLN_jm9wgvkqykajlp7", // planCode provided
-                  // amount/currency/interval optional when planCode is set
+                  amount: 50000,
+                  currency: "NGN",
+                  interval: "monthly",
+                  planCode: "PLN_jm9wgvkqykajlp7",
+                  paystackId: "ID_starter",
                 },
                 {
                   name: "pro",
+                  amount: 100000,
+                  currency: "NGN",
+                  interval: "monthly",
                   planCode: "PLN_6ikzoaxnunttb5e",
+                  paystackId: "ID_pro",
                 },
               ],
             },
@@ -86,9 +97,7 @@ describe("planCode and organization referenceId tests", () => {
         ],
       });
 
-      const _ctx = await (auth as any).$context;
       const cookieHeaders = new Headers();
-
       const authClient = createAuthClient({
         baseURL: "http://localhost:3000",
         plugins: [bearer(), paystackClient({ subscription: true })],
@@ -103,31 +112,24 @@ describe("planCode and organization referenceId tests", () => {
         },
       });
 
-      // Create user and sign in
       const user = {
         email: "plancode.user@example.com",
         password: "password",
         name: "PlanCode User",
       };
-      const signUp = await authClient.signUp.email(user, { throw: true });
-      expect(signUp.user.id).toBeDefined();
-
+      await authClient.signUp.email(user, { throw: true });
       await authClient.signIn.email(user, {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      // Initialize transaction with planCode plan
-      const init = await authClient.paystack.transaction.initialize({ plan: "starter" });
+      const init = await (authClient as any).paystack.transaction.initialize({ plan: "starter" });
       if (init.error) throw new Error("Initialization failed");
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_plancode_123");
 
-      // Verify the SDK was called with planCode
-      expect(paystackSdk.transaction_initialize).toHaveBeenCalledTimes(1);
-      const callArgs = paystackSdk.transaction_initialize.mock.calls[0][0];
+      expect(paystackSdk.transaction.initialize).toHaveBeenCalledTimes(1);
+      const callArgs = paystackSdk.transaction.initialize.mock.calls[0][0];
       expect(callArgs.body.plan).toBe("PLN_jm9wgvkqykajlp7");
-      // Paystack API requires amount even with planCode (it uses plan's stored amount)
-      // For plans without local amount, we send minimum 50000 kobo (500 NGN)
       expect(callArgs.body.amount).toBe(50000);
     });
 
@@ -143,25 +145,27 @@ describe("planCode and organization referenceId tests", () => {
       const memory = memoryAdapter(data);
 
       const paystackSdk = {
-        transaction_initialize: vi.fn().mockResolvedValue({
-          data: {
-            status: true,
-            message: "ok",
+        transaction: {
+          initialize: vi.fn().mockResolvedValue({
             data: {
-              authorization_url: "https://paystack/checkout",
-              reference: "ref_local_123",
-              access_code: "acc_local",
+              status: true,
+              message: "ok",
+              data: {
+                authorization_url: "https://paystack/checkout",
+                reference: "ref_local_123",
+                access_code: "acc_local",
+              },
             },
-          },
-        }),
-        transaction_verify: vi.fn().mockResolvedValue({
-          data: {
-            status: true,
-            message: "ok",
-            data: { status: "success", reference: "ref_local_123" },
-          },
-        }),
-      };
+          }),
+          verify: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: { status: "success", reference: "ref_local_123" },
+            },
+          }),
+        },
+      } as any;
 
       const auth = betterAuth({
         baseURL: "http://localhost:3000",
@@ -171,15 +175,18 @@ describe("planCode and organization referenceId tests", () => {
         plugins: [
           paystack<any>({
             paystackClient: paystackSdk,
-            paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
                 {
                   name: "team",
-                  amount: 2500000, // 25,000 NGN - no planCode
+                  amount: 2500000,
                   currency: "NGN",
                   interval: "monthly",
+                  planCode: "PLN_team",
+                  paystackId: "ID_team",
                 },
               ],
             },
@@ -188,7 +195,6 @@ describe("planCode and organization referenceId tests", () => {
       });
 
       const cookieHeaders = new Headers();
-
       const authClient = createAuthClient({
         baseURL: "http://localhost:3000",
         plugins: [bearer(), paystackClient({ subscription: true })],
@@ -210,13 +216,12 @@ describe("planCode and organization referenceId tests", () => {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const init = await authClient.paystack.transaction.initialize({ plan: "team" });
+      const init = await (authClient as any).paystack.transaction.initialize({ plan: "team" });
 
       if (init.error) throw new Error("Initialization failed");
       expect(init.data.url).toBe("https://paystack/checkout");
 
-      // Verify the SDK was called with amount (no planCode)
-      const callArgs = paystackSdk.transaction_initialize.mock.calls[0][0];
+      const callArgs = paystackSdk.transaction.initialize.mock.calls[0][0];
       expect(callArgs.body.amount).toBe(2500000);
       expect(callArgs.body.plan).toBeUndefined();
     });
@@ -238,25 +243,27 @@ describe("planCode and organization referenceId tests", () => {
       const memory = memoryAdapter(data);
 
       const paystackSdk = {
-        transaction_initialize: vi.fn().mockResolvedValue({
-          data: {
-            status: true,
-            message: "ok",
+        transaction: {
+          initialize: vi.fn().mockResolvedValue({
             data: {
-              authorization_url: "https://paystack/checkout",
-              reference: "ref_org_123",
-              access_code: "acc_org",
+              status: true,
+              message: "ok",
+              data: {
+                authorization_url: "https://paystack/checkout",
+                reference: "ref_org_123",
+                access_code: "acc_org",
+              },
             },
-          },
-        }),
-        transaction_verify: vi.fn().mockResolvedValue({
-          data: {
-            status: true,
-            message: "ok",
-            data: { status: "success", reference: "ref_org_123" },
-          },
-        }),
-      };
+          }),
+          verify: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: { status: "success", reference: "ref_org_123" },
+            },
+          }),
+        },
+      } as any;
 
       const auth = betterAuth({
         baseURL: "http://localhost:3000",
@@ -267,7 +274,8 @@ describe("planCode and organization referenceId tests", () => {
           organization(),
           paystack<any>({
             paystackClient: paystackSdk,
-            paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -276,14 +284,14 @@ describe("planCode and organization referenceId tests", () => {
                   amount: 2500000,
                   currency: "NGN",
                   interval: "monthly",
+                  planCode: "PLN_team_org",
+                  paystackId: "ID_team_org",
                 },
               ],
               authorizeReference: async ({ user, referenceId }, ctx) => {
-                // Allow user's own ID
                 if (!referenceId || referenceId === user.id) {
                   return true;
                 }
-                // Check org membership
                 const members = await ctx.context.adapter.findMany({
                   model: "member",
                   where: [
@@ -319,26 +327,21 @@ describe("planCode and organization referenceId tests", () => {
         },
       });
 
-      // Create user and sign in
       const user = { email: "org.owner@example.com", password: "password", name: "Org Owner" };
-      const signUp = await authClient.signUp.email(user, { throw: true });
-      const _userId = signUp.user.id;
-
+      await authClient.signUp.email(user, { throw: true });
       await authClient.signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      // Create an organization (user becomes owner)
-      const org = await authClient.organization.create({
+      const org = await (authClient as any).organization.create({
         name: "Test Org",
         slug: "test-org",
       });
       const orgId = org.data?.id;
       expect(orgId).toBeDefined();
 
-      // Initialize transaction with org referenceId
-      const init = await authClient.paystack.transaction.initialize({
+      const init = await (authClient as any).paystack.transaction.initialize({
         plan: "team",
         referenceId: orgId,
       });
@@ -346,7 +349,6 @@ describe("planCode and organization referenceId tests", () => {
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_org_123");
 
-      // Verify subscription was created with org referenceId
       const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
       expect(subscriptions?.length).toBeGreaterThan(0);
       const sub = subscriptions?.find((s: any) => s.referenceId === orgId);
@@ -368,9 +370,11 @@ describe("planCode and organization referenceId tests", () => {
       const memory = memoryAdapter(data);
 
       const paystackSdk = {
-        transaction_initialize: vi.fn(),
-        transaction_verify: vi.fn(),
-      };
+        transaction: {
+          initialize: vi.fn(),
+          verify: vi.fn(),
+        },
+      } as any;
 
       const auth = betterAuth({
         baseURL: "http://localhost:3000",
@@ -381,7 +385,8 @@ describe("planCode and organization referenceId tests", () => {
           organization(),
           paystack<any>({
             paystackClient: paystackSdk,
-            paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -390,6 +395,8 @@ describe("planCode and organization referenceId tests", () => {
                   amount: 2500000,
                   currency: "NGN",
                   interval: "monthly",
+                  planCode: "PLN_team_reject",
+                  paystackId: "ID_team_reject",
                 },
               ],
               authorizeReference: async ({ user, referenceId }, ctx) => {
@@ -430,7 +437,6 @@ describe("planCode and organization referenceId tests", () => {
         },
       });
 
-      // Create user and sign in
       const user = { email: "nonmember@example.com", password: "password", name: "Non Member" };
       await authClient.signUp.email(user, { throw: true });
       await authClient.signIn.email(user, {
@@ -438,23 +444,19 @@ describe("planCode and organization referenceId tests", () => {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      // Try to bill against a fake org ID the user doesn't belong to
       const fakeOrgId = "org_fake_123";
 
       try {
-        await authClient.paystack.transaction.initialize(
+        await (authClient as any).paystack.transaction.initialize(
           { plan: "team", referenceId: fakeOrgId },
           { throw: true },
         );
-        // Should not reach here
         expect(true).toBe(false);
       } catch (error: any) {
-        // Expect authorization to fail
         expect(error).toBeDefined();
       }
 
-      // Verify SDK was NOT called
-      expect(paystackSdk.transaction_initialize).not.toHaveBeenCalled();
+      expect(paystackSdk.transaction.initialize).not.toHaveBeenCalled();
     });
   });
 });

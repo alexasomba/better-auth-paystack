@@ -2,10 +2,10 @@ import { createAuthMiddleware } from "@better-auth/core/api";
 import { logger } from "better-auth";
 import { APIError } from "better-auth/api";
 
-import type { PaystackClientLike, PaystackOptions, Session, User } from "./types";
+import type { PaystackOptions, Session, User } from "./types";
 
 export const referenceMiddleware = (
-  options: PaystackOptions<PaystackClientLike>,
+  options: PaystackOptions,
   action:
     | "initialize-transaction"
     | "verify-transaction"
@@ -43,7 +43,7 @@ export const referenceMiddleware = (
     if (
       subscriptionOptions?.enabled === true &&
       "authorizeReference" in subscriptionOptions &&
-      subscriptionOptions.authorizeReference
+      typeof subscriptionOptions.authorizeReference === "function"
     ) {
       const authorized = await subscriptionOptions.authorizeReference(
         {

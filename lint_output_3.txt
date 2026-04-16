@@ -1,0 +1,476 @@
+VITE+ - The Unified Toolchain for the Web
+
+
+  x `await` is only allowed within async functions and at the top levels of modules
+      ,-[src/routes.ts:1196:22]
+ 1195 |   if (typeof (globalThis as any).atob === "function") return (globalThis as any).atob(padded);
+ 1196 |   const { Buffer } = await import("node:buffer");
+      :                      ^^^^^
+ 1197 |   return Buffer.from(padded, "base64").toString("utf8");
+      `----
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
+
+  x typescript(TS18048): 'ownerMember' is possibly 'undefined'.
+     ,-[src/routes.ts:625:49]
+ 624 |                   model: "user",
+ 625 |                   where: [{ field: "id", value: ownerMember.userId }],
+     :                                                 ^^^^^^^^^^^
+ 626 |                 });
+     `----
+
+  x typescript(TS2339): Property 'userId' does not exist on type '{}'.
+     ,-[src/routes.ts:625:61]
+ 624 |                   model: "user",
+ 625 |                   where: [{ field: "id", value: ownerMember.userId }],
+     :                                                             ^^^^^^
+ 626 |                 });
+     `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+     ,-[src/routes.ts:755:19]
+ 754 | 
+ 755 |             await options.paystackClient.subscription_update({
+     :                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 756 |               path: { email_or_code: existingSub.paystackSubscriptionCode },
+     `----
+
+  x typescript(TS2353): Object literal may only specify known properties, and 'path' does not exist in type '{ params: { path: { code: string; }; }; body: { plan?: string | undefined; authorization?: string | undefined; amount?: number | undefined; }; }'.
+     ,-[src/routes.ts:756:15]
+ 755 |             await options.paystackClient.subscription_update({
+ 756 |               path: { email_or_code: existingSub.paystackSubscriptionCode },
+     :               ^^^^
+ 757 |               body: { amount: String(newAmount) } as any,
+     `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+     ,-[src/routes.ts:895:33]
+ 894 |       try {
+ 895 |         const verifyRaw = await options.paystackClient.transaction_verify({
+     :                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 896 |           path: { reference: ctx.body.reference },
+     `----
+
+  x typescript(TS18048): 'options.paystackClient.transaction_verify' is possibly 'undefined'.
+     ,-[src/routes.ts:895:33]
+ 894 |       try {
+ 895 |         const verifyRaw = await options.paystackClient.transaction_verify({
+     :                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 896 |           path: { reference: ctx.body.reference },
+     `----
+
+  x typescript(TS2353): Object literal may only specify known properties, and 'path' does not exist in type 'FetchOptions<{ parameters: { query?: undefined; header?: undefined; path: { reference: string; }; cookie?: undefined; }; requestBody?: undefined; responses: { 200: { headers: { [name: string]: unknown; }; content: { "application/json": { ...; }; }; }; 401: { ...; }; 404: { ...; };
+  | default: { ...; }; }; }>'.
+     ,-[src/routes.ts:896:11]
+ 895 |         const verifyRaw = await options.paystackClient.transaction_verify({
+ 896 |           path: { reference: ctx.body.reference },
+     :           ^^^^
+ 897 |         });
+     `----
+
+  x typescript(TS2339): Property 'customer' does not exist on type '{}'.
+     ,-[src/routes.ts:961:39]
+ 960 | 
+ 961 |           const customerCode = (data?.customer as any)?.customer_code;
+     :                                       ^^^^^^^^
+ 962 |           if (
+     `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1041:39]
+ 1040 |             ) {
+ 1041 |               const subResRaw = await options.paystackClient.subscription_create({
+      :                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1042 |                 body: {
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.subscription_create' is possibly 'undefined'.
+      ,-[src/routes.ts:1041:39]
+ 1040 |             ) {
+ 1041 |               const subResRaw = await options.paystackClient.subscription_create({
+      :                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1042 |                 body: {
+      `----
+
+  x typescript(TS1308): 'await' expressions are only allowed within async functions and at the top levels of modules.
+      ,-[src/routes.ts:1196:22]
+ 1195 |   if (typeof (globalThis as any).atob === "function") return (globalThis as any).atob(padded);
+ 1196 |   const { Buffer } = await import("node:buffer");
+      :                      ^^^^^
+ 1197 |   return Buffer.from(padded, "base64").toString("utf8");
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1253:29]
+ 1252 |         try {
+ 1253 |           const raw = await options.paystackClient.subscription_fetch({
+      :                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1254 |             path: { id_or_code: subscriptionCode },
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.subscription_fetch' is possibly 'undefined'.
+      ,-[src/routes.ts:1253:29]
+ 1252 |         try {
+ 1253 |           const raw = await options.paystackClient.subscription_fetch({
+      :                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1254 |             path: { id_or_code: subscriptionCode },
+      `----
+
+  x typescript(TS2353): Object literal may only specify known properties, and 'path' does not exist in type 'FetchOptions<{ parameters: { query?: undefined; header?: undefined; path: { id_or_code: string; }; cookie?: undefined; }; requestBody?: undefined; responses: { 200: { headers: { [name: string]: unknown; }; content: { "application/json": { ...; }; }; }; 401: { ...; }; 404: { ...; };
+  | default: { ...; }; }; }>'.
+      ,-[src/routes.ts:1254:13]
+ 1253 |           const raw = await options.paystackClient.subscription_fetch({
+ 1254 |             path: { id_or_code: subscriptionCode },
+      :             ^^^^
+ 1255 |           });
+      `----
+
+  x typescript(TS2339): Property 'email_token' does not exist on type '{}'.
+      ,-[src/routes.ts:1257:32]
+ 1256 |           const data = unwrapSdkResult<PaystackSubscriptionResponse>(raw);
+ 1257 |           emailToken ??= data?.email_token;
+      :                                ^^^^^^^^^^^
+ 1258 |           nextPaymentDate = data?.next_payment_date;
+      `----
+
+  x typescript(TS2339): Property 'next_payment_date' does not exist on type '{}'.
+      ,-[src/routes.ts:1258:35]
+ 1257 |           emailToken ??= data?.email_token;
+ 1258 |           nextPaymentDate = data?.next_payment_date;
+      :                                   ^^^^^^^^^^^^^^^^^
+ 1259 |         } catch {
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1265:31]
+ 1264 |           try {
+ 1265 |             const raw = await options.paystackClient.subscription_manageLink({
+      :                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1266 |               path: { code: subscriptionCode },
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.subscription_manageLink' is possibly 'undefined'.
+      ,-[src/routes.ts:1265:31]
+ 1264 |           try {
+ 1265 |             const raw = await options.paystackClient.subscription_manageLink({
+      :                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1266 |               path: { code: subscriptionCode },
+      `----
+
+  x typescript(TS2353): Object literal may only specify known properties, and 'path' does not exist in type 'FetchOptions<{ parameters: { query?: undefined; header?: undefined; path: { code: string; }; cookie?: undefined; }; requestBody?: undefined; responses: { 200: { headers: { [name: string]: unknown; }; content: { "application/json": { ...; }; }; }; 401: { ...; }; default: { ...; }; }; }>'.
+      ,-[src/routes.ts:1266:15]
+ 1265 |             const raw = await options.paystackClient.subscription_manageLink({
+ 1266 |               path: { code: subscriptionCode },
+      :               ^^^^
+ 1267 |             });
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1279:15]
+ 1278 | 
+ 1279 |         await options.paystackClient.subscription_disable({
+      :               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1280 |           body: { code: subscriptionCode, token: emailToken },
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1339:31]
+ 1338 |           try {
+ 1339 |             const raw = await options.paystackClient.subscription_fetch({
+      :                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1340 |               path: { id_or_code: subscriptionCode },
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.subscription_fetch' is possibly 'undefined'.
+      ,-[src/routes.ts:1339:31]
+ 1338 |           try {
+ 1339 |             const raw = await options.paystackClient.subscription_fetch({
+      :                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1340 |               path: { id_or_code: subscriptionCode },
+      `----
+
+  x typescript(TS2353): Object literal may only specify known properties, and 'path' does not exist in type 'FetchOptions<{ parameters: { query?: undefined; header?: undefined; path: { id_or_code: string; }; cookie?: undefined; }; requestBody?: undefined; responses: { 200: { headers: { [name: string]: unknown; }; content: { "application/json": { ...; }; }; }; 401: { ...; }; 404: { ...; };
+  | default: { ...; }; }; }>'.
+      ,-[src/routes.ts:1340:15]
+ 1339 |             const raw = await options.paystackClient.subscription_fetch({
+ 1340 |               path: { id_or_code: subscriptionCode },
+      :               ^^^^
+ 1341 |             });
+      `----
+
+  x typescript(TS2339): Property 'email_token' does not exist on type '{}'.
+      ,-[src/routes.ts:1343:32]
+ 1342 |             const data = unwrapSdkResult<PaystackSubscriptionResponse>(raw);
+ 1343 |             emailToken = data?.email_token;
+      :                                ^^^^^^^^^^^
+ 1344 |           } catch {
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1351:31]
+ 1350 |           try {
+ 1351 |             const raw = await options.paystackClient.subscription_manageLink({
+      :                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1352 |               path: { code: subscriptionCode },
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.subscription_manageLink' is possibly 'undefined'.
+      ,-[src/routes.ts:1351:31]
+ 1350 |           try {
+ 1351 |             const raw = await options.paystackClient.subscription_manageLink({
+      :                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1352 |               path: { code: subscriptionCode },
+      `----
+
+  x typescript(TS2353): Object literal may only specify known properties, and 'path' does not exist in type 'FetchOptions<{ parameters: { query?: undefined; header?: undefined; path: { code: string; }; cookie?: undefined; }; requestBody?: undefined; responses: { 200: { headers: { [name: string]: unknown; }; content: { "application/json": { ...; }; }; }; 401: { ...; }; default: { ...; }; }; }>'.
+      ,-[src/routes.ts:1352:15]
+ 1351 |             const raw = await options.paystackClient.subscription_manageLink({
+ 1352 |               path: { code: subscriptionCode },
+      :               ^^^^
+ 1353 |             });
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1365:15]
+ 1364 | 
+ 1365 |         await options.paystackClient.subscription_enable({
+      :               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1366 |           body: { code: subscriptionCode, token: emailToken },
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1417:27]
+ 1416 |       try {
+ 1417 |         const raw = await options.paystackClient.subscription_manageLink({
+      :                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1418 |           path: { code: subscriptionCode },
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.subscription_manageLink' is possibly 'undefined'.
+      ,-[src/routes.ts:1417:27]
+ 1416 |       try {
+ 1417 |         const raw = await options.paystackClient.subscription_manageLink({
+      :                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1418 |           path: { code: subscriptionCode },
+      `----
+
+  x typescript(TS2353): Object literal may only specify known properties, and 'path' does not exist in type 'FetchOptions<{ parameters: { query?: undefined; header?: undefined; path: { code: string; }; cookie?: undefined; }; requestBody?: undefined; responses: { 200: { headers: { [name: string]: unknown; }; content: { "application/json": { ...; }; }; }; 401: { ...; }; default: { ...; }; }; }>'.
+      ,-[src/routes.ts:1418:11]
+ 1417 |         const raw = await options.paystackClient.subscription_manageLink({
+ 1418 |           path: { code: subscriptionCode },
+      :           ^^^^
+ 1419 |         });
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1512:27]
+ 1511 |       try {
+ 1512 |         const raw = await options.paystackClient.plan_list();
+      :                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1513 |         const plansData = unwrapSdkResult<any[]>(raw);
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.plan_list' is possibly 'undefined'.
+      ,-[src/routes.ts:1512:27]
+ 1511 |       try {
+ 1512 |         const raw = await options.paystackClient.plan_list();
+      :                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1513 |         const plansData = unwrapSdkResult<any[]>(raw);
+      `----
+
+  x typescript(TS2722): Cannot invoke an object which is possibly 'undefined'.
+      ,-[src/routes.ts:1658:34]
+ 1657 | 
+ 1658 |       const chargeResRaw = await options.paystackClient.transaction_chargeAuthorization({
+      :                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1659 |         body: {
+      `----
+
+  x typescript(TS18048): 'options.paystackClient.transaction_chargeAuthorization' is possibly 'undefined'.
+      ,-[src/routes.ts:1658:34]
+ 1657 | 
+ 1658 |       const chargeResRaw = await options.paystackClient.transaction_chargeAuthorization({
+      :                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 1659 |         body: {
+      `----
+
+  x typescript(TS2322): Type 'string' is not assignable to type 'undefined'.
+      ,-[src/routes.ts:1664:23]
+ 1663 |           currency: finalCurrency as PaystackCurrency,
+ 1664 |           metadata: { subscriptionId, referenceId: subscription.referenceId, plan: plan.name },
+      :                       ^^^^^^^^^^^^^^
+ 1665 |         },
+      `----
+
+  x typescript(TS2322): Type 'string' is not assignable to type 'undefined'.
+      ,-[src/routes.ts:1664:39]
+ 1663 |           currency: finalCurrency as PaystackCurrency,
+ 1664 |           metadata: { subscriptionId, referenceId: subscription.referenceId, plan: plan.name },
+      :                                       ^^^^^^^^^^^
+ 1665 |         },
+      `----
+
+  x typescript(TS2322): Type 'string' is not assignable to type 'undefined'.
+      ,-[src/routes.ts:1664:78]
+ 1663 |           currency: finalCurrency as PaystackCurrency,
+ 1664 |           metadata: { subscriptionId, referenceId: subscription.referenceId, plan: plan.name },
+      :                                                                              ^^^^
+ 1665 |         },
+      `----
+
+  x typescript(TS2339): Property 'status' does not exist on type '{}'.
+      ,-[src/routes.ts:1672:20]
+ 1671 |         chargeData !== undefined &&
+ 1672 |         chargeData.status === "success"
+      :                    ^^^^^^
+ 1673 |       ) {
+      `----
+
+  x typescript(TS2339): Property 'reference' does not exist on type '{}'.
+      ,-[src/routes.ts:1681:55]
+ 1680 |             updatedAt: now,
+ 1681 |             paystackTransactionReference: chargeData?.reference,
+      :                                                       ^^^^^^^^^
+ 1682 |           },
+      `----
+
+  x typescript-eslint(no-base-to-string): 'data.id' will use Object's default stringification format ('[object Object]') when stringified.
+     ,-[src/routes.ts:123:62]
+ 122 |         const paystackId =
+ 123 |           data.id !== null && data.id !== undefined ? String(data.id) : undefined;
+     :                                                              ^^^^^^^
+ 124 | 
+     `----
+  help: Consider picking a property (e.g. `user.name`), using a formatter (or `JSON.stringify`), or implementing a custom `toString()`/`toLocaleString()` on the type.
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected object value in conditional. An object is always truthy.
+     ,-[src/routes.ts:235:21]
+ 234 |                 const subscription = matches?.[0];
+ 235 |                 if (subscription) {
+     :                     ^^^^^^^^^^^^
+ 236 |                   await ctx.context.adapter.update({
+     `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected nullable string value in conditional. Please handle the nullish and empty string cases explicitly.
+     ,-[src/routes.ts:242:35]
+ 241 |                       updatedAt: new Date(),
+ 242 |                       periodEnd: (payloadData.next_payment_date as string | undefined)
+     :                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 243 |                         ? new Date(payloadData.next_payment_date as string)
+     `----
+
+  x typescript-eslint(prefer-optional-chain): Prefer using an optional chain expression instead, as it's more concise and easier to read.
+     ,-[src/routes.ts:582:11]
+ 581 |             const hadTrial =
+ 582 | ,->           previousTrials !== null &&
+ 583 | |             previousTrials.some(
+ 584 | |               (sub) =>
+ 585 | |                 sub.trialStart !== undefined ||
+ 586 | |                 sub.trialEnd !== undefined ||
+ 587 | |                 sub.status === "trialing",
+ 588 | `->           );
+ 589 |     
+     `----
+
+  x typescript-eslint(prefer-optional-chain): Prefer using an optional chain expression instead, as it's more concise and easier to read.
+     ,-[src/routes.ts:747:21]
+ 746 |                 const sdkRes = unwrapSdkResult<Record<string, any>>(chargeResRaw);
+ 747 |                 if (sdkRes === null || sdkRes === undefined || sdkRes.status !== "success") {
+     :                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 748 |                   throw new APIError("BAD_REQUEST", {
+     `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected any value in conditional. Use a more specific type to ensure type safety.
+     ,-[src/routes.ts:910:26]
+ 909 |       const reference = (data as any)?.reference ?? ctx.body.reference;
+ 910 |       const paystackId = (data as any)?.id ? String((data as any).id) : undefined;
+     :                          ^^^^^^^^^^^^^^^^^
+ 911 |       const authorizationCode = (data as any)?.authorization?.authorization_code;
+     `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected any value in conditional. Use a more specific type to ensure type safety.
+     ,-[src/routes.ts:924:14]
+ 923 |                 authRef !== undefined &&
+ 924 | ,->             (await authRef(
+ 925 | |                 { user: session.user, session, referenceId, action: "verify-transaction" },
+ 926 | |                 ctx as GenericEndpointContext,
+ 927 | `->             ))
+ 928 |               );
+     `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected any value in conditional. Use a more specific type to ensure type safety.
+     ,-[src/routes.ts:973:20]
+ 972 |                   (referenceId.startsWith("org_") ??
+ 973 | ,->                 !!(await ctx.context.adapter.findOne({
+ 974 | |                     model: "organization",
+ 975 | |                     where: [{ field: "id", value: referenceId }],
+ 976 | `->                 })));
+ 977 |                 await ctx.context.adapter.update({
+     `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected any value in conditional. Use a more specific type to ensure type safety.
+     ,-[src/routes.ts:978:22]
+ 977 |             await ctx.context.adapter.update({
+ 978 |               model: isOrg ? "organization" : "user",
+     :                      ^^^^^
+ 979 |               update: { paystackCustomerCode: customerCode },
+     `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected any value in conditional. Use a more specific type to ensure type safety.
+      ,-[src/routes.ts:999:15]
+  998 | 
+  999 |           if ((data as any)?.metadata) {
+      :               ^^^^^^^^^^^^^^^^^^^^^^^
+ 1000 |             const meta =
+      `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected nullable string value in conditional. Please handle the nullish and empty string cases explicitly.
+      ,-[src/routes.ts:1263:14]
+ 1262 | 
+ 1263 |         if (!emailToken) {
+      :              ^^^^^^^^^^
+ 1264 |           try {
+      `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected any value in conditional. Use a more specific type to ensure type safety.
+      ,-[src/routes.ts:1270:17]
+ 1269 |             const link = typeof data === "string" ? data : data?.link;
+ 1270 |             if (link) emailToken = tryGetEmailToken(link);
+      :                 ^^^^
+ 1271 |           } catch {
+      `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected nullable string value in conditional. Please handle the nullish and empty string cases explicitly.
+      ,-[src/routes.ts:1337:14]
+ 1336 |         let emailToken = ctx.body.emailToken;
+ 1337 |         if (!emailToken) {
+      :              ^^^^^^^^^^
+ 1338 |           try {
+      `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected nullable string value in conditional. Please handle the nullish and empty string cases explicitly.
+      ,-[src/routes.ts:1349:14]
+ 1348 | 
+ 1349 |         if (!emailToken) {
+      :              ^^^^^^^^^^
+ 1350 |           try {
+      `----
+
+  ! typescript-eslint(strict-boolean-expressions): Unexpected any value in conditional. Use a more specific type to ensure type safety.
+      ,-[src/routes.ts:1356:17]
+ 1355 |             const link = typeof data === "string" ? data : data?.link;
+ 1356 |             if (link) emailToken = tryGetEmailToken(link);
+      :                 ^^^^
+ 1357 |           } catch {
+      `----
+
+  x typescript-eslint(prefer-optional-chain): Prefer using an optional chain expression instead, as it's more concise and easier to read.
+      ,-[src/routes.ts:1670:9]
+ 1669 |           if (
+ 1670 | ,->         chargeData !== null &&
+ 1671 | |           chargeData !== undefined &&
+ 1672 | `->         chargeData.status === "success"
+ 1673 |           ) {
+      `----
+
+Found 12 warnings and 45 errors.
+Finished in 592ms on 1 file with 178 rules using 8 threads.

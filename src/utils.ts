@@ -7,7 +7,7 @@ import type {
   Subscription,
   PaystackProductResponse,
 } from "./types";
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { unwrapSdkResult } from "./paystack-sdk";
 
 export async function getPlans(subscriptionOptions: AnyPaystackOptions["subscription"]) {
   if (subscriptionOptions?.enabled === true) {
@@ -52,9 +52,10 @@ export async function getProducts(productOptions: AnyPaystackOptions["products"]
 }
 
 export async function getProductByName(options: AnyPaystackOptions, name: string) {
-  return await getProducts(options.products).then(
-    (products) =>
-      products?.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null,
+  return await getProducts(options.products).then((products) =>
+    products !== undefined && products !== null
+      ? (products.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null)
+      : null,
   );
 }
 
@@ -142,8 +143,9 @@ export async function syncProductQuantityFromPaystack(
 
   // Fetch the latest quantity from Paystack
   try {
-    const ops = getPaystackOps(paystackClient);
-    const raw = await ops.productFetch(localProduct.paystackId);
+    const raw = await paystackClient.product?.fetch({
+      params: { path: { id_or_code: localProduct.paystackId } },
+    });
     const sdkRes = unwrapSdkResult<PaystackProductResponse>(raw);
     const remoteQuantity = sdkRes?.quantity;
 
@@ -182,7 +184,7 @@ export async function decrementProductQuantity(ctx: GenericEndpointContext, prod
     where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
   });
 
-  if (product) {
+  if (product !== undefined && product !== null) {
     if (
       product.unlimited !== true &&
       typeof product.quantity === "number" &&
@@ -219,9 +221,14 @@ export async function syncSubscriptionSeats(
     subscription.paystackSubscriptionCode === ""
   )
     return;
+  if (subscription === null || subscription === undefined) return;
   const plan = await getPlanByName(options, subscription.plan);
-  if (plan === null) return;
-  if (plan.seatAmount === undefined && plan.seatPlanCode === undefined) return;
+  if (plan === null || plan === undefined) return;
+  if (
+    plan.seatAmount === undefined &&
+    (plan as unknown as Record<string, unknown>).seatPriceId === undefined
+  )
+    return;
 
   const members = await adapter.findMany({
     model: "member",
@@ -239,14 +246,17 @@ export async function syncSubscriptionSeats(
     totalAmount += quantity * plan.seatAmount;
   }
 
-  const ops = getPaystackOps(options.paystackClient);
   try {
+    const client = options.paystackClient;
+    if (client === undefined || client === null) return;
+
     // Paystack subscription update doesn't natively support quantity in the same way as Stripe
     // but we can update the amount or the plan.
-    await ops.subscriptionUpdate({
-      code: subscription.paystackSubscriptionCode,
-      amount: totalAmount,
+    const raw = await client.subscription?.update({
+      params: { path: { code: subscription.paystackSubscriptionCode } },
+      body: { amount: totalAmount },
     });
+    unwrapSdkResult(raw);
 
     // Update local DB to reflect current seat count
     await adapter.update({

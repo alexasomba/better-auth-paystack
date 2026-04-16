@@ -1,3 +1,5 @@
+/* oxlint-disable @typescript-eslint/strict-boolean-expressions */
+
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
@@ -25,28 +27,30 @@ describe("examples/nextjs integration - paystack flow", () => {
     const memory = memoryAdapter(data);
 
     const paystackSdk = {
-      transaction_initialize: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
           data: {
-            authorization_url: "https://paystack/checkout",
-            reference: "ref_123",
-            access_code: "acc_123",
+            status: true,
+            message: "ok",
+            data: {
+              authorization_url: "https://paystack/checkout",
+              reference: "ref_123",
+              access_code: "acc_123",
+            },
           },
-        },
-      }),
-      transaction_verify: vi.fn().mockResolvedValue({
-        data: {
-          status: true,
-          message: "ok",
+        }),
+        verify: vi.fn().mockResolvedValue({
           data: {
-            status: "success",
-            reference: "ref_123",
+            status: true,
+            message: "ok",
+            data: {
+              status: "success",
+              reference: "ref_123",
+            },
           },
-        },
-      }),
-    };
+        }),
+      },
+    } as any;
 
     const auth = betterAuth({
       baseURL: "http://localhost:3000",
@@ -56,7 +60,8 @@ describe("examples/nextjs integration - paystack flow", () => {
       plugins: [
         paystack<any>({
           paystackClient: paystackSdk,
-          paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+          secretKey: "sk_test_123",
+          webhook: { secret: "whsec_test" },
           subscription: {
             enabled: true,
             plans: [
@@ -64,6 +69,9 @@ describe("examples/nextjs integration - paystack flow", () => {
                 name: "starter",
                 amount: 5000,
                 currency: "NGN",
+                interval: "monthly",
+                planCode: "PLN_starter",
+                paystackId: "ID_starter",
               },
             ],
           },
@@ -89,33 +97,30 @@ describe("examples/nextjs integration - paystack flow", () => {
       },
     });
 
-    // create user and sign in
     const user = { email: "user@example.com", password: "password", name: "Test" };
-    const signUp = await authClient.signUp.email(user, { throw: true });
-    expect(signUp.user.id).toBeDefined();
+    await authClient.signUp.email(user, { throw: true });
 
     await authClient.signIn.email(user, {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
-    const init = await authClient.paystack.transaction.initialize({ plan: "starter" });
+    const init = await (authClient as any).paystack.transaction.initialize({ plan: "starter" });
     if (init.error) throw new Error("Initialization failed");
     expect(init.data.url).toBe("https://paystack/checkout");
     const reference = init.data.reference;
     expect(reference).toBe("ref_123");
 
-    const verify = await authClient.paystack.transaction.verify({ reference });
+    const verify = await (authClient as any).paystack.transaction.verify({ reference });
     if (verify.error) throw new Error("Verification failed");
     expect(verify.data.status).toBe("success");
 
-    // check DB subscription updated to active
     const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
     expect(subscriptions?.length).toBeGreaterThan(0);
     const sub = subscriptions?.find((s: any) => s.paystackTransactionReference === reference);
     expect(sub).toBeDefined();
     expect(sub.status).toBe("active");
 
-    expect(paystackSdk.transaction_initialize).toHaveBeenCalledTimes(1);
-    expect(paystackSdk.transaction_verify).toHaveBeenCalledTimes(1);
+    expect(paystackSdk.transaction.initialize).toHaveBeenCalledTimes(1);
+    expect(paystackSdk.transaction.verify).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,3 +1,5 @@
+/* oxlint-disable @typescript-eslint/strict-boolean-expressions */
+
 import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins";
@@ -12,18 +14,27 @@ import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Seat-Based Billing & Scheduled Changes", () => {
   const paystackSdk = {
-    transaction_initialize: vi.fn(),
-    transaction_chargeAuthorization: vi.fn(),
-    transaction_verify: vi.fn(),
-    subscription_update: vi.fn(),
-    subscription_fetch: vi.fn(),
-    subscription_disable: vi.fn(),
-    customer_update: vi.fn(),
+    transaction: {
+      initialize: vi.fn(),
+      chargeAuthorization: vi.fn(),
+      verify: vi.fn(),
+    },
+    subscription: {
+      update: vi.fn(),
+      fetch: vi.fn(),
+      disable: vi.fn(),
+    },
+    customer: {
+      update: vi.fn(),
+    },
   } as unknown as PaystackClientLike;
 
   const options = {
     paystackClient: paystackSdk,
-    paystackWebhookSecret: "whsec_test",
+    secretKey: "whsec_test",
+    webhook: {
+      secret: "whsec_test",
+    },
     subscription: {
       enabled: true,
       plans: [
@@ -104,7 +115,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       },
     });
 
-    (paystackSdk.transaction_initialize as any).mockResolvedValue({
+    (paystackSdk.transaction.initialize as any).mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -115,7 +126,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     // 2 members total (owner should be auto-added + 1 added manually)
-    await authClient.paystack.initializeTransaction(
+    await (authClient as any).paystack.initializeTransaction(
       {
         plan: "team-plan",
         referenceId: orgId,
@@ -123,7 +134,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       { headers },
     );
 
-    expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+    expect((paystackSdk as any).transaction.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           amount: 200000,
@@ -148,7 +159,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     );
     const orgId = orgRes.data?.id ?? "";
 
-    (paystackSdk.transaction_initialize as any).mockResolvedValue({
+    (paystackSdk.transaction.initialize as any).mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -159,7 +170,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     // Request with explicit quantity: 3. Base 1000 + (3 * 500) = 2500.
-    await authClient.paystack.initializeTransaction(
+    await (authClient as any).paystack.initializeTransaction(
       {
         plan: "team-plan",
         referenceId: orgId,
@@ -168,7 +179,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       { headers },
     );
 
-    expect(paystackSdk.transaction_initialize).toHaveBeenCalledWith(
+    expect((paystackSdk as any).transaction.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           amount: 250000,
@@ -305,7 +316,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       },
     });
 
-    (paystackSdk.subscription_fetch as any).mockResolvedValue({
+    (paystackSdk.subscription.fetch as any).mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -315,7 +326,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       },
     });
 
-    (paystackSdk.subscription_disable as any).mockResolvedValue({
+    (paystackSdk.subscription.disable as any).mockResolvedValue({
       data: { status: true },
     });
 
@@ -374,12 +385,12 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       },
     });
 
-    (paystackSdk.transaction_chargeAuthorization as any).mockResolvedValue({
+    (paystackSdk.transaction.chargeAuthorization as any).mockResolvedValue({
       status: true,
       data: { status: "success", reference: "prorate_mocked" },
     });
 
-    (paystackSdk.subscription_update as any).mockResolvedValue({
+    (paystackSdk.subscription.update as any).mockResolvedValue({
       status: true,
       data: { status: "success" },
     });
@@ -411,7 +422,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     // Difference: 100000
     // Prorated: (100000 / 30) * 15 = 50000 exactly
 
-    expect(paystackSdk.transaction_chargeAuthorization).toHaveBeenCalledWith(
+    expect((paystackSdk as any).transaction.chargeAuthorization).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           authorization_code: "AUTH_abc123",
@@ -420,7 +431,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       }),
     );
 
-    expect(paystackSdk.subscription_update).toHaveBeenCalledWith(
+    expect((paystackSdk as any).subscription.update).toHaveBeenCalledWith(
       expect.objectContaining({
         params: expect.objectContaining({
           path: { code: "SUB_abc123" },
