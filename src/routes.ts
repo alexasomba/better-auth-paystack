@@ -187,18 +187,19 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
       if (options.subscription?.enabled === true) {
         try {
           if (eventName === "subscription.create") {
-            const rawPayloadData = data as any;
+            const rawPayloadData = data as Record<string, unknown>;
             const subscriptionCode = (rawPayloadData?.subscription_code ??
-              rawPayloadData?.subscription?.subscription_code ??
+              (rawPayloadData?.subscription as Record<string, unknown>)?.subscription_code ??
               rawPayloadData?.code ??
               "") as string;
-            const customerCode = (rawPayloadData?.customer?.customer_code ??
+            const customerCode = ((rawPayloadData?.customer as Record<string, unknown>)
+              ?.customer_code ??
               rawPayloadData?.customer_code ??
-              rawPayloadData?.customer?.code ??
+              (rawPayloadData?.customer as Record<string, unknown>)?.code ??
               "") as string;
-            const planCode = (rawPayloadData?.plan?.plan_code ??
+            const planCode = ((rawPayloadData?.plan as Record<string, unknown>)?.plan_code ??
               rawPayloadData?.plan_code ??
-              rawPayloadData?.plan?.code ??
+              (rawPayloadData?.plan as Record<string, unknown>)?.code ??
               "") as string;
 
             let metadata: unknown = rawPayloadData?.metadata;
@@ -321,9 +322,9 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
           }
 
           if (eventName === "subscription.disable" || eventName === "subscription.not_renew") {
-            const rawPayloadData = data as any;
+            const rawPayloadData = data as Record<string, unknown>;
             const subscriptionCode = (rawPayloadData?.subscription_code ??
-              rawPayloadData?.subscription?.subscription_code ??
+              (rawPayloadData?.subscription as Record<string, unknown>)?.subscription_code ??
               rawPayloadData?.code ??
               "") as string;
             if (subscriptionCode !== "") {
@@ -369,8 +370,9 @@ export const paystackWebhook = (options: AnyPaystackOptions) => {
 
           // Handle plan changes on renewal
           if (eventName === "charge.success" || eventName === "invoice.update") {
-            const rawPayloadData = data as any;
-            const subscriptionCode = (rawPayloadData?.subscription?.subscription_code ??
+            const rawPayloadData = data as Record<string, unknown>;
+            const subscriptionCode = ((rawPayloadData?.subscription as Record<string, unknown>)
+              ?.subscription_code ??
               rawPayloadData?.subscription_code ??
               "") as string;
 
@@ -561,8 +563,16 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
         });
       }
 
-      let amount = bodyAmount ?? (product as any)?.price ?? (product as any)?.amount;
-      const finalCurrency = currency ?? (product as any)?.currency ?? plan?.currency ?? "NGN";
+      let amount =
+        bodyAmount ??
+        (product as PaystackProduct)?.price ??
+        (product as InputPaystackProduct)?.amount;
+      const finalCurrency =
+        currency ??
+        (product as PaystackProduct)?.currency ??
+        (product as InputPaystackProduct)?.currency ??
+        plan?.currency ??
+        "NGN";
 
       const referenceIdFromCtx = (ctx.context as Record<string, unknown>).referenceId as
         | string
@@ -1013,11 +1023,11 @@ export const initializeTransaction = <P extends string = "/paystack/initialize-t
             where: [{ field: "id", value: referenceId }],
           });
           if (
-            (org as any)?.paystackCustomerCode !== undefined &&
-            (org as any).paystackCustomerCode !== null &&
-            (org as any).paystackCustomerCode !== ""
+            (org as PaystackOrganization)?.paystackCustomerCode !== undefined &&
+            (org as PaystackOrganization).paystackCustomerCode !== null &&
+            (org as PaystackOrganization).paystackCustomerCode !== ""
           ) {
-            storedCustomerCode = (org as any).paystackCustomerCode;
+            storedCustomerCode = (org as PaystackOrganization).paystackCustomerCode;
           }
         }
 
