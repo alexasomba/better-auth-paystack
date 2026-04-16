@@ -50,7 +50,7 @@ interface Transaction {
 }
 
 export default function TransactionsTable() {
-  const [data, setData] = React.useState<Array<Transaction>>([]);
+  const [data, setData] = React.useState<Transaction[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedTransaction, setSelectedTransaction] = React.useState<Transaction | null>(null);
 
@@ -237,7 +237,7 @@ export default function TransactionsTable() {
           query: {},
         });
 
-        let allTransactions: Array<Transaction> = [];
+        let allTransactions: Transaction[] = [];
 
         if (personalRes.data?.transactions) {
           allTransactions = [...personalRes.data.transactions];

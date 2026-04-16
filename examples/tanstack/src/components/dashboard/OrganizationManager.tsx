@@ -41,9 +41,9 @@ interface Member {
 }
 
 export default function OrganizationManager() {
-  const [organizations, setOrganizations] = useState<Array<Organization>>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
-  const [members, setMembers] = useState<Array<Member>>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -70,7 +70,7 @@ export default function OrganizationManager() {
     try {
       const result = await authClient.organization.list();
       if (result.data) {
-        setOrganizations(result.data as Array<Organization>);
+        setOrganizations(result.data as Organization[]);
         if (result.data.length > 0 && !activeOrg) {
           setActiveOrg(result.data[0] as Organization);
         }
@@ -88,7 +88,7 @@ export default function OrganizationManager() {
       await authClient.organization.setActive({ organizationId: orgId });
       const result = await authClient.organization.getFullOrganization();
       if (result.data?.members) {
-        setMembers(result.data.members as Array<Member>);
+        setMembers(result.data.members as Member[]);
       }
     } catch (error) {
       console.error("Failed to load members:", error);

@@ -6,7 +6,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { paystack } from "@alexasomba/better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
 
-export const data: Record<string, Array<any>> = {
+export const data: Record<string, any[]> = {
   user: [],
   session: [],
   verification: [],
@@ -52,14 +52,15 @@ export const auth = betterAuth({
       ? [
           paystack({
             paystackClient,
-            paystackWebhookSecret: webhookSecret,
+            secretKey: secretKey!,
+            webhook: { secret: webhookSecret },
 
             organization: {
               enabled: true,
               onCustomerCreate: async ({ organization: org, paystackCustomer }) => {
                 await Promise.resolve(); // satisfying require-await
                 console.log(
-                  `🏢 Paystack customer created for org "${org.name}": ${paystackCustomer.customer_code}`,
+                  `🏢 Paystack customer created for org "${(org as any).name}": ${paystackCustomer.customer_code}`,
                 );
               },
             },
@@ -88,9 +89,11 @@ export const auth = betterAuth({
                 // ========================================
                 {
                   name: "starter",
-                  amount: 500000, // 5000 NGN, this is inconsequential as the actual price on Paystack for this plan is what is used
+                  amount: 500000,
                   currency: "NGN",
-                  planCode: "PLN_jm9wgvkqykajlp7", // Replace with your Paystack plan code
+                  interval: "monthly",
+                  planCode: "PLN_jm9wgvkqykajlp7",
+                  paystackId: "starter",
                   // v0.3.0: Trial period with abuse prevention (user can only get trial once)
                   freeTrial: {
                     days: 7,
@@ -114,9 +117,11 @@ export const auth = betterAuth({
                 },
                 {
                   name: "pro",
-                  amount: 1000000, // 10000 NGN, this is inconsequential as the actual price on Paystack for this plan is what is used
+                  amount: 1000000,
                   currency: "NGN",
-                  planCode: "PLN_6ikzoaxnunttb5e", // Replace with your Paystack plan code
+                  interval: "monthly",
+                  planCode: "PLN_6ikzoaxnunttb5e",
+                  paystackId: "pro",
                   description: "For serious professionals. Supports scheduled changes.",
                   features: [
                     "Advanced analytics",
@@ -131,19 +136,23 @@ export const auth = betterAuth({
                 // ========================================
                 {
                   name: "team",
-                  amount: 2500000, // 25,000 NGN
+                  amount: 2500000,
                   currency: "NGN",
                   interval: "monthly",
-                  seatAmount: 500000, // 5,000 NGN per seat
+                  planCode: "PLN_team",
+                  paystackId: "team",
+                  seatAmount: 500000,
                   description: "Best for growing teams (Seat-based)",
                   features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
                 },
                 {
                   name: "business",
-                  amount: 5000000, // 50,000 NGN
+                  amount: 5000000,
                   currency: "NGN",
                   interval: "monthly",
-                  seatAmount: 1000000, // 10,000 NGN per seat
+                  planCode: "PLN_business",
+                  paystackId: "business",
+                  seatAmount: 1000000,
                   freeTrial: {
                     days: 7,
                     onTrialStart: async (subscription) => {
@@ -166,9 +175,11 @@ export const auth = betterAuth({
                 },
                 {
                   name: "enterprise",
-                  amount: 10000000, // 100,000 NGN
+                  amount: 10000000,
                   currency: "NGN",
                   interval: "annually",
+                  planCode: "PLN_enterprise",
+                  paystackId: "enterprise",
                   description: "For large scale organizations",
                   features: [
                     "Everything in Team",
@@ -200,8 +211,8 @@ export const auth = betterAuth({
                   });
 
                   // User is a member of this organization
-                  if (members.length > 0) {
-                    const member = members[0];
+                  if ((members as any[]).length > 0) {
+                    const member = (members as any[])[0];
                     // Only owners and admins can manage billing
                     return member.role === "owner" || member.role === "admin";
                   }

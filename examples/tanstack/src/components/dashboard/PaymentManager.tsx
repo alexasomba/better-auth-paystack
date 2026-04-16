@@ -40,7 +40,7 @@ interface PaystackPlan {
   currency: string;
   interval?: string;
   description?: string;
-  features?: Array<string>;
+  features?: string[];
   planCode?: string;
   paystackId?: string;
 }
@@ -52,7 +52,7 @@ interface PaystackProduct {
   currency: string;
   metadata?: Record<string, unknown> | string;
   description?: string;
-  features?: Array<string>;
+  features?: string[];
   slug?: string;
   paystackId?: string;
 }
@@ -64,16 +64,16 @@ interface Organization {
 }
 
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
-  const [subscriptions, setSubscriptions] = useState<Array<Subscription>>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [config, setConfig] = useState<{
-    plans: Array<PaystackPlan>;
-    products: Array<PaystackProduct>;
+    plans: PaystackPlan[];
+    products: PaystackProduct[];
   }>({ plans: [], products: [] });
-  const [nativeProducts, setNativeProducts] = useState<Array<PaystackProduct>>([]);
-  const [nativePlans, setNativePlans] = useState<Array<PaystackPlan>>([]);
+  const [nativeProducts, setNativeProducts] = useState<PaystackProduct[]>([]);
+  const [nativePlans, setNativePlans] = useState<PaystackPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [organizations, setOrganizations] = useState<Array<Organization>>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedBillingTarget, setSelectedBillingTarget] = useState<string>("personal"); // "personal" or org.id
   const [quantity, setQuantity] = useState(1);
 
@@ -81,7 +81,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     try {
       const res = await authClient.paystack.listProducts();
       if (res.data?.products) {
-        setNativeProducts(res.data.products as unknown as Array<PaystackProduct>);
+        setNativeProducts(res.data.products as unknown as PaystackProduct[]);
       }
     } catch (e) {
       console.error("Failed to fetch native products", e);
@@ -92,7 +92,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     try {
       const res = await authClient.paystack.listPlans();
       if (res.data?.plans) {
-        setNativePlans(res.data.plans as Array<PaystackPlan>);
+        setNativePlans(res.data.plans as PaystackPlan[]);
       }
     } catch (e) {
       console.error("Failed to fetch native plans", e);
@@ -115,13 +115,13 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         if (configRes.data) {
           setConfig(
             configRes.data as unknown as {
-              plans: Array<PaystackPlan>;
-              products: Array<PaystackProduct>;
+              plans: PaystackPlan[];
+              products: PaystackProduct[];
             },
           );
         }
         if (subsRes.data?.subscriptions) {
-          setSubscriptions(subsRes.data.subscriptions as Array<Subscription>);
+          setSubscriptions(subsRes.data.subscriptions as Subscription[]);
         }
       } catch (e) {
         console.error("Failed to fetch data", e);
@@ -172,7 +172,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       try {
         const result = await authClient.organization.list();
         if (result.data) {
-          setOrganizations(result.data as Array<Organization>);
+          setOrganizations(result.data as Organization[]);
         }
       } catch (e) {
         console.error("Failed to fetch organizations", e);

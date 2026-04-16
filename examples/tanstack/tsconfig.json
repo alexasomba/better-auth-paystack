@@ -22,7 +22,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "types": ["node", "react", "react-dom", "@testing-library/jest-dom"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@alexasomba/better-auth-paystack": ["../../src/index.ts"],
