@@ -24,7 +24,7 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 - [x] **Enforced Limits & Seats**: Automatic enforcement of member seat upgrades and resource limits (teams).
 - [x] **Scheduled Changes**: Defer subscription updates or cancellations to the end of the billing cycle.
 - [x] **Proration**: Immediate mid-cycle prorated charges for seat and plan upgrades.
-- [x] **Popup Modal Flow**: Optional support for Paystack's inline checkout experience via `@alexasomba/paystack-browser`.
+- [x] **Popup Modal Flow**: Optional support for Paystack's inline checkout experience via `@alexasomba/paystack-inline`.
 - [x] **Webhook Security**: Pre-configured signature verification (HMAC-SHA512) and optional IP whitelisting.
 - [x] **Transaction History**: Built-in support for listing and viewing local transaction records.
 
@@ -46,7 +46,7 @@ npm install better-auth @alexasomba/better-auth-paystack @alexasomba/paystack-no
 #### Optional: Browser SDK (for Popup Modals)
 
 ```bash
-npm install @alexasomba/paystack-browser
+npm install @alexasomba/paystack-inline
 ```
 
 ### 2. Configure Environment Variables
@@ -265,7 +265,7 @@ Enable `organization.enabled` to bill organizations instead of users.
 
 ### Inline Popup Modal
 
-Use `@alexasomba/paystack-browser` for a seamless UI.
+Use `@alexasomba/paystack-inline` for a seamless UI.
 
 ```ts
 const { data } = await authClient.subscription.upgrade({ plan: "pro" });
@@ -651,7 +651,7 @@ Future features planned for upcoming versions:
 
 - GitHub Repository: [alexasomba/better-auth-paystack](https://github.com/alexasomba/better-auth-paystack)
 - Comprehensive and up-to-date Paystack Node SDK: [alexasomba/paystack-node](https://github.com/alexasomba/paystack-node)
-- Comprehensive and up-to-date Paystack Browser SDK: [alexasomba/paystack-browser](https://github.com/alexasomba/paystack-browser)
+- Comprehensive and up-to-date Paystack Inline SDK: [alexasomba/paystack-inline](https://github.com/alexasomba/paystack-inline)
 - [TanStack Start Example Implementation](https://github.com/alexasomba/better-auth-paystack/tree/main/examples/tanstack)
 - Paystack Webhooks: https://paystack.com/docs/payments/webhooks/
 - Paystack Transaction API: https://paystack.com/docs/api/transaction/
