@@ -25,7 +25,7 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 - [x] **Scheduled Changes**: Defer subscription updates or cancellations to the end of the billing cycle.
 - [x] **Proration**: Immediate mid-cycle prorated charges for seat and plan upgrades.
 - [x] **Popup Modal Flow**: Optional support for Paystack's inline checkout experience via `@alexasomba/paystack-browser`.
-- [x] **Webhook Security**: Pre-configured signature verification (HMAC-SHA512).
+- [x] **Webhook Security**: Pre-configured signature verification (HMAC-SHA512) and optional IP whitelisting.
 - [x] **Transaction History**: Built-in support for listing and viewing local transaction records.
 
 ---
@@ -295,6 +295,20 @@ await authClient.paystack.transaction.initialize({
   plan: "pro",
   quantity: 5, // Upgrading seats
   prorateAndCharge: true, // Will calculate and charge the prorated amount instantly
+});
+```
+
+### Webhook Security
+
+The plugin automatically verifies the `x-paystack-signature` header to ensure events are authentic. For an extra layer of security, you can enable **IP Whitelisting** to restrict processing to Paystack's official servers.
+
+```ts
+paystack({
+  webhook: {
+    secret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+    verifyIP: true, // Enable IP whitelisting (defaults to false for flexible proxy support)
+    trustedIPs: ["52.31.139.75", "52.49.173.169", "52.214.14.220"], // Optional: override trusted IPs
+  },
 });
 ```
 

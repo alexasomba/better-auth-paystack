@@ -129,6 +129,29 @@ export const paystackWebhook = <P extends string = "/webhook">(
         (ctx.request as unknown as { headers: Headers })?.headers;
       const signature = headers?.get("x-paystack-signature") as string | null | undefined;
 
+      if (options.webhook?.verifyIP === true) {
+        const trustedIPs = options.webhook.trustedIPs ?? [
+          "52.31.139.75",
+          "52.49.173.169",
+          "52.214.14.220",
+        ];
+        const clientIP =
+          headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          headers?.get("x-real-ip") ??
+          (ctx.request as unknown as { ip?: string }).ip;
+
+        if (
+          clientIP !== undefined &&
+          clientIP !== null &&
+          trustedIPs.includes(clientIP) === false
+        ) {
+          throw new APIError("UNAUTHORIZED", {
+            message: `Forbidden IP: ${clientIP}`,
+            status: 401,
+          });
+        }
+      }
+
       if (signature === undefined || signature === null || signature === "") {
         throw new APIError("UNAUTHORIZED", {
           message: "Missing x-paystack-signature header",
