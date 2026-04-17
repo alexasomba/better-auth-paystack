@@ -6,13 +6,14 @@
     "moduleResolution": "Bundler",
     "declaration": true,
     "declarationMap": true,
-    "emitDeclarationOnly": false,
+    "isolatedDeclarations": true,
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "types": ["node", "vitest/globals"],
     "verbatimModuleSyntax": true
   },
-  "include": ["src", "test", "tsdown.config.ts", "vitest.config.ts"],
+  "include": ["src", "test", "vite.config.ts"],
   "exclude": ["dist", "node_modules"]
 }

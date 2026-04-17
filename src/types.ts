@@ -1,572 +1,346 @@
+import type { GenericEndpointContext, Session, User } from "better-auth";
+import type { Organization, Member } from "better-auth/plugins/organization";
 import type {
-	InferOptionSchema,
-	Session,
-	User,
-} from "better-auth";
-import type { createPaystack } from "@alexasomba/paystack-node";
-import type { GenericEndpointContext } from "@better-auth/core";
-import type { DBAdapter } from "@better-auth/core/db/adapter";
+  PaystackPaths,
+  PaystackResponse,
+  PaystackWebhookEvent,
+  PaystackClient,
+  components,
+} from "@alexasomba/paystack-node";
 
-import type { organization, subscriptions, user } from "./schema";
+/**
+ * Valid Paystack currencies
+ */
+export type PaystackCurrency = components["schemas"]["Currency"];
 
-export type { GenericEndpointContext, DBAdapter };
-export type { InferOptionSchema, Session, User };
-export interface PaystackUser extends User {
-	paystackCustomerCode?: string;
-}
+export type { PaystackPaths, PaystackClient, PaystackResponse };
 
-export type PaystackNodeClient = ReturnType<typeof createPaystack>;
-export type PaystackCurrency = "NGN" | "GHS" | "KES" | "ZAR" | "USD" | "XOF";
+/**
+ * Standard Better Auth Models
+ */
+export type { User, Session, Organization, Member };
 
-export type PaystackEvent =
-    | "charge.success"
-    | "charge.failure"
-    | "subscription.create"
-    | "subscription.disable"
-    | "subscription.not_renew"
-    | "subscription.expiring_cards"
-    | "invoice.create"
-    | "invoice.payment_failed"
-    | "invoice.update"
-    | "transfer.success"
-    | "transfer.failed"
-    | "transfer.reversed"
-    | "customeridentification.success"
-    | "customeridentification.failed"
-    | (string & {});
-
-export interface PaystackWebhookPayload<TData = Record<string, unknown>, TMetadata = PaystackMetadata> {
-    event: PaystackEvent;
-
-    data: TData;
-    metadata?: TMetadata;
-    [key: string]: unknown;
-}
-
-export interface PaystackCustomerResponse {
-    customer_code: string;
-    email: string;
-    first_name?: string;
-    last_name?: string;
-    metadata?: PaystackMetadata | string | null;
-    id: number;
-    [key: string]: unknown;
-}
-
-export interface PaystackTransactionResponse {
-    id: number;
-    domain: string;
-    status: string;
-    reference: string;
-    receipt_number?: string | null;
-    amount: number;
-    message?: string | null;
-    gateway_response: string;
-    helpdesk_link?: string | null;
-    paid_at: string;
-    created_at: string;
-    channel: string;
-    currency: PaystackCurrency;
-    ip_address: string;
-    metadata: PaystackMetadata | { custom_fields: Record<string, unknown>[] } | string | null;
-    authorization_url?: string;
-    access_code?: string;
-    customer: PaystackCustomerResponse;
-    authorization?: {
-        authorization_code: string;
-        bin: string;
-        last4: string;
-        exp_month: string;
-        exp_year: string;
-        channel: string;
-        card_type: string;
-        bank: string;
-        country_code: string;
-        brand: string;
-        reusable: boolean;
-        signature: string;
-        account_name?: string | null;
-    };
-    [key: string]: unknown;
-}
-
-export interface PaystackProductResponse {
-    id: number;
-    name: string;
-    description: string;
-    product_code: string;
-    price: number;
-    currency: string;
-    quantity: number;
-    quantity_sold?: number | null;
-    type: string;
-    is_shippable: boolean;
-    unlimited: boolean;
-    domain: string;
-    active: boolean;
-    metadata?: PaystackMetadata | string | null;
-    createdAt: string;
-    updatedAt: string;
-    [key: string]: unknown;
-}
-
-export interface PaystackSubscriptionResponse {
-    id: number;
-    domain: string;
-    status: string;
-    subscription_code: string;
-    email_token: string;
-    amount: number;
-    cron_expression?: string;
-    next_payment_date: string | null;
-    open_invoice?: unknown;
-    createdAt: string;
-    cancelledAt?: string | null;
-    integration?: number;
-    plan: {
-        id: number;
-        name: string;
-        plan_code: string;
-        description?: string | null;
-        amount: number;
-        interval: string;
-        send_invoices: boolean;
-        send_sms: boolean;
-        currency: string;
-    };
-    authorization?: {
-        authorization_code: string;
-        bin: string;
-        last4: string;
-        exp_month: string;
-        exp_year: string;
-        channel: string;
-        card_type: string;
-        bank: string;
-        country_code: string;
-        brand: string;
-        reusable: boolean;
-        signature: string;
-        account_name?: string | null;
-    };
-    customer: PaystackCustomerResponse;
-    metadata?: PaystackMetadata | string | null;
-    [key: string]: unknown;
-}
-
-export interface PaystackOpenApiFetchResponse<T = unknown> {
-    data?: T;
-    error?: unknown;
-    response?: Response;
-}
-
-export type PaystackApiResult<T = unknown> = Promise<T | PaystackOpenApiFetchResponse<T>>;
-
-type NonNullableInit<T> = Exclude<T, undefined>;
-type ExtractBody<T> = T extends { body?: infer B } ? B : never;
-type WithMetadataStringOrObject<T> = T extends object
-    ? Omit<T, "metadata"> & { metadata?: string | Record<string, unknown> }
-    : T;
-type WithMetadataObject<T> = T extends object
-    ? Omit<T, "metadata"> & { metadata?: Record<string, unknown> }
-    : T;
-type WithEmail<T> = T extends object
-    ? Omit<T, "email"> & { email?: string }
-    : T;
-
-type CustomerCreateInit = NonNullableInit<
-    Parameters<PaystackNodeClient["customer_create"]>[0]
->;
-type CustomerUpdateInit = NonNullableInit<
-    Parameters<PaystackNodeClient["customer_update"]>[0]
->;
-type TransactionInitializeInit = NonNullableInit<
-    Parameters<PaystackNodeClient["transaction_initialize"]>[0]
->;
-type SubscriptionCreateInit = NonNullableInit<
-    Parameters<PaystackNodeClient["subscription_create"]>[0]
->;
-type SubscriptionToggleInit = NonNullableInit<
-    Parameters<PaystackNodeClient["subscription_disable"]>[0]
->;
-
-type TransactionChargeAuthorizationInit = NonNullableInit<
-    Parameters<PaystackNodeClient["transaction_chargeAuthorization"]>[0]
->;
-
-export type PaystackCustomerCreateInput =
-    WithMetadataStringOrObject<ExtractBody<CustomerCreateInit>>;
-export type PaystackCustomerUpdateInput =
-    WithMetadataStringOrObject<WithEmail<ExtractBody<CustomerUpdateInit>>>;
-export type PaystackTransactionInitializeInput =
-    WithMetadataObject<ExtractBody<TransactionInitializeInit>> & {
-        scheduleAtPeriodEnd?: boolean;
-        cancelAtPeriodEnd?: boolean;
-        prorateAndCharge?: boolean;
-    };
-export type PaystackTransactionChargeAuthorizationInput =
-    WithMetadataObject<ExtractBody<TransactionChargeAuthorizationInit>>;
-export type PaystackSubscriptionCreateInput = ExtractBody<SubscriptionCreateInit>;
-export type PaystackSubscriptionToggleInput = ExtractBody<SubscriptionToggleInit>;
-
-export type PaystackSubscriptionFetchInit =
-    | { params: { path: { code: string } } }
-    | { params: { path: { id_or_code: string } } };
-
-export interface PaystackPlanResponse {
-    id: number;
-    name: string;
-    plan_code: string;
-    description: string | null;
-    amount: number;
-    interval: string;
-    send_invoices: boolean;
-    send_sms: boolean;
-    currency: string;
-    integration: number;
-    domain: string;
-    createdAt: string;
-    updatedAt: string;
-    [key: string]: unknown;
-}
-
-export type PaystackClientLike = Partial<PaystackNodeClient> & {
-    // Some older SDKs use snake_case for manage link
-    subscription_manage_link?: PaystackNodeClient["subscription_manageLink"];
-    subscription_update?: (params: { params: { path: { code: string } }; body: { plan?: string; authorization?: string; amount?: number } }) => Promise<unknown>;
-
-    // Legacy nested style support (kept for compatibility)
-    customer?: {
-        create?: (params: PaystackCustomerCreateInput) => Promise<unknown>;
-        update?: (code: string, params: PaystackCustomerUpdateInput) => Promise<unknown>;
-    };
-    transaction?: {
-        initialize?: (params: PaystackTransactionInitializeInput) => Promise<unknown>;
-        verify?: (reference: string) => Promise<unknown>;
-        chargeAuthorization?: (params: PaystackTransactionChargeAuthorizationInput) => Promise<unknown>;
-    };
-    subscription?: {
-        fetch?: (idOrCode: string) => Promise<unknown>;
-        create?: (params: PaystackSubscriptionCreateInput) => Promise<unknown>;
-        disable?: (params: PaystackSubscriptionToggleInput) => Promise<unknown>;
-        enable?: (params: PaystackSubscriptionToggleInput) => Promise<unknown>;
-        manage?: {
-            link?: (code: string) => Promise<unknown>;
-            email?: (code: string, email: string) => Promise<unknown>;
-        };
-    };
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    plan?: {
-        list?: (init?: any) => Promise<unknown>;
-        fetch?: (idOrCode: string) => Promise<unknown>;
-        create?: (params: Record<string, unknown>) => Promise<unknown>;
-        update?: (idOrCode: string, params: Record<string, unknown>) => Promise<unknown>;
-    };
-    product?: {
-        list?: () => Promise<unknown>;
-        fetch?: (idOrCode: string) => Promise<unknown>;
-        create?: (params: Record<string, unknown>) => Promise<unknown>;
-        update?: (idOrCode: string, params: Record<string, unknown>) => Promise<unknown>;
-        delete?: (idOrCode: string) => Promise<unknown>;
-    };
-    product_list?: (init?: any) => Promise<unknown>;
-    product_fetch?: (init: any) => Promise<unknown>;
-    product_create?: (init: any) => Promise<unknown>;
-    product_update?: (init: any) => Promise<unknown>;
-    product_delete?: (init: any) => Promise<unknown>;
-    plan_list?: (init?: any) => Promise<unknown>;
-    plan_fetch?: (init: any) => Promise<unknown>;
-    plan_create?: (init: any) => Promise<unknown>;
-    plan_update?: (init: any) => Promise<unknown>;
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-};
-
-export interface PaystackMetadata {
-    userId?: string;
-    organizationId?: string;
-    [key: string]: unknown;
-}
-
-type NoInfer<T> = [T][T extends unknown ? 0 : never];
-
-export type AuthSession = {
-    user: User;
-    session: Session;
-} & Record<string, unknown>;
-
-export interface PaystackPlan<TLimits = Record<string, unknown>> {
-    /** Human name stored in DB (lowercased). */
-    name: string;
-    /** Paystack plan code (if you use Paystack plans). */
-    planCode?: string | undefined;
-    /** Amount in the smallest currency unit (e.g. kobo). */
-    amount?: number | undefined;
-    /** Currency ISO code (e.g. NGN). */
-    currency?: PaystackCurrency | (string & {}) | undefined;
-    /** Paystack interval keyword (when using Paystack plans). */
-    interval?:
-    | "daily"
-    | "weekly"
-    | "monthly"
-    | "quarterly"
-    | "biannually"
-    | "annually"
-    | undefined;
-    /** Optional description of the plan. */
-    description?: string | undefined;
-    /** Optional list of features for the plan. */
-    features?: string[] | undefined;
-    /** Optional invoice limit; Paystack uses `invoice_limit` during init. */
-    invoiceLimit?: number | undefined;
-    /** Arbitrary limits (stored/consumed by your app). */
-    limits?: TLimits | undefined;
-    /** Amount per seat (optional). */
-    seatAmount?: number | undefined;
-    /** Paystack plan code for seat (optional). */
-    seatPlanCode?: string | undefined;
-    /** Optional free trial config, if your app supports it. */
-    freeTrial?:
-    | {
-        days: number;
-        onTrialStart?: (subscription: Subscription) => Promise<void>;
-        onTrialEnd?: (data: { subscription: Subscription }, ctx: GenericEndpointContext) => Promise<void>;
-        onTrialExpired?: (subscription: Subscription, ctx: GenericEndpointContext) => Promise<void>;
-    }
-    | undefined;
+/**
+ * Custom models for Paystack Plugin
+ * These align with the database schema in src/schema.ts
+ */
+export interface PaystackTransaction {
+  id: string;
+  reference: string;
+  paystackId?: string;
+  referenceId: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  plan?: string | null;
+  product?: string | null;
+  metadata?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface PaystackProduct {
-    id: string;
-    /** Human-readable name of the product. */
-    name: string;
-    /** Price in the smallest currency unit (e.g., kobo). */
-    price: number;
-    /** Currency ISO code (e.g., NGN). */
-    currency: PaystackCurrency | (string & {});
-    /** Optional metadata to include with the product. */
-    metadata?: string | undefined;
-    /** Optional description of the product. */
-    description?: string | undefined;
-    /** Optional list of features for the product. */
-    features?: string[] | undefined;
-    /** Optional stock quantity for the product. */
-    quantity?: number | undefined;
-    /** Whether the product has unlimited stock. */
-    unlimited?: boolean | undefined;
-    /** The internal Paystack ID for the product. */
-    paystackId?: string | undefined;
-    /** Unique slug for the product. */
-    slug: string;
-    createdAt: Date;
-    updatedAt: Date;
+  id?: string;
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  quantity?: number;
+  unlimited?: boolean;
+  paystackId?: string;
+  slug?: string;
+  metadata?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface InputPaystackProduct extends Omit<PaystackProduct, "id" | "createdAt" | "updatedAt" | "slug"> {
-    slug?: string;
-    createdAt?: Date;
-    updatedAt?: Date;
+export interface InputPaystackProduct {
+  name: string;
+  description?: string;
+  amount: number;
+  currency: string;
 }
 
-export interface PaystackTransaction {
-    id: string;
-    reference: string;
-    paystackId?: string | undefined;
-    referenceId: string;
-    userId: string;
-    amount: number;
-    currency: PaystackCurrency | (string & {});
-    status: string;
-    plan?: string | undefined;
-    product?: string | undefined;
-    metadata?: string | undefined;
-    createdAt: Date;
-    updatedAt: Date;
+/**
+ * Enhanced Better Auth Models with Paystack Fields
+ */
+export interface PaystackUser extends User {
+  paystackCustomerCode?: string;
 }
 
-export interface InputPaystackTransaction extends Omit<PaystackTransaction, "id"> { }
+export interface PaystackOrganization extends Organization {
+  paystackCustomerCode?: string;
+}
+
+export interface PaystackPlan {
+  id?: string;
+  name: string;
+  description?: string;
+  amount?: number;
+  currency?: string;
+  interval?: string;
+  planCode?: string;
+  paystackId?: string;
+  seatAmount?: number;
+  seatPlanCode?: string;
+  invoiceLimit?: number;
+  freeTrial?: {
+    days?: number;
+    onTrialStart?: (subscription: Subscription) => Promise<void>;
+  };
+  limits?: Record<string, unknown>;
+  features?: string[];
+  metadata?: string | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+/**
+ * Paystack Webhook Payload structure
+ */
+export type PaystackWebhookPayload = PaystackWebhookEvent;
+
+/**
+ * Paystack SDK Result types
+ */
+export type PaystackTransactionResponse = components["schemas"]["VerifyResponse"]["data"];
+export type PaystackPlanResponse = components["schemas"]["PlanListResponseArray"];
+export type PaystackCustomerResponse =
+  components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"];
+export type PaystackSubscriptionResponse = components["schemas"]["SubscriptionListResponseArray"];
+export type PaystackProductResponse = components["schemas"]["ProductListsResponseArray"];
+
+export interface SubscriptionOptions {
+  /**
+   * Enable subscriptions
+   */
+  enabled?: boolean;
+  /**
+   * Plans configuration
+   */
+  plans: PaystackPlan[] | (() => Promise<PaystackPlan[]>);
+  /**
+   * Automatically sync quantity from local DB to Paystack (if seats are used)
+   */
+  autoSyncQuantity?: boolean;
+  /**
+   * Handling of subscription cancellation
+   * @default "at_period_end"
+   */
+  cancelBehavior?: "at_period_end" | "immediately";
+  /**
+   * Handlers for subscription events
+   */
+  onSubscriptionComplete?: (
+    data: { event: PaystackWebhookPayload; subscription: Subscription; plan: PaystackPlan },
+    ctx: GenericEndpointContext,
+  ) => Promise<void>;
+  onSubscriptionCreated?: (
+    data: { event: PaystackWebhookPayload; subscription: Subscription; plan: PaystackPlan },
+    ctx: GenericEndpointContext,
+  ) => Promise<void>;
+  onSubscriptionCancel?: (
+    data: { event: PaystackWebhookPayload; subscription: Subscription },
+    ctx: GenericEndpointContext,
+  ) => Promise<void>;
+  /**
+   * Authorization handler for reference checks
+   */
+  authorizeReference?: (
+    data: { user: User; session: Session; referenceId: string; action: string },
+    ctx: GenericEndpointContext,
+  ) => Promise<boolean>;
+  /**
+   * Require email verification before subscription
+   */
+  requireEmailVerification?: boolean;
+}
+
+export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackClientLike> {
+  /**
+   * Paystack Secret Key
+   */
+  secretKey: string;
+  /**
+   * Paystack Client Instance
+   * If provided, will be used instead of creating a new one with secretKey
+   */
+  paystackClient?: TPaystackClient;
+  /**
+   * Webhook configuration
+   */
+  webhook?: {
+    /**
+     * Webhook secret for signature verification
+     */
+    secret?: string;
+  };
+  /**
+   * Subscription configuration
+   */
+  subscription?: SubscriptionOptions;
+  /**
+   * Billing pattern
+   * @default "native"
+   */
+  billingPattern?: "native" | "local";
+  /**
+   * Global event handler
+   */
+  onEvent?: (event: PaystackWebhookEvent) => Promise<void>;
+  /**
+   * Organization billing configuration
+   */
+  organization?: {
+    enabled?: boolean;
+    getCustomerCreateParams?: (
+      org: { id: string; name: string; email?: string | null },
+      ctx: GenericEndpointContext,
+    ) => Promise<Record<string, unknown>>;
+    onCustomerCreate?: (
+      data: { paystackCustomer: Record<string, unknown>; organization: unknown },
+      ctx: GenericEndpointContext,
+    ) => Promise<void>;
+  };
+  /**
+   * Products configuration
+   */
+  products?: {
+    products?: PaystackProduct[] | (() => Promise<PaystackProduct[]>);
+  };
+  createCustomerOnSignUp?: boolean;
+  onCustomerCreate?: (
+    data: { paystackCustomer: Record<string, unknown>; user: unknown },
+    ctx: GenericEndpointContext,
+  ) => Promise<void>;
+  /**
+   * Custom database schema / model names
+   */
+  schema?: Record<
+    string,
+    {
+      modelName?: string;
+      fields?: Record<string, string>;
+    }
+  >;
+}
 
 export interface Subscription {
-    id: string;
-    plan: string;
-    referenceId: string;
-    paystackCustomerCode?: string | undefined;
-    paystackSubscriptionCode?: string | undefined;
-    paystackTransactionReference?: string | undefined;
-    paystackAuthorizationCode?: string | undefined;
-    paystackEmailToken?: string | undefined;
-    status:
-    | "active"
-    | "canceled"
-    | "incomplete"
-    | "incomplete_expired"
-    | "paused"
-    | "trialing"
-    | "unpaid";
-    periodStart?: Date | undefined;
-    periodEnd?: Date | undefined;
-    trialStart?: Date | undefined;
-    trialEnd?: Date | undefined;
-    cancelAtPeriodEnd?: boolean | undefined;
-    groupId?: string | undefined;
-    seats?: number | undefined;
-    /** The plan that will be applied at the next billing cycle. */
-    pendingPlan?: string | undefined;
+  id: string;
+  userId: string;
+  organizationId?: string;
+  plan: string;
+  pendingPlan?: string | null;
+  paystackSubscriptionCode?: string;
+  paystackCustomerCode?: string;
+  paystackPlanCode?: string;
+  paystackAuthorizationCode?: string;
+  paystackTransactionReference?: string;
+  paystackEmailToken?: string;
+  status: string;
+  seats: number;
+  referenceId: string;
+  periodStart?: Date | null;
+  periodEnd?: Date | null;
+  cancelAtPeriodEnd: boolean;
+  trialStart?: Date | null;
+  trialEnd?: Date | null;
+  groupId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface InputSubscription extends Omit<Subscription, "id"> { }
-
-export interface SubscriptionOptions<TMetadata = Record<string, unknown>, TLimits = Record<string, unknown>> {
-    plans: PaystackPlan<TLimits>[] | (() => PaystackPlan<TLimits>[] | Promise<PaystackPlan<TLimits>[]>);
-    requireEmailVerification?: boolean | undefined;
-    authorizeReference?:
-    | ((
-        data: {
-            user: User;
-            session: Session;
-            referenceId: string;
-            action:
-            | "initialize-transaction"
-            | "verify-transaction"
-            | "list-subscriptions"
-            | "list-transactions"
-            | "disable-subscription"
-            | "enable-subscription"
-            | "get-subscription-manage-link";
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<boolean>)
-    | undefined;
-    onSubscriptionComplete?:
-    | ((
-        data: {
-            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
-            subscription: Subscription;
-            plan: PaystackPlan<TLimits>;
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<void>)
-    | undefined;
-    onSubscriptionUpdate?:
-    | ((
-        data: {
-            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
-            subscription: Subscription;
-            plan?: PaystackPlan<TLimits>;
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<void>)
-    | undefined;
-    onSubscriptionCreated?:
-    | ((
-        data: {
-            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
-            subscription: Subscription;
-            plan: PaystackPlan<TLimits>;
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<void>)
-    | undefined;
-    onSubscriptionCancel?:
-    | ((
-        data: {
-            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
-            subscription: Subscription;
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<void>)
-    | undefined;
-    onSubscriptionDelete?:
-    | ((
-        data: {
-            event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>;
-            subscription: Subscription;
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<void>)
-    | undefined;
+export interface ChargeRecurringSubscriptionInput {
+  subscriptionId: string;
+  amount?: number;
 }
 
-export interface ProductOptions {
-    products: InputPaystackProduct[] | (() => InputPaystackProduct[] | Promise<InputPaystackProduct[]>);
+export interface ChargeRecurringSubscriptionResult {
+  status: "success" | "failed";
+  data: PaystackTransactionResponse;
 }
 
-export interface OrganizationOptions<TMetadata = Record<string, unknown>> {
-    enabled: boolean;
-    createCustomerOnOrganizationCreate?: boolean | undefined;
-    onCustomerCreate?:
-    | ((
-        data: {
-            paystackCustomer: PaystackCustomerResponse;
-            organization: Record<string, unknown> & { paystackCustomerCode: string };
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<void>)
-    | undefined;
-    getCustomerCreateParams?:
-    | ((organization: unknown, ctx: GenericEndpointContext) => Promise<Record<string, unknown> & { metadata?: TMetadata }>)
-    | undefined;
+export interface PaystackSyncResult {
+  status: "success";
+  count: number;
 }
 
-export interface PaystackOptions<
-    TPaystackClient extends PaystackClientLike = PaystackNodeClient,
-    TMetadata extends Record<string, unknown> = Record<string, unknown>,
-    TLimits extends Record<string, unknown> = Record<string, unknown>,
-> {
-    /** Paystack SDK instance (recommended: `@alexasomba/paystack-node` via `createPaystack({ secretKey })`). */
-    paystackClient: NoInfer<TPaystackClient>;
-    /** Paystack webhook secret used to verify `x-paystack-signature`. */
-    paystackWebhookSecret: string;
-    /** Enable customer creation on Better Auth sign up. */
-    createCustomerOnSignUp?: boolean | undefined;
-    onCustomerCreate?:
-    | ((
-        data: {
-            paystackCustomer: PaystackCustomerResponse;
-            user: User & { paystackCustomerCode: string };
-        },
-        ctx: GenericEndpointContext,
-    ) => Promise<void>)
-    | undefined;
-    getCustomerCreateParams?:
-    | ((user: User, ctx: GenericEndpointContext) => Promise<Record<string, unknown> & { metadata?: TMetadata }>)
-    | undefined;
-    subscription?:
-    | (
-        | {
-            enabled: false;
-        }
-        | ({
-            enabled: true;
-        } & SubscriptionOptions<TMetadata, TLimits>)
-    )
-    | undefined;
-    products?: ProductOptions | undefined;
-    organization?: OrganizationOptions<TMetadata> | undefined;
-    onEvent?: ((event: PaystackWebhookPayload<Record<string, unknown>, TMetadata>) => Promise<void>) | undefined;
-    schema?: InferOptionSchema<typeof subscriptions & typeof user & typeof organization> | undefined;
-}
+export type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
 
-export interface Organization {
-    id: string;
-    name: string;
-    slug: string;
-    paystackCustomerCode?: string | undefined;
-    email?: string | undefined;
-    createdAt: Date;
-    updatedAt: Date;
-    metadata?: unknown;
-    [key: string]: unknown;
+/**
+ * A stricter PaystackClient interface based on the grouped SDK structure
+ */
+export interface PaystackClientLike {
+  transaction?: {
+    initialize: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    verify: (
+      reference: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<components["schemas"]["VerifyResponse"]["data"]>>;
+    chargeAuthorization: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]>>;
+  };
+  customer?: {
+    create: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<
+      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
+    >;
+    update: (
+      email_or_code: string,
+      init: { body: Record<string, unknown> },
+    ) => Promise<
+      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
+    >;
+    fetch: (
+      email_or_code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<
+      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
+    >;
+  };
+  subscription?: {
+    create: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
+    update: (
+      code: string,
+      init: { body: Record<string, unknown> },
+    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
+    fetch: (
+      id_or_code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
+    disable: (init: {
+      body: { code: string; token: string };
+    }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    enable: (init: {
+      body: { code: string; token: string };
+    }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    manageLink: (
+      code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<{ link: string }>>;
+  };
+  product?: {
+    fetch: (
+      id_or_code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"]>>;
+    list: (init?: {
+      query?: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"][]>>;
+  };
+  plan?: {
+    list: (init?: {
+      query?: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"][]>>;
+    create: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"]>>;
+  };
 }
-
-export interface Member {
-    id: string;
-    organizationId: string;
-    userId: string;
-    role: string;
-    createdAt: Date;
-    updatedAt: Date;
-    [key: string]: unknown;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyPaystackOptions = PaystackOptions<PaystackClientLike, any, any>;

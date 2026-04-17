@@ -7,15 +7,15 @@
   "vars": {
     "VITE_BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
     "BETTER_AUTH_URL": "https://better-auth-paystack.gittech.workers.dev",
-    "URL": "https://better-auth-paystack.gittech.workers.dev"
+    "URL": "https://better-auth-paystack.gittech.workers.dev",
   },
   "observability": {
     "logs": {
       "enabled": true,
-      "invocation_logs": true
+      "invocation_logs": true,
     },
     "traces": {
-      "enabled": true
-    }
-  }
+      "enabled": true,
+    },
+  },
 }

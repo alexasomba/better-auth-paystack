@@ -12,7 +12,7 @@ A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin w
 - [x] Subscription management (list, cancel)
 - [x] **Organization billing** - Bill subscriptions to organizations instead of personal accounts
 - [x] **Plan Code subscriptions** - Use Paystack-managed plans (`planCode`)
-- [x] Dynamic plan configuration via `/paystack/get-config`
+- [x] Dynamic plan configuration via `/paystack/config`
 
 ## Tech Stack
 
@@ -89,8 +89,8 @@ src/
 ### Server Configuration (`src/lib/auth.ts`)
 
 ```ts
-import { paystack } from '@alexasomba/better-auth-paystack'
-import { organization } from 'better-auth/plugins'
+import { paystack } from "@alexasomba/better-auth-paystack";
+import { organization } from "better-auth/plugins";
 
 export const auth = betterAuth({
   plugins: [
@@ -102,57 +102,54 @@ export const auth = betterAuth({
         enabled: true,
         plans: [
           // Paystack-managed plans (uses planCode)
-          { name: 'starter', planCode: 'PLN_xxxxx' },
-          { name: 'pro', planCode: 'PLN_yyyyy' },
+          { name: "starter", planCode: "PLN_xxxxx" },
+          { name: "pro", planCode: "PLN_yyyyy" },
           // Locally-defined plans
           {
-            name: 'team',
+            name: "team",
             amount: 2500000,
-            currency: 'NGN',
-            interval: 'monthly',
+            currency: "NGN",
+            interval: "monthly",
           },
         ],
         // Control who can bill to which organization
         authorizeReference: async ({ referenceId, user }) => {
           const membership = await db.query.member.findFirst({
-            where: and(
-              eq(member.organizationId, referenceId),
-              eq(member.userId, user.id),
-            ),
-          })
-          return !!membership
+            where: and(eq(member.organizationId, referenceId), eq(member.userId, user.id)),
+          });
+          return !!membership;
         },
       },
     }),
   ],
-})
+});
 ```
 
 ### Client Configuration (`src/lib/auth-client.ts`)
 
 ```ts
-import { createAuthClient } from 'better-auth/react'
-import { paystackClient } from '@alexasomba/better-auth-paystack/client'
-import { organizationClient } from 'better-auth/client/plugins'
+import { createAuthClient } from "better-auth/react";
+import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+import { organizationClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_BETTER_AUTH_URL,
   plugins: [paystackClient({ subscription: true }), organizationClient()],
-})
+});
 ```
 
 ### Billing to an Organization
 
 ```ts
 // Initialize a subscription for an organization
-const result = await authClient.paystack.transaction.initialize({
-  plan: 'team',
+const result = await authClient.paystack.initializeTransaction({
+  plan: "team",
   callbackURL: `${window.location.origin}/billing/paystack/callback`,
-  referenceId: 'org_123', // Organization ID
-})
+  referenceId: "org_123", // Organization ID
+});
 
 if (result.data?.url) {
-  window.location.href = result.data.url
+  window.location.href = result.data.url;
 }
 ```
 

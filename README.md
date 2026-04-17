@@ -6,7 +6,7 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 
 ![npm downloads](https://img.shields.io/npm/dm/@alexasomba/better-auth-paystack.svg)
 [![GitHub stars](https://img.shields.io/github/stars/alexasomba/better-auth-paystack.svg?style=social&label=Star)](https://github.com/alexasomba/better-auth-paystack/stargazers)
-[![GitHub release](https://img.shields.io/github/v/release/alexasomba/better-auth-paystack)](https://github.com/alexasomba/better-auth-paystack/releases) 
+[![GitHub release](https://img.shields.io/github/v/release/alexasomba/better-auth-paystack)](https://github.com/alexasomba/better-auth-paystack/releases)
 [![bundlephobia](https://img.shields.io/bundlephobia/minzip/@alexasomba/better-auth-paystack)](https://bundlephobia.com/result?p=@alexasomba/better-auth-paystack)
 [![Follow on Twitter](https://img.shields.io/twitter/follow/alexasomba?style=social)](https://twitter.com/alexasomba)
 ![GitHub License](https://img.shields.io/github/license/alexasomba/better-auth-paystack)
@@ -31,6 +31,11 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 ---
 
 ## Quick Start
+
+### Prerequisites
+
+- **Node.js**: `v24.0.0` or higher.
+- **Better Auth**: `v1.6.5` or higher.
 
 ### 1. Install Plugin & SDKs
 
@@ -68,7 +73,7 @@ export const auth = betterAuth({
   plugins: [
     paystack({
       paystackClient,
-      paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+      webhook: { secret: process.env.PAYSTACK_WEBHOOK_SECRET! },
       createCustomerOnSignUp: true,
       subscription: {
         enabled: true,
@@ -111,6 +116,60 @@ export const client = createAuthClient({
 ```bash
 npx better-auth migrate
 ```
+
+---
+
+## Migration Guide
+
+Version `2.0.0` contains a security-focused breaking change.
+
+- Removed public/client operator actions:
+  - `authClient.paystack.syncProducts()`
+  - `authClient.paystack.syncPlans()`
+  - `authClient.paystack.chargeRecurringSubscription(...)`
+- Removed public Better Auth endpoints for:
+  - `/paystack/sync-products`
+  - `/paystack/sync-plans`
+  - `/paystack/charge-recurring`
+- Added trusted server operations:
+  - `chargeSubscriptionRenewal`
+  - `syncPaystackProducts`
+  - `syncPaystackPlans`
+
+### Old
+
+```ts
+await authClient.paystack.syncProducts();
+await authClient.paystack.syncPlans();
+await authClient.paystack.chargeRecurringSubscription({
+  subscriptionId: "sub_123",
+});
+```
+
+### New
+
+```ts
+import {
+  chargeSubscriptionRenewal,
+  syncPaystackPlans,
+  syncPaystackProducts,
+} from "@alexasomba/better-auth-paystack";
+
+const ctx = { context: await auth.$context } as any;
+const paystackOptions = {
+  secretKey: process.env.PAYSTACK_SECRET_KEY!,
+  webhook: { secret: process.env.PAYSTACK_WEBHOOK_SECRET! },
+  paystackClient,
+};
+
+await syncPaystackProducts(ctx, paystackOptions);
+await syncPaystackPlans(ctx, paystackOptions);
+await chargeSubscriptionRenewal(ctx, paystackOptions, {
+  subscriptionId: "sub_123",
+});
+```
+
+These operations are intentionally server-only. Do not expose them through browser-triggered auth client calls.
 
 ---
 
@@ -214,8 +273,7 @@ if (data?.accessCode) {
   const paystack = createPaystack({ publicKey: "pk_test_..." });
   paystack.checkout({
     accessCode: data.accessCode,
-    onSuccess: (res) =>
-      authClient.paystack.transaction.verify({ reference: res.reference }),
+    onSuccess: (res) => authClient.paystack.transaction.verify({ reference: res.reference }),
   });
 }
 ```
@@ -223,6 +281,7 @@ if (data?.accessCode) {
 ### Scheduled Changes & Cancellation
 
 Defer changes to the end of the current billing cycle:
+
 - **Upgrades**: Pass `scheduleAtPeriodEnd: true` in `initializeTransaction()`.
 - **Cancellations**: Use `authClient.subscription.cancel({ atPeriodEnd: true })` to keep the subscription active until the period ends.
 
@@ -251,9 +310,7 @@ React to billing events on the server by providing callbacks in your configurati
 
 - `onSubscriptionComplete`: Called after successful transaction verification (Native or Local).
 - `onSubscriptionCreated`: Called when a subscription record is first initialized in the DB.
-- `onSubscriptionUpdate`: Called whenever a subscription's status or period is updated.
 - `onSubscriptionCancel`: Called when a user or organization cancels their subscription.
-- `onSubscriptionDelete`: Called when a subscription record is deleted.
 
 #### Customer Hooks (`top-level` or `organization.*`)
 
@@ -263,11 +320,32 @@ React to billing events on the server by providing callbacks in your configurati
 #### Trial Hooks (`subscription.plans[].freeTrial.*`)
 
 - `onTrialStart`: Called when a new trial period begins.
-- `onTrialEnd`: Called when a trial period ends naturally or via manual upgrade.
 
 #### Global Hook
 
 - `onEvent`: Receives every webhook event payload sent from Paystack for custom processing.
+
+### Trusted Server Operations
+
+Recurring renewals and Paystack catalog sync are intentionally not exposed through the browser auth client.
+Invoke them from trusted backend code only:
+
+```ts
+import {
+  chargeSubscriptionRenewal,
+  syncPaystackPlans,
+  syncPaystackProducts,
+} from "@alexasomba/better-auth-paystack";
+
+const ctx = { context: await auth.$context } as any;
+
+await chargeSubscriptionRenewal(ctx, paystackOptions, {
+  subscriptionId: "sub_123",
+});
+
+await syncPaystackProducts(ctx, paystackOptions);
+await syncPaystackPlans(ctx, paystackOptions);
+```
 
 ### Authorization & Security
 
@@ -439,36 +517,36 @@ The plugin extends your database with the following fields and tables.
 
 ### `paystackTransaction`
 
-| Field         | Type     | Required | Description                                       |
-| :------------ | :------- | :------- | :------------------------------------------------ |
-| `reference`   | `string` | Yes      | Unique transaction reference.                     |
-| `referenceId` | `string` | Yes      | Associated User ID or Organization ID.            |
-| `userId`      | `string` | Yes      | The ID of the user who initiated the transaction. |
-| `amount`      | `number` | Yes      | Transaction amount in smallest currency unit.     |
-| `currency`    | `string` | Yes      | Currency code (e.g., "NGN").                      |
-| `status`      | `string` | Yes      | `success`, `pending`, `failed`, `abandoned`.      |
-| `plan`        | `string` | No       | Name of the plan associated with the transaction. |
+| Field         | Type     | Required | Description                                          |
+| :------------ | :------- | :------- | :--------------------------------------------------- |
+| `reference`   | `string` | Yes      | Unique transaction reference.                        |
+| `referenceId` | `string` | Yes      | Associated User ID or Organization ID.               |
+| `userId`      | `string` | Yes      | The ID of the user who initiated the transaction.    |
+| `amount`      | `number` | Yes      | Transaction amount in smallest currency unit.        |
+| `currency`    | `string` | Yes      | Currency code (e.g., "NGN").                         |
+| `status`      | `string` | Yes      | `success`, `pending`, `failed`, `abandoned`.         |
+| `plan`        | `string` | No       | Name of the plan associated with the transaction.    |
 | `product`     | `string` | No       | Name of the product associated with the transaction. |
-| `metadata`    | `string` | No       | JSON string of extra transaction metadata.        |
-| `paystackId`  | `string` | No       | The internal Paystack ID for the transaction.     |
-| `createdAt`   | `Date`   | Yes      | Transaction creation timestamp.                   |
-| `updatedAt`   | `Date`   | Yes      | Transaction last update timestamp.                |
+| `metadata`    | `string` | No       | JSON string of extra transaction metadata.           |
+| `paystackId`  | `string` | No       | The internal Paystack ID for the transaction.        |
+| `createdAt`   | `Date`   | Yes      | Transaction creation timestamp.                      |
+| `updatedAt`   | `Date`   | Yes      | Transaction last update timestamp.                   |
 
 ### `paystackProduct`
 
-| Field         | Type      | Required | Description                                       |
-| :------------ | :-------- | :------- | :------------------------------------------------ |
-| `name`        | `string`  | Yes      | Product name.                                     |
-| `description` | `string`  | No       | Product description.                              |
-| `price`       | `number`  | Yes      | Price in smallest currency unit.                  |
-| `currency`    | `string`  | Yes      | Currency code (e.g., "NGN").                      |
-| `quantity`    | `number`  | No       | Available stock quantity.                         |
-| `unlimited`   | `boolean` | No       | Whether the product has unlimited stock.          |
-| `paystackId`  | `string`  | No       | The internal Paystack Product ID.                 |
-| `slug`        | `string`  | Yes      | Unique slug for the product.                      |
-| `metadata`    | `string`  | No       | JSON string of extra product metadata.            |
-| `createdAt`   | `Date`    | Yes      | Product creation timestamp.                       |
-| `updatedAt`   | `Date`    | Yes      | Product last update timestamp.                    |
+| Field         | Type      | Required | Description                              |
+| :------------ | :-------- | :------- | :--------------------------------------- |
+| `name`        | `string`  | Yes      | Product name.                            |
+| `description` | `string`  | No       | Product description.                     |
+| `price`       | `number`  | Yes      | Price in smallest currency unit.         |
+| `currency`    | `string`  | Yes      | Currency code (e.g., "NGN").             |
+| `quantity`    | `number`  | No       | Available stock quantity.                |
+| `unlimited`   | `boolean` | No       | Whether the product has unlimited stock. |
+| `paystackId`  | `string`  | No       | The internal Paystack Product ID.        |
+| `slug`        | `string`  | Yes      | Unique slug for the product.             |
+| `metadata`    | `string`  | No       | JSON string of extra product metadata.   |
+| `createdAt`   | `Date`    | Yes      | Product creation timestamp.              |
+| `updatedAt`   | `Date`    | Yes      | Product last update timestamp.           |
 
 ---
 
@@ -485,6 +563,7 @@ The plugin extends your database with the following fields and tables.
 The plugin's schema definition includes recommended indexes and uniqueness constraints for performance. When you run `npx better-auth migrate`, these will be automatically applied to your database.
 
 The following fields are indexed:
+
 - **`paystackTransaction`**: `reference` (unique), `userId`, `referenceId`.
 - **`subscription`**: `paystackSubscriptionCode` (unique), `referenceId`, `paystackTransactionReference`, `paystackCustomerCode`, `plan`.
 - **`user` & `organization`**: `paystackCustomerCode`.
@@ -495,9 +574,11 @@ The following fields are indexed:
 The plugin provides two ways to keep your product inventory in sync with Paystack:
 
 #### 1. Automated Inventory Sync (New)
+
 Whenever a successful one-time payment is made (via webhook or manual verification), the plugin automatically calls **`syncProductQuantityFromPaystack`**. This fetches the real-time remaining quantity from the Paystack API and updates your local database record, ensuring your inventory is always accurate.
 
 #### 2. Manual Bulk Sync
+
 You can synchronize all products with your local database using the `/paystack/sync-products` endpoint.
 
 ```bash
@@ -508,20 +589,23 @@ POST /api/auth/paystack/sync-products
 
 ## 🏗️ Development & Contributing
 
-This repository is set up as a pnpm workspace. You can run and build examples via `--filter`.
+This repository is powered by **Vite+**. You use the `vp` CLI to manage the entire workspace.
 
 ```bash
-# Install everything
-pnpm install
+# Install dependencies
+vp i
+
+# Check project health (format, lint, types)
+vp check --fix
 
 # Build the core library
-pnpm --filter "@alexasomba/better-auth-paystack" build
+vp build
 
-# Run Next.js example (Next.js + Better Auth)
-pnpm --filter nextjs-better-auth-paystack dev
+# Run tests
+vp test
 
-# Run TanStack Start example (TanStack Start + Better Auth)
-pnpm --filter tanstack-start-better-auth-paystack dev
+# Run the TanStack Start example
+vp run examples/tanstack dev
 ```
 
 Contributions are welcome! Please open an issue or pull request.
@@ -537,11 +621,11 @@ Future features planned for upcoming versions:
 ### v1.1.0 - Manual Recurring Subscriptions (Available Now)
 
 - [x] **Stored Authorization Codes**: Securely store Paystack authorization codes from verified transactions.
-- [x] **Charge Authorization Endpoint**: Server-side endpoint (`/charge-recurring`) to charge stored cards for renewals.
+- [x] **Trusted Renewal Operation**: Server-side helper to charge stored cards for renewals.
 - [ ] **Card Management UI**: Let users view/delete saved payment methods (masked card data only) - _Upcoming_
 - [ ] **Renewal Scheduler Integration**: Documentation for integrating with Cloudflare Workers Cron, Vercel Cron, etc. - _Upcoming_
 
-> **Note**: For local-managed subscriptions (no `planCode`), the plugin now automatically captures and stores the `authorization_code`. You can trigger renewals using `authClient.paystack.chargeRecurringSubscription({ subscriptionId })`.
+> **Note**: For local-managed subscriptions (no `planCode`), the plugin automatically captures and stores the `authorization_code`. Trigger renewals from trusted backend code with `chargeSubscriptionRenewal(...)`.
 
 ### Future Considerations
 

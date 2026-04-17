@@ -12,13 +12,5 @@
   "git": true,
   "version": 1,
   "framework": "react-cra",
-  "chosenAddOns": [
-    "eslint",
-    "cloudflare",
-    "start",
-    "shadcn",
-    "drizzle",
-    "form",
-    "tanstack-query"
-  ]
+  "chosenAddOns": ["eslint", "cloudflare", "start", "shadcn", "drizzle", "form", "tanstack-query"]
 }

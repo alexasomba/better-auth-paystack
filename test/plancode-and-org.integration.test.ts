@@ -1,3 +1,5 @@
+/* oxlint-disable @typescript-eslint/strict-boolean-expressions */
+
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
@@ -5,455 +7,456 @@ import { bearer } from "better-auth/plugins";
 import { organization } from "better-auth/plugins";
 import { organizationClient } from "better-auth/client/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src";
-import { paystackClient } from "../src/client";
+import { paystack } from "../src/index.ts";
+import { paystackClient } from "../src/client.ts";
+import type { Member } from "../src/types";
 
- 
-/* eslint-disable @typescript-eslint/strict-boolean-expressions */
-// Polyfill for Zod: ensure schema.parseAsync exists and delegates to safeParseAsync.
+/* oxlint-disable @typescript-eslint/strict-boolean-expressions */
 
 /**
  * Tests for planCode-based subscriptions and organization referenceId billing
  */
 describe("planCode and organization referenceId tests", () => {
-	beforeEach(() => {
-		process.env.PAYSTACK_SECRET_KEY = "sk_test_123";
-		process.env.PAYSTACK_WEBHOOK_SECRET = "whsec_test";
-	});
+  beforeEach(() => {
+    process.env.PAYSTACK_SECRET_KEY = "sk_test_123";
+    process.env.PAYSTACK_WEBHOOK_SECRET = "whsec_test";
+  });
 
-	describe("planCode subscription flow", () => {
-		it("should initialize transaction with planCode correctly", async () => {
-			const data: Record<string, any[]> = {
-				user: [],
-				session: [],
-				verification: [],
-				account: [],
-				subscription: [],
-				paystackTransaction: [],
-			};
-			const memory = memoryAdapter(data);
+  describe("planCode subscription flow", () => {
+    it("should initialize transaction with planCode correctly", async () => {
+      const data: Record<string, any[]> = {
+        user: [],
+        session: [],
+        verification: [],
+        account: [],
+        subscription: [],
+        paystackTransaction: [],
+      };
+      const memory = memoryAdapter(data);
 
-			const paystackSdk = {
-				transaction_initialize: vi.fn().mockResolvedValue({
-					data: {
-						status: true,
-						message: "ok",
-						data: {
-							authorization_url: "https://paystack/checkout",
-							reference: "ref_plancode_123",
-							access_code: "acc_123",
-						},
-					},
-				}),
-				transaction_verify: vi.fn().mockResolvedValue({
-					data: {
-						status: true,
-						message: "ok",
-						data: {
-							status: "success",
-							reference: "ref_plancode_123",
-						},
-					},
-				}),
-			};
+      const paystackSdk = {
+        transaction: {
+          initialize: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: {
+                authorization_url: "https://paystack/checkout",
+                reference: "ref_plancode_123",
+                access_code: "acc_123",
+              },
+            },
+          }),
+          verify: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: {
+                status: "success",
+                reference: "ref_plancode_123",
+              },
+            },
+          }),
+        },
+      } as any;
 
-			const auth = betterAuth({
-				baseURL: "http://localhost:3000",
-				trustedOrigins: ["http://localhost:3000"],
-				database: memory,
-				emailAndPassword: { enabled: true },
-				plugins: [
-					paystack<any>({
-						paystackClient: paystackSdk,
-						paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-						subscription: {
-							enabled: true,
-							plans: [
-								{
-									name: "starter",
-									planCode: "PLN_jm9wgvkqykajlp7", // planCode provided
-									// amount/currency/interval optional when planCode is set
-								},
-								{
-									name: "pro",
-									planCode: "PLN_6ikzoaxnunttb5e",
-								},
-							],
-						},
-					}),
-				],
-			});
+      const auth = betterAuth({
+        baseURL: "http://localhost:3000",
+        trustedOrigins: ["http://localhost:3000"],
+        database: memory,
+        emailAndPassword: { enabled: true },
+        plugins: [
+          paystack<any>({
+            paystackClient: paystackSdk,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
+            subscription: {
+              enabled: true,
+              plans: [
+                {
+                  name: "starter",
+                  amount: 50000,
+                  currency: "NGN",
+                  interval: "monthly",
+                  planCode: "PLN_jm9wgvkqykajlp7",
+                  paystackId: "ID_starter",
+                },
+                {
+                  name: "pro",
+                  amount: 100000,
+                  currency: "NGN",
+                  interval: "monthly",
+                  planCode: "PLN_6ikzoaxnunttb5e",
+                  paystackId: "ID_pro",
+                },
+              ],
+            },
+          }),
+        ],
+      });
 
-			const _ctx = await (auth as any).$context;
-			const cookieHeaders = new Headers();
+      const cookieHeaders = new Headers();
+      const authClient = createAuthClient({
+        baseURL: "http://localhost:3000",
+        plugins: [bearer(), paystackClient({ subscription: true })],
+        fetchOptions: {
+          customFetchImpl: async (url, init) => {
+            const merged = new Headers(cookieHeaders);
+            const initHeaders = new Headers((init as any)?.headers ?? {});
+            for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
+            if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+            return auth.handler(new Request(url, { ...init, headers: merged }));
+          },
+        },
+      });
 
-			const authClient = createAuthClient({
-				baseURL: "http://localhost:3000",
-				plugins: [bearer(), paystackClient({ subscription: true })],
-				fetchOptions: {
-					customFetchImpl: async (url, init) => {
-						const merged = new Headers(cookieHeaders);
-						const initHeaders = new Headers((init as any)?.headers ?? {});
-						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
-						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
-					},
-				},
-			});
+      const user = {
+        email: "plancode.user@example.com",
+        password: "password",
+        name: "PlanCode User",
+      };
+      await authClient.signUp.email(user, { throw: true });
+      await authClient.signIn.email(user, {
+        onSuccess: setCookieToHeader(cookieHeaders),
+      });
 
-			// Create user and sign in
-			const user = { email: "plancode.user@example.com", password: "password", name: "PlanCode User" };
-			const signUp = await authClient.signUp.email(user, { throw: true });
-			expect(signUp.user.id).toBeDefined();
+      const init = await (authClient as any).paystack.initializeTransaction({ plan: "starter" });
+      if (init.error) throw new Error("Initialization failed");
+      expect(init.data.url).toBe("https://paystack/checkout");
+      expect(init.data.reference).toBe("ref_plancode_123");
 
-			await authClient.signIn.email(user, {
-				onSuccess: setCookieToHeader(cookieHeaders),
-			});
+      expect(paystackSdk.transaction.initialize).toHaveBeenCalledTimes(1);
+      const callArgs = paystackSdk.transaction.initialize.mock.calls[0][0];
+      expect(callArgs.body.plan).toBe("PLN_jm9wgvkqykajlp7");
+      expect(callArgs.body.amount).toBe(50000);
+    });
 
-			// Initialize transaction with planCode plan
-			const init = await authClient.paystack.transaction.initialize(
-				{ plan: "starter" }
-			);
-			if (init.error) throw new Error("Initialization failed");
-			expect(init.data.url).toBe("https://paystack/checkout");
-			expect(init.data.reference).toBe("ref_plancode_123");
+    it("should initialize transaction with local amount when no planCode", async () => {
+      const data: Record<string, any[]> = {
+        user: [],
+        session: [],
+        verification: [],
+        account: [],
+        subscription: [],
+        paystackTransaction: [],
+      };
+      const memory = memoryAdapter(data);
 
-			// Verify the SDK was called with planCode
-			expect(paystackSdk.transaction_initialize).toHaveBeenCalledTimes(1);
-			const callArgs = paystackSdk.transaction_initialize.mock.calls[0][0];
-			expect(callArgs.body.plan).toBe("PLN_jm9wgvkqykajlp7");
-			// Paystack API requires amount even with planCode (it uses plan's stored amount)
-			// For plans without local amount, we send minimum 50000 kobo (500 NGN)
-			expect(callArgs.body.amount).toBe(50000);
-		});
+      const paystackSdk = {
+        transaction: {
+          initialize: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: {
+                authorization_url: "https://paystack/checkout",
+                reference: "ref_local_123",
+                access_code: "acc_local",
+              },
+            },
+          }),
+          verify: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: { status: "success", reference: "ref_local_123" },
+            },
+          }),
+        },
+      } as any;
 
-		it("should initialize transaction with local amount when no planCode", async () => {
-			const data: Record<string, any[]> = {
-				user: [],
-				session: [],
-				verification: [],
-				account: [],
-				subscription: [],
-				paystackTransaction: [],
-			};
-			const memory = memoryAdapter(data);
+      const auth = betterAuth({
+        baseURL: "http://localhost:3000",
+        trustedOrigins: ["http://localhost:3000"],
+        database: memory,
+        emailAndPassword: { enabled: true },
+        plugins: [
+          paystack<any>({
+            paystackClient: paystackSdk,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
+            subscription: {
+              enabled: true,
+              plans: [
+                {
+                  name: "team",
+                  amount: 2500000,
+                  currency: "NGN",
+                  interval: "monthly",
+                  planCode: "PLN_team",
+                  paystackId: "ID_team",
+                },
+              ],
+            },
+          }),
+        ],
+      });
 
-			const paystackSdk = {
-				transaction_initialize: vi.fn().mockResolvedValue({
-					data: {
-						status: true,
-						message: "ok",
-						data: {
-							authorization_url: "https://paystack/checkout",
-							reference: "ref_local_123",
-							access_code: "acc_local",
-						},
-					},
-				}),
-				transaction_verify: vi.fn().mockResolvedValue({
-					data: {
-						status: true,
-						message: "ok",
-						data: { status: "success", reference: "ref_local_123" },
-					},
-				}),
-			};
+      const cookieHeaders = new Headers();
+      const authClient = createAuthClient({
+        baseURL: "http://localhost:3000",
+        plugins: [bearer(), paystackClient({ subscription: true })],
+        fetchOptions: {
+          customFetchImpl: async (url, init) => {
+            const merged = new Headers(cookieHeaders);
+            const initHeaders = new Headers((init as any)?.headers ?? {});
+            for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
+            if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+            return auth.handler(new Request(url, { ...init, headers: merged }));
+          },
+        },
+      });
 
-			const auth = betterAuth({
-				baseURL: "http://localhost:3000",
-				trustedOrigins: ["http://localhost:3000"],
-				database: memory,
-				emailAndPassword: { enabled: true },
-				plugins: [
-					paystack<any>({
-						paystackClient: paystackSdk,
-						paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-						subscription: {
-							enabled: true,
-							plans: [
-								{
-									name: "team",
-									amount: 2500000, // 25,000 NGN - no planCode
-									currency: "NGN",
-									interval: "monthly",
-								},
-							],
-						},
-					}),
-				],
-			});
+      const user = { email: "team.user@example.com", password: "password", name: "Team User" };
+      await authClient.signUp.email(user, { throw: true });
+      await authClient.signIn.email(user, {
+        throw: true,
+        onSuccess: setCookieToHeader(cookieHeaders),
+      });
 
-			const cookieHeaders = new Headers();
+      const init = await (authClient as any).paystack.initializeTransaction({ plan: "team" });
 
-			const authClient = createAuthClient({
-				baseURL: "http://localhost:3000",
-				plugins: [bearer(), paystackClient({ subscription: true })],
-				fetchOptions: {
-					customFetchImpl: async (url, init) => {
-						const merged = new Headers(cookieHeaders);
-						const initHeaders = new Headers((init as any)?.headers ?? {});
-						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
-						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
-					},
-				},
-			});
+      if (init.error) throw new Error("Initialization failed");
+      expect(init.data.url).toBe("https://paystack/checkout");
 
-			const user = { email: "team.user@example.com", password: "password", name: "Team User" };
-			await authClient.signUp.email(user, { throw: true });
-			await authClient.signIn.email(user, {
-				throw: true,
-				onSuccess: setCookieToHeader(cookieHeaders),
-			});
+      const callArgs = paystackSdk.transaction.initialize.mock.calls[0][0];
+      expect(callArgs.body.amount).toBe(2500000);
+      expect(callArgs.body.plan).toBeUndefined();
+    });
+  });
 
-			const init = await authClient.paystack.transaction.initialize(
-				{ plan: "team" }
-			);
+  describe("organization referenceId billing", () => {
+    it("should authorize referenceId for org owner", async () => {
+      const data: Record<string, any[]> = {
+        user: [],
+        session: [],
+        verification: [],
+        account: [],
+        subscription: [],
+        paystackTransaction: [],
+        organization: [],
+        member: [],
+        invitation: [],
+      };
+      const memory = memoryAdapter(data);
 
-			if (init.error) throw new Error("Initialization failed");
-			expect(init.data.url).toBe("https://paystack/checkout");
+      const paystackSdk = {
+        transaction: {
+          initialize: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: {
+                authorization_url: "https://paystack/checkout",
+                reference: "ref_org_123",
+                access_code: "acc_org",
+              },
+            },
+          }),
+          verify: vi.fn().mockResolvedValue({
+            data: {
+              status: true,
+              message: "ok",
+              data: { status: "success", reference: "ref_org_123" },
+            },
+          }),
+        },
+      } as any;
 
-			// Verify the SDK was called with amount (no planCode)
-			const callArgs = paystackSdk.transaction_initialize.mock.calls[0][0];
-			expect(callArgs.body.amount).toBe(2500000);
-			expect(callArgs.body.plan).toBeUndefined();
-		});
-	});
+      const auth = betterAuth({
+        baseURL: "http://localhost:3000",
+        trustedOrigins: ["http://localhost:3000"],
+        database: memory,
+        emailAndPassword: { enabled: true },
+        plugins: [
+          organization(),
+          paystack<any>({
+            paystackClient: paystackSdk,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
+            subscription: {
+              enabled: true,
+              plans: [
+                {
+                  name: "team",
+                  amount: 2500000,
+                  currency: "NGN",
+                  interval: "monthly",
+                  planCode: "PLN_team_org",
+                  paystackId: "ID_team_org",
+                },
+              ],
+              authorizeReference: async ({ user, referenceId }, ctx) => {
+                if (!referenceId || referenceId === user.id) {
+                  return true;
+                }
+                const members = await ctx.context.adapter.findMany({
+                  model: "member",
+                  where: [
+                    { field: "userId", value: user.id },
+                    { field: "organizationId", value: referenceId },
+                  ],
+                });
+                if (members && members.length > 0) {
+                  const member = members[0] as Member;
+                  return member.role === "owner" || member.role === "admin";
+                }
+                return false;
+              },
+            },
+          }),
+        ],
+      });
 
-	describe("organization referenceId billing", () => {
-		it("should authorize referenceId for org owner", async () => {
-			const data: Record<string, any[]> = {
-				user: [],
-				session: [],
-				verification: [],
-				account: [],
-				subscription: [],
-				paystackTransaction: [],
-				organization: [],
-				member: [],
-				invitation: [],
-			};
-			const memory = memoryAdapter(data);
+      const ctx = await (auth as any).$context;
+      const cookieHeaders = new Headers();
 
-			const paystackSdk = {
-				transaction_initialize: vi.fn().mockResolvedValue({
-					data: {
-						status: true,
-						message: "ok",
-						data: {
-							authorization_url: "https://paystack/checkout",
-							reference: "ref_org_123",
-							access_code: "acc_org",
-						},
-					},
-				}),
-				transaction_verify: vi.fn().mockResolvedValue({
-					data: {
-						status: true,
-						message: "ok",
-						data: { status: "success", reference: "ref_org_123" },
-					},
-				}),
-			};
+      const authClient = createAuthClient({
+        baseURL: "http://localhost:3000",
+        plugins: [bearer(), organizationClient(), paystackClient({ subscription: true })],
+        fetchOptions: {
+          customFetchImpl: async (url, init) => {
+            const merged = new Headers(cookieHeaders);
+            const initHeaders = new Headers((init as any)?.headers ?? {});
+            for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
+            if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+            return auth.handler(new Request(url, { ...init, headers: merged }));
+          },
+        },
+      });
 
-			const auth = betterAuth({
-				baseURL: "http://localhost:3000",
-				trustedOrigins: ["http://localhost:3000"],
-				database: memory,
-				emailAndPassword: { enabled: true },
-				plugins: [
-					organization(),
-					paystack<any>({
-						paystackClient: paystackSdk,
-						paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-						subscription: {
-							enabled: true,
-							plans: [
-								{
-									name: "team",
-									amount: 2500000,
-									currency: "NGN",
-									interval: "monthly",
-								},
-							],
-							authorizeReference: async ({ user, referenceId }, ctx) => {
-								// Allow user's own ID
-								if (!referenceId || referenceId === user.id) {
-									return true;
-								}
-								// Check org membership
-								const members = await ctx.context.adapter.findMany({
-									model: "member",
-									where: [
-										{ field: "userId", value: user.id },
-										{ field: "organizationId", value: referenceId },
-									],
-								});
-								if (members && members.length > 0) {
-									const member = members[0];
-									return member.role === "owner" || member.role === "admin";
-								}
-								return false;
-							},
-						},
-					}),
-				],
-			});
+      const user = { email: "org.owner@example.com", password: "password", name: "Org Owner" };
+      await authClient.signUp.email(user, { throw: true });
+      await authClient.signIn.email(user, {
+        throw: true,
+        onSuccess: setCookieToHeader(cookieHeaders),
+      });
 
-			const ctx = await (auth as any).$context;
-			const cookieHeaders = new Headers();
+      const org = await (authClient as any).organization.create({
+        name: "Test Org",
+        slug: "test-org",
+      });
+      const orgId = org.data?.id;
+      expect(orgId).toBeDefined();
 
-			const authClient = createAuthClient({
-				baseURL: "http://localhost:3000",
-				plugins: [bearer(), organizationClient(), paystackClient({ subscription: true })],
-				fetchOptions: {
-					customFetchImpl: async (url, init) => {
-						const merged = new Headers(cookieHeaders);
-						const initHeaders = new Headers((init as any)?.headers ?? {});
-						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
-						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
-					},
-				},
-			});
+      const init = await (authClient as any).paystack.initializeTransaction({
+        plan: "team",
+        referenceId: orgId,
+      });
+      if (init.error) throw new Error("Initialization failed");
+      expect(init.data.url).toBe("https://paystack/checkout");
+      expect(init.data.reference).toBe("ref_org_123");
 
-			// Create user and sign in
-			const user = { email: "org.owner@example.com", password: "password", name: "Org Owner" };
-			const signUp = await authClient.signUp.email(user, { throw: true });
-			const _userId = signUp.user.id;
+      const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
+      expect(subscriptions?.length).toBeGreaterThan(0);
+      const sub = subscriptions?.find((s: any) => s.referenceId === orgId);
+      expect(sub).toBeDefined();
+    });
 
-			await authClient.signIn.email(user, {
-				throw: true,
-				onSuccess: setCookieToHeader(cookieHeaders),
-			});
+    it("should reject referenceId for unauthorized user", async () => {
+      const data: Record<string, any[]> = {
+        user: [],
+        session: [],
+        verification: [],
+        account: [],
+        subscription: [],
+        paystackTransaction: [],
+        organization: [],
+        member: [],
+        invitation: [],
+      };
+      const memory = memoryAdapter(data);
 
-			// Create an organization (user becomes owner)
-			const org = await authClient.organization.create({
-				name: "Test Org",
-				slug: "test-org",
-			});
-			const orgId = org.data?.id;
-			expect(orgId).toBeDefined();
+      const paystackSdk = {
+        transaction: {
+          initialize: vi.fn(),
+          verify: vi.fn(),
+        },
+      } as any;
 
-			// Initialize transaction with org referenceId
-			const init = await authClient.paystack.transaction.initialize(
-				{ plan: "team", referenceId: orgId }
-			);
-			if (init.error) throw new Error("Initialization failed");
-			expect(init.data.url).toBe("https://paystack/checkout");
-			expect(init.data.reference).toBe("ref_org_123");
+      const auth = betterAuth({
+        baseURL: "http://localhost:3000",
+        trustedOrigins: ["http://localhost:3000"],
+        database: memory,
+        emailAndPassword: { enabled: true },
+        plugins: [
+          organization(),
+          paystack<any>({
+            paystackClient: paystackSdk,
+            secretKey: "sk_test_123",
+            webhook: { secret: "whsec_test" },
+            subscription: {
+              enabled: true,
+              plans: [
+                {
+                  name: "team",
+                  amount: 2500000,
+                  currency: "NGN",
+                  interval: "monthly",
+                  planCode: "PLN_team_reject",
+                  paystackId: "ID_team_reject",
+                },
+              ],
+              authorizeReference: async ({ user, referenceId }, ctx) => {
+                if (!referenceId || referenceId === user.id) {
+                  return true;
+                }
+                const members = await ctx.context.adapter.findMany({
+                  model: "member",
+                  where: [
+                    { field: "userId", value: user.id },
+                    { field: "organizationId", value: referenceId },
+                  ],
+                });
+                if (members && members.length > 0) {
+                  const member = members[0] as Member;
+                  return member.role === "owner" || member.role === "admin";
+                }
+                return false;
+              },
+            },
+          }),
+        ],
+      });
 
-			// Verify subscription was created with org referenceId
-			const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
-			expect(subscriptions?.length).toBeGreaterThan(0);
-			const sub = subscriptions?.find((s: any) => s.referenceId === orgId);
-			expect(sub).toBeDefined();
-		});
+      const cookieHeaders = new Headers();
 
-		it("should reject referenceId for unauthorized user", async () => {
-			const data: Record<string, any[]> = {
-				user: [],
-				session: [],
-				verification: [],
-				account: [],
-				subscription: [],
-				paystackTransaction: [],
-				organization: [],
-				member: [],
-				invitation: [],
-			};
-			const memory = memoryAdapter(data);
+      const authClient = createAuthClient({
+        baseURL: "http://localhost:3000",
+        plugins: [bearer(), organizationClient(), paystackClient({ subscription: true })],
+        fetchOptions: {
+          customFetchImpl: async (url, init) => {
+            const merged = new Headers(cookieHeaders);
+            const initHeaders = new Headers((init as any)?.headers ?? {});
+            for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
+            if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+            return auth.handler(new Request(url, { ...init, headers: merged }));
+          },
+        },
+      });
 
-			const paystackSdk = {
-				transaction_initialize: vi.fn(),
-				transaction_verify: vi.fn(),
-			};
+      const user = { email: "nonmember@example.com", password: "password", name: "Non Member" };
+      await authClient.signUp.email(user, { throw: true });
+      await authClient.signIn.email(user, {
+        throw: true,
+        onSuccess: setCookieToHeader(cookieHeaders),
+      });
 
-			const auth = betterAuth({
-				baseURL: "http://localhost:3000",
-				trustedOrigins: ["http://localhost:3000"],
-				database: memory,
-				emailAndPassword: { enabled: true },
-				plugins: [
-					organization(),
-					paystack<any>({
-						paystackClient: paystackSdk,
-						paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-						subscription: {
-							enabled: true,
-							plans: [
-								{
-									name: "team",
-									amount: 2500000,
-									currency: "NGN",
-									interval: "monthly",
-								},
-							],
-							authorizeReference: async ({ user, referenceId }, ctx) => {
-								if (!referenceId || referenceId === user.id) {
-									return true;
-								}
-								const members = await ctx.context.adapter.findMany({
-									model: "member",
-									where: [
-										{ field: "userId", value: user.id },
-										{ field: "organizationId", value: referenceId },
-									],
-								});
-								if (members && members.length > 0) {
-									const member = members[0];
-									return member.role === "owner" || member.role === "admin";
-								}
-								return false;
-							},
-						},
-					}),
-				],
-			});
+      const fakeOrgId = "org_fake_123";
 
-			const cookieHeaders = new Headers();
+      try {
+        await (authClient as any).paystack.initializeTransaction(
+          { plan: "team", referenceId: fakeOrgId },
+          { throw: true },
+        );
+        expect(true).toBe(false);
+      } catch (error: any) {
+        expect(error).toBeDefined();
+      }
 
-			const authClient = createAuthClient({
-				baseURL: "http://localhost:3000",
-				plugins: [bearer(), organizationClient(), paystackClient({ subscription: true })],
-				fetchOptions: {
-					customFetchImpl: async (url, init) => {
-						const merged = new Headers(cookieHeaders);
-						const initHeaders = new Headers((init as any)?.headers ?? {});
-						for (const [k, v] of (initHeaders as any).entries()) merged.set(k, v);
-						if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-						return auth.handler(new Request(url, { ...(init ?? {}), headers: merged }));
-					},
-				},
-			});
-
-			// Create user and sign in
-			const user = { email: "nonmember@example.com", password: "password", name: "Non Member" };
-			await authClient.signUp.email(user, { throw: true });
-			await authClient.signIn.email(user, {
-				throw: true,
-				onSuccess: setCookieToHeader(cookieHeaders),
-			});
-
-			// Try to bill against a fake org ID the user doesn't belong to
-			const fakeOrgId = "org_fake_123";
-
-			try {
-				await authClient.paystack.transaction.initialize(
-					{ plan: "team", referenceId: fakeOrgId },
-					{ throw: true },
-				);
-				// Should not reach here
-				expect(true).toBe(false);
-			} catch (error: any) {
-				// Expect authorization to fail
-				expect(error).toBeDefined();
-			}
-
-			// Verify SDK was NOT called
-			expect(paystackSdk.transaction_initialize).not.toHaveBeenCalled();
-		});
-	});
+      expect(paystackSdk.transaction.initialize).not.toHaveBeenCalled();
+    });
+  });
 });

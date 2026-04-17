@@ -1,6 +1,6 @@
 {
   "include": ["**/*.ts", "**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.js"],
-  
+
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
@@ -22,7 +22,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "types": ["node", "react", "react-dom", "@testing-library/jest-dom"],
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@alexasomba/better-auth-paystack": ["../../src/index.ts"],
