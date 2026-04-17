@@ -1,0 +1,203 @@
+VITE+ - The Unified Toolchain for the Web
+
+ RUN  /Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack
+
+stderr | test/paystack.test.ts > paystack > should not verify another user's subscription by reference
+2026-04-17T07:54:55.194Z ERROR [Better Auth]: [MemoryAdapter] Model paystackPlan not found in the DB [
+  'user',
+  'session',
+  'verification',
+  'account',
+  'subscription',
+  'paystackProduct',
+  'paystackTransaction',
+  'paystackCustomer',
+  'paystackSubscription'
+]
+
+stdout | test/paystack.test.ts > paystack > should update subscription status to canceled via webhook events
+Create method with `id` being called at: 
+    at /Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack/test/paystack.test.ts:937:23
+    at file:///Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack/node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+stderr | test/paystack.test.ts > paystack > should update subscription status to canceled via webhook events
+2026-04-17T07:54:55.543Z WARN [Better Auth]: [Memory Adapter] - You are trying to create a record with an id. This is not allowed as we handle id generation for you, unless you pass in the `forceAllowId` parameter. The id will be ignored.
+
+stdout | test/paystack.test.ts > paystack > should call onSubscriptionCancel hook when subscription.disable webhook fires
+Create method with `id` being called at: 
+    at /Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack/test/paystack.test.ts:1059:23
+    at file:///Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack/node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+stderr | test/paystack.test.ts > paystack > should call onSubscriptionCancel hook when subscription.disable webhook fires
+2026-04-17T07:54:55.562Z WARN [Better Auth]: [Memory Adapter] - You are trying to create a record with an id. This is not allowed as we handle id generation for you, unless you pass in the `forceAllowId` parameter. The id will be ignored.
+
+stdout | test/paystack.test.ts > paystack > should prevent trial abuse - second subscription does not get trial
+Create method with `id` being called at: 
+    at /Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack/test/paystack.test.ts:1150:23
+    at file:///Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack/node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+stderr | test/paystack.test.ts > paystack > should prevent trial abuse - second subscription does not get trial
+2026-04-17T07:54:55.726Z WARN [Better Auth]: [Memory Adapter] - You are trying to create a record with an id. This is not allowed as we handle id generation for you, unless you pass in the `forceAllowId` parameter. The id will be ignored.
+
+ ❯ test/paystack.test.ts (23 tests | 8 failed) 2355ms
+     ✓ should api endpoint exist 1ms
+     ✓ should expose typed transaction routes on authClient 0ms
+     ✓ should reject invalid webhook signature 20ms
+     ✓ should accept valid webhook signature 4ms
+     ✓ should create Paystack customer on sign up 85ms
+     × should disable subscription without emailToken by fetching it 132ms
+     × should enable subscription without emailToken by fetching it 137ms
+     ✓ should list subscriptions for user 205ms
+     ✓ should get billing portal link 179ms
+     ✓ should reject untrusted callbackURL 152ms
+     × should not verify another user's subscription by reference 233ms
+     ✓ should handle one-time product transaction initialization with comprehensive checks 159ms
+     ✓ should authorize reference access via authorizeReference for listLocal 187ms
+     × should update subscription status to canceled via webhook events 7ms
+     × should call onSubscriptionCreated hook when subscription.create webhook fires 9ms
+     × should call onSubscriptionCancel hook when subscription.disable webhook fires 8ms
+     ✓ should prevent trial abuse - second subscription does not get trial 163ms
+     ✓ should grant trial to first-time subscriber 152ms
+     ✓ should create Paystack customer for organization on create 1ms
+     ✓ should use Organization email and attribution when initializing transaction for an Org 133ms
+     ✓ should fallback to Organization owner email when Org email is missing 153ms
+     × should sync products from Paystack 128ms
+     × should decrement product quantity on successful webhook charge 102ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/paystack.test.ts > paystack > should disable subscription without emailToken by fetching it
+Error: API Error: {"status":404,"statusText":"Not Found"}
+ ❯ test/paystack.test.ts:264:35
+    262|     );
+    263|
+    264|     if (res.error !== null) throw new Error(`API Error: ${JSON.stringi…
+       |                                   ^
+    265|     expect(res.data?.status).toBe("success");
+    266|     expect(paystackSdk.subscription.fetch).toHaveBeenCalledTimes(1);
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  test/paystack.test.ts > paystack > should enable subscription without emailToken by fetching it
+Error: API Error: {"status":404,"statusText":"Not Found"}
+ ❯ test/paystack.test.ts:342:35
+    340|     );
+    341|
+    342|     if (res.error !== null) throw new Error(`API Error: ${JSON.stringi…
+       |                                   ^
+    343|     expect(res.data?.status).toBe("success");
+    344|     expect(paystackSdk.subscription.fetch).toHaveBeenCalledTimes(1);
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  test/paystack.test.ts > paystack > should not verify another user's subscription by reference
+AssertionError: expected 400 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 400
+
+ ❯ test/paystack.test.ts:682:28
+    680|     });
+    681|     const initRes = await auth.handler(initReq);
+    682|     expect(initRes.status).toBe(200);
+       |                            ^
+    683|
+    684|     const subA0 = (
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  test/paystack.test.ts > paystack > should update subscription status to canceled via webhook events
+AssertionError: expected 'active' to be 'canceled' // Object.is equality
+
+Expected: "canceled"
+Received: "active"
+
+ ❯ test/paystack.test.ts:960:32
+    958|       where: [{ field: "paystackSubscriptionCode", value: "SUB_ABC" }],
+    959|     });
+    960|     expect(updatedSub?.status).toBe("canceled");
+       |                                ^
+    961|   });
+    962|
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  test/paystack.test.ts > paystack > should call onSubscriptionCreated hook when subscription.create webhook fires
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ test/paystack.test.ts:1016:35
+    1014|     await auth.handler(req);
+    1015|
+    1016|     expect(onSubscriptionCreated).toHaveBeenCalledTimes(1);
+       |                                   ^
+    1017|     expect(onSubscriptionCreated).toHaveBeenCalledWith(
+    1018|       expect.objectContaining({
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  test/paystack.test.ts > paystack > should call onSubscriptionCancel hook when subscription.disable webhook fires
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ test/paystack.test.ts:1078:34
+    1076|     await auth.handler(req);
+    1077|
+    1078|     expect(onSubscriptionCancel).toHaveBeenCalledTimes(1);
+       |                                  ^
+    1079|     expect(onSubscriptionCancel).toHaveBeenCalledWith(
+    1080|       expect.objectContaining({
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  test/paystack.test.ts > paystack > should sync products from Paystack
+AssertionError: expected undefined to be 'success' // Object.is equality
+
+- Expected:
+"success"
+
++ Received:
+undefined
+
+ ❯ test/paystack.test.ts:1622:25
+    1620|
+    1621|     const json = (await res.json()) as { status: string; count: number…
+    1622|     expect(json.status).toBe("success");
+       |                         ^
+    1623|     expect(json.count).toBe(1);
+    1624|
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  test/paystack.test.ts > paystack > should decrement product quantity on successful webhook charge
+AssertionError: expected 10 to be 9 // Object.is equality
+
+- Expected
++ Received
+
+- 9
++ 10
+
+ ❯ test/paystack.test.ts:1727:31
+    1725|     });
+    1726|
+    1727|     expect(product?.quantity).toBe(9);
+       |                               ^
+    1728|   });
+    1729| });
+ ❯ node_modules/.pnpm/@voidzero-dev+vite-plus-test@0.1.18_@arethetypeswrong+core@0.18.2_@opentelemetry+api@1._714b1c3364437725be2a2d56442dc0f8/node_modules/@voidzero-dev/vite-plus-test/dist/@vitest/runner/chunk-artifact.js:1903:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 15 passed (23)
+   Start at  08:54:53
+   Duration  3.11s (transform 114ms, setup 29ms, import 569ms, tests 2.35s, environment 0ms)
+

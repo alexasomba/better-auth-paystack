@@ -8,7 +8,7 @@ import {
   DotsThree,
   Eye,
 } from "@phosphor-icons/react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, HeaderGroup, Row, Cell, Header } from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -54,12 +54,12 @@ export default function TransactionsTable() {
   const [loading, setLoading] = React.useState(true);
   const [selectedTransaction, setSelectedTransaction] = React.useState<Transaction | null>(null);
 
-  const columns: Array<ColumnDef<Transaction>> = [
+  const columns: ColumnDef<Transaction>[] = [
     {
       accessorKey: "reference",
       header: "Reference",
-      cell: ({ row }: { row: any }) => {
-        const reference = row.getValue("reference") as string;
+      cell: ({ row }: { row: Row<Transaction> }) => {
+        const reference = row.original.reference;
         return (
           <div className="flex items-center gap-2 group">
             <code className="font-mono text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
@@ -68,7 +68,7 @@ export default function TransactionsTable() {
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard.writeText(reference);
+                void navigator.clipboard.writeText(reference);
               }}
               className="p-1 hover:bg-primary/10 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
               title="Copy Reference"
@@ -84,13 +84,13 @@ export default function TransactionsTable() {
     {
       accessorKey: "amount",
       header: "Amount",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ row }: { row: Row<Transaction> }) => {
         const rawAmount = row.getValue("amount");
-        const amount = parseFloat(rawAmount as string);
+        const amount = parseFloat(String(rawAmount));
         if (Number.isNaN(amount) || rawAmount === null || rawAmount === undefined) {
           return <div className="font-medium text-muted-foreground">—</div>;
         }
-        const currency = row.original.currency || "NGN"; // fallback
+        const currency = row.original.currency ?? "NGN"; // fallback
         const formatted = new Intl.NumberFormat("en-NG", {
           style: "currency",
           currency: currency,
@@ -101,8 +101,8 @@ export default function TransactionsTable() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }: { row: any }) => {
-        const status = row.getValue("status") as string;
+      cell: ({ row }: { row: Row<Transaction> }) => {
+        const status = row.original.status;
         return (
           <Badge
             variant={
@@ -118,12 +118,16 @@ export default function TransactionsTable() {
     {
       accessorKey: "referenceId",
       header: "Billed To",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ row }: { row: Row<Transaction> }) => {
         const referenceId = row.original.referenceId;
         const userId = row.original.userId;
 
         // If referenceId equals userId or is empty, it's personal billing
-        const isOrgBilling = referenceId && referenceId !== userId;
+        const isOrgBilling =
+          referenceId !== undefined &&
+          referenceId !== null &&
+          referenceId !== "" &&
+          referenceId !== userId;
 
         if (isOrgBilling) {
           const orgName = row.original._orgName;
@@ -134,12 +138,12 @@ export default function TransactionsTable() {
               </span>
               <div className="flex flex-col">
                 <span className="text-xs font-medium text-blue-600">
-                  {orgName || "Organization"}
+                  {orgName ?? "Organization"}
                 </span>
-                {!orgName && (
+                {orgName === undefined && (
                   <code
                     className="font-mono text-[9px] text-muted-foreground truncate max-w-20"
-                    title={referenceId}
+                    title={referenceId ?? ""}
                   >
                     {referenceId?.slice(0, 8)}...
                   </code>
@@ -155,8 +159,8 @@ export default function TransactionsTable() {
     {
       accessorKey: "createdAt",
       header: "Date",
-      cell: ({ row }: { row: any }) => {
-        const date = new Date(row.getValue("createdAt") as string);
+      cell: ({ row }: { row: Row<Transaction> }) => {
+        const date = new Date(row.getValue("createdAt"));
         return (
           <div className="flex flex-col">
             <span>{date.toLocaleDateString()}</span>
@@ -168,11 +172,11 @@ export default function TransactionsTable() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ row }: { row: Row<Transaction> }) => {
         const transaction = row.original;
 
         const copyReference = () => {
-          navigator.clipboard.writeText(transaction.reference);
+          void navigator.clipboard.writeText(transaction.reference);
         };
 
         return (
@@ -191,7 +195,11 @@ export default function TransactionsTable() {
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setSelectedTransaction(transaction)}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedTransaction(transaction);
+                  }}
+                >
                   <span className="mr-2 text-muted-foreground">
                     <Eye weight="duotone" size={16} />
                   </span>
@@ -208,7 +216,9 @@ export default function TransactionsTable() {
               <DropdownMenuItem>
                 <a
                   href={
-                    transaction.paystackId
+                    transaction.paystackId !== undefined &&
+                    transaction.paystackId !== null &&
+                    transaction.paystackId !== ""
                       ? `https://dashboard.paystack.com/#/transactions/${transaction.paystackId}/analytics`
                       : `https://dashboard.paystack.com/#/transactions?q=${transaction.reference}`
                   }
@@ -233,26 +243,29 @@ export default function TransactionsTable() {
     async function fetchTransactions() {
       try {
         // Fetch personal transactions
-        const personalRes = await authClient.paystack.transaction.list({
+        const personalRes = await (authClient as any).paystack.transaction.list({
           query: {},
         });
 
         let allTransactions: Transaction[] = [];
 
-        if (personalRes.data?.transactions) {
+        if (
+          personalRes.data?.transactions !== undefined &&
+          personalRes.data?.transactions !== null
+        ) {
           allTransactions = [...personalRes.data.transactions];
         }
 
         // Fetch organization transactions
         try {
           const orgsRes = await authClient.organization.list();
-          if (orgsRes.data && Array.isArray(orgsRes.data)) {
+          if (orgsRes.data !== undefined && orgsRes.data !== null && Array.isArray(orgsRes.data)) {
             for (const org of orgsRes.data) {
               try {
-                const orgRes = await authClient.paystack.transaction.list({
+                const orgRes = await (authClient as any).paystack.transaction.list({
                   query: { referenceId: org.id },
                 });
-                if (orgRes.data?.transactions) {
+                if (orgRes.data?.transactions !== undefined && orgRes.data?.transactions !== null) {
                   // Add org name to transactions for display
                   const orgTransactions = orgRes.data.transactions.map((t: Transaction) => ({
                     ...t,
@@ -281,7 +294,7 @@ export default function TransactionsTable() {
         setLoading(false);
       }
     }
-    fetchTransactions();
+    void fetchTransactions();
   }, []);
 
   const table = useReactTable({
@@ -305,11 +318,11 @@ export default function TransactionsTable() {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup: any) => (
+            {table.getHeaderGroups().map((headerGroup: HeaderGroup<Transaction>) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header: any) => (
+                {headerGroup.headers.map((header: Header<Transaction, unknown>) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder
+                    {header.isPlaceholder === true
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -318,10 +331,13 @@ export default function TransactionsTable() {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row: any) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell: any) => (
+            {table.getRowModel().rows.length > 0 ? (
+              table.getRowModel().rows.map((row: Row<Transaction>) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() === true ? "selected" : undefined}
+                >
+                  {row.getVisibleCells().map((cell: Cell<Transaction, unknown>) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -340,14 +356,16 @@ export default function TransactionsTable() {
       </div>
 
       <Dialog
-        open={!!selectedTransaction}
-        onOpenChange={(open) => !open && setSelectedTransaction(null)}
+        open={selectedTransaction !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedTransaction(null);
+        }}
       >
         <DialogContent className="sm:max-w-106.25">
           <DialogHeader>
             <DialogTitle>Transaction Details</DialogTitle>
           </DialogHeader>
-          {selectedTransaction && (
+          {selectedTransaction !== null && (
             <div className="grid gap-4 py-4">
               <div className="space-y-1 bg-muted/50 p-3 rounded-lg border border-dashed">
                 <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
@@ -361,7 +379,9 @@ export default function TransactionsTable() {
                     size="icon"
                     variant="ghost"
                     className="h-6 w-6 shrink-0"
-                    onClick={() => navigator.clipboard.writeText(selectedTransaction.reference)}
+                    onClick={() => {
+                      void navigator.clipboard.writeText(selectedTransaction.reference);
+                    }}
                   >
                     <Copy weight="duotone" size={12} />
                   </Button>
@@ -370,7 +390,8 @@ export default function TransactionsTable() {
               <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                 <span className="text-sm font-medium text-muted-foreground">Amount</span>
                 <span className="col-span-3 text-right font-semibold">
-                  {(selectedTransaction.amount as unknown) != null &&
+                  {selectedTransaction.amount !== undefined &&
+                  selectedTransaction.amount !== null &&
                   !Number.isNaN(selectedTransaction.amount)
                     ? new Intl.NumberFormat("en-NG", {
                         style: "currency",
@@ -396,14 +417,16 @@ export default function TransactionsTable() {
               <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                 <span className="text-sm font-medium text-muted-foreground">Billed To</span>
                 <span className="col-span-3 text-right">
-                  {selectedTransaction.referenceId &&
+                  {selectedTransaction.referenceId !== undefined &&
+                  selectedTransaction.referenceId !== null &&
+                  selectedTransaction.referenceId !== "" &&
                   selectedTransaction.referenceId !== selectedTransaction.userId ? (
                     <span className="inline-flex items-center gap-1 text-blue-600">
                       <Buildings weight="duotone" size={14} />
                       <span className="text-xs font-medium">
-                        {(selectedTransaction as any)._orgName || "Organization"}
+                        {selectedTransaction._orgName ?? "Organization"}
                       </span>
-                      {!(selectedTransaction as any)._orgName && (
+                      {selectedTransaction._orgName === undefined && (
                         <code className="font-mono text-[9px] text-muted-foreground ml-1">
                           {selectedTransaction.referenceId.slice(0, 12)}...
                         </code>
@@ -417,7 +440,7 @@ export default function TransactionsTable() {
               <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                 <span className="text-sm font-medium text-muted-foreground">Plan/Product</span>
                 <span className="col-span-3 text-right capitalize text-sm">
-                  {selectedTransaction.plan || selectedTransaction.product || "One-time Payment"}
+                  {selectedTransaction.plan ?? selectedTransaction.product ?? "One-time Payment"}
                 </span>
               </div>
               <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
@@ -426,16 +449,18 @@ export default function TransactionsTable() {
                   {new Date(selectedTransaction.createdAt).toLocaleString()}
                 </span>
               </div>
-              {selectedTransaction.metadata && (
-                <div className="space-y-1">
-                  <span className="text-sm font-medium text-muted-foreground text-left block">
-                    Metadata
-                  </span>
-                  <pre className="mt-1 max-h-25 overflow-auto rounded-md bg-muted p-2 text-[10px]">
-                    {JSON.stringify(JSON.parse(selectedTransaction.metadata), null, 2)}
-                  </pre>
-                </div>
-              )}
+              {selectedTransaction.metadata !== undefined &&
+                selectedTransaction.metadata !== null &&
+                selectedTransaction.metadata !== "" && (
+                  <div className="space-y-1">
+                    <span className="text-sm font-medium text-muted-foreground text-left block">
+                      Metadata
+                    </span>
+                    <pre className="mt-1 max-h-25 overflow-auto rounded-md bg-muted p-2 text-[10px]">
+                      {JSON.stringify(JSON.parse(selectedTransaction.metadata), null, 2)}
+                    </pre>
+                  </div>
+                )}
             </div>
           )}
         </DialogContent>

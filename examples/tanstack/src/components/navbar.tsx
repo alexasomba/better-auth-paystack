@@ -17,7 +17,7 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          {session ? (
+          {session !== null && session !== undefined ? (
             <>
               <Link to="/dashboard">
                 <Button variant="ghost">Dashboard</Button>
@@ -29,7 +29,7 @@ export default function Navbar() {
                   size="sm"
                   onClick={async () => {
                     await authClient.signOut();
-                    router.navigate({ to: "/" });
+                    void router.navigate({ to: "/" });
                   }}
                 >
                   Sign Out
@@ -42,7 +42,7 @@ export default function Navbar() {
                 variant="outline"
                 onClick={async () => {
                   await authClient.signIn.anonymous();
-                  router.navigate({ to: "/dashboard" });
+                  void router.navigate({ to: "/dashboard" });
                 }}
               >
                 Guest Sign In

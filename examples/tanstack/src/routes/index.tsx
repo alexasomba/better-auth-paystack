@@ -22,25 +22,25 @@ import {
 export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
-  const { data: sessionData, error: sessionError } = authClient.useSession();
   const router = useRouter();
+  const { data: sessionData, error: sessionError } = authClient.useSession();
   const [isAuthActionInProgress, setIsAuthActionInProgress] = useState(false);
 
   useEffect(() => {
-    if (sessionData?.user) {
-      router.navigate({ to: "/dashboard" });
+    if (sessionData?.user !== null && sessionData?.user !== undefined) {
+      void router.navigate({ to: "/dashboard" });
     }
-  }, [sessionData, router]);
+  }, [sessionData]);
 
   const handleAnonymousLogin = async () => {
     setIsAuthActionInProgress(true);
     try {
       const result = await authClient.signIn.anonymous();
-      if (result.error) {
+      if (result.error !== null && result.error !== undefined) {
         setIsAuthActionInProgress(false);
         alert(`Anonymous login failed: ${result.error.message}`);
       } else {
-        router.navigate({ to: "/dashboard" });
+        void router.navigate({ to: "/dashboard" });
       }
     } catch (e: unknown) {
       setIsAuthActionInProgress(false);
@@ -49,7 +49,7 @@ function Home() {
     }
   };
 
-  if (sessionError) {
+  if (sessionError !== null && sessionError !== undefined) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <p>Error loading session: {sessionError.message}</p>
@@ -99,7 +99,9 @@ function Home() {
           </CardContent>
           <CardFooter>
             <Button
-              onClick={handleAnonymousLogin}
+              onClick={() => {
+                void handleAnonymousLogin();
+              }}
               className="w-full h-11 text-sm font-semibold gap-2 shadow-lg shadow-primary/20 group"
               disabled={isAuthActionInProgress}
             >

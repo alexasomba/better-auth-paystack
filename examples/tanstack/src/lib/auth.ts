@@ -1,12 +1,18 @@
+/* eslint-disable no-console */
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { anonymous, organization } from "better-auth/plugins";
 import { dash } from "@better-auth/infra";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { paystack } from "@alexasomba/better-auth-paystack";
+import {
+  paystack,
+  type Subscription,
+  type PaystackPlan,
+  type PaystackProduct,
+} from "@alexasomba/better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
 
-export const data: Record<string, any[]> = {
+export const data: Record<string, unknown[]> = {
   user: [],
   session: [],
   verification: [],
@@ -28,18 +34,19 @@ const baseURL =
 const secretKey = process.env.PAYSTACK_SECRET_KEY;
 const webhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET;
 
-if (!secretKey) {
+if (secretKey === undefined || secretKey === null || secretKey === "") {
   console.warn("Missing PAYSTACK_SECRET_KEY in environment variables");
 }
-if (!webhookSecret) {
+if (webhookSecret === undefined || webhookSecret === null || webhookSecret === "") {
   console.warn("Missing PAYSTACK_WEBHOOK_SECRET in environment variables");
 }
 
-const paystackClient = secretKey
-  ? createPaystack({
-      secretKey,
-    })
-  : null;
+const paystackClient =
+  secretKey !== undefined && secretKey !== null && secretKey !== ""
+    ? createPaystack({
+        secretKey,
+      })
+    : null;
 
 export const auth = betterAuth({
   baseURL,
@@ -48,10 +55,13 @@ export const auth = betterAuth({
   plugins: [
     anonymous(),
     organization(),
-    ...(paystackClient && webhookSecret
+    ...(paystackClient !== null &&
+    webhookSecret !== undefined &&
+    webhookSecret !== null &&
+    webhookSecret !== ""
       ? [
           paystack({
-            paystackClient,
+            paystackClient: paystackClient as any, // Cast to any because of SDK structure mismatch
             secretKey: secretKey!,
             webhook: { secret: webhookSecret },
 
@@ -60,7 +70,7 @@ export const auth = betterAuth({
               onCustomerCreate: async ({ organization: org, paystackCustomer }) => {
                 await Promise.resolve(); // satisfying require-await
                 console.log(
-                  `🏢 Paystack customer created for org "${(org as any).name}": ${paystackCustomer.customer_code}`,
+                  `🏢 Paystack customer created for org "${String((org as Record<string, unknown>).name)}": ${String(paystackCustomer.customer_code)}`,
                 );
               },
             },
@@ -74,8 +84,10 @@ export const auth = betterAuth({
                 console.log(
                   `🎉 Subscription created: ${plan.name} plan - Status: ${subscription.status}`,
                 );
-                if (subscription.trialStart) {
-                  console.log(`   ⏰ Trial active until ${subscription.trialEnd}`);
+                if (subscription.trialStart !== undefined && subscription.trialStart !== null) {
+                  console.log(
+                    `   ⏰ Trial active until ${subscription.trialEnd instanceof Date ? subscription.trialEnd.toISOString() : String(subscription.trialEnd)}`,
+                  );
                 }
               },
               onSubscriptionCancel: async ({ subscription }) => {
@@ -97,15 +109,15 @@ export const auth = betterAuth({
                   // v0.3.0: Trial period with abuse prevention (user can only get trial once)
                   freeTrial: {
                     days: 7,
-                    onTrialStart: async (subscription) => {
+                    onTrialStart: async (subscription: Subscription) => {
                       await Promise.resolve();
                       console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
                     },
-                    onTrialEnd: async ({ subscription }) => {
+                    onTrialEnd: async ({ subscription }: { subscription: Subscription }) => {
                       await Promise.resolve();
                       console.log(`✅ Trial ended, now active: ${subscription.referenceId}`);
                     },
-                    onTrialExpired: async (subscription) => {
+                    onTrialExpired: async (subscription: Subscription) => {
                       await Promise.resolve();
                       console.log(
                         `⚠️ Trial expired without conversion: ${subscription.referenceId}`,
@@ -139,8 +151,6 @@ export const auth = betterAuth({
                   amount: 2500000,
                   currency: "NGN",
                   interval: "monthly",
-                  planCode: "PLN_team",
-                  paystackId: "team",
                   seatAmount: 500000,
                   description: "Best for growing teams (Seat-based)",
                   features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
@@ -150,20 +160,18 @@ export const auth = betterAuth({
                   amount: 5000000,
                   currency: "NGN",
                   interval: "monthly",
-                  planCode: "PLN_business",
-                  paystackId: "business",
                   seatAmount: 1000000,
                   freeTrial: {
                     days: 7,
-                    onTrialStart: async (subscription) => {
+                    onTrialStart: async (subscription: Subscription) => {
                       await Promise.resolve();
                       console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
                     },
-                    onTrialEnd: async ({ subscription }) => {
+                    onTrialEnd: async ({ subscription }: { subscription: Subscription }) => {
                       await Promise.resolve();
                       console.log(`✅ Trial ended, now active: ${subscription.referenceId}`);
                     },
-                    onTrialExpired: async (subscription) => {
+                    onTrialExpired: async (subscription: Subscription) => {
                       await Promise.resolve();
                       console.log(
                         `⚠️ Trial expired without conversion: ${subscription.referenceId}`,
@@ -178,8 +186,6 @@ export const auth = betterAuth({
                   amount: 10000000,
                   currency: "NGN",
                   interval: "annually",
-                  planCode: "PLN_enterprise",
-                  paystackId: "enterprise",
                   description: "For large scale organizations",
                   features: [
                     "Everything in Team",
@@ -188,7 +194,7 @@ export const auth = betterAuth({
                     "On-premise deployment",
                   ],
                 },
-              ],
+              ] as PaystackPlan[],
 
               // Authorize referenceId for organization billing
               authorizeReference: async (
@@ -196,7 +202,12 @@ export const auth = betterAuth({
                 ctx,
               ) => {
                 // If no referenceId provided, allow (defaults to user.id)
-                if (!referenceId || referenceId === user.id) {
+                if (
+                  referenceId === undefined ||
+                  referenceId === null ||
+                  referenceId === "" ||
+                  referenceId === user.id
+                ) {
                   return true;
                 }
 
@@ -211,8 +222,8 @@ export const auth = betterAuth({
                   });
 
                   // User is a member of this organization
-                  if ((members as any[]).length > 0) {
-                    const member = (members as any[])[0];
+                  if ((members as Record<string, unknown>[]).length > 0) {
+                    const member = (members as Record<string, unknown>[])[0] as { role: string };
                     // Only owners and admins can manage billing
                     return member.role === "owner" || member.role === "admin";
                   }
@@ -237,7 +248,7 @@ export const auth = betterAuth({
                   currency: "NGN",
                   metadata: JSON.stringify({ type: "credits", quantity: 150 }),
                 },
-              ],
+              ] as PaystackProduct[],
             },
           }),
         ]

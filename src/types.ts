@@ -1,70 +1,55 @@
 import type { GenericEndpointContext, Session, User } from "better-auth";
+import type { Organization, Member } from "better-auth/plugins/organization";
 import type {
   PaystackPaths,
   PaystackResponse,
   PaystackWebhookEvent,
+  PaystackClient,
+  components,
 } from "@alexasomba/paystack-node";
 
 /**
  * Valid Paystack currencies
  */
-export type PaystackCurrency = "NGN" | "GHS" | "ZAR" | "USD" | "KES";
+export type PaystackCurrency = components["schemas"]["Currency"];
 
-export type { PaystackPaths };
+export type { PaystackPaths, PaystackClient };
 
 /**
  * Standard Better Auth Models
  */
-export type { User, Session };
-
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  logo?: string | null;
-  metadata?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Member {
-  id: string;
-  userId: string;
-  organizationId: string;
-  role: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type { User, Session, Organization, Member };
 
 /**
  * Custom models for Paystack Plugin
+ * These align with the database schema in src/schema.ts
  */
 export interface PaystackTransaction {
   id: string;
   reference: string;
+  paystackId?: string;
+  referenceId: string;
+  userId: string;
   amount: number;
   currency: string;
   status: string;
-  metadata?: string | null;
-  paystackId?: string | null;
-  referenceId: string;
-  userId?: string | null;
+  plan?: string | null;
   product?: string | null;
-  quantity?: number | null;
+  metadata?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface PaystackProduct {
-  id: string;
+  id?: string;
   name: string;
-  description?: string | null;
-  price?: number | null;
-  currency?: string | null;
-  paystackId?: string | null;
-  slug?: string | null;
-  quantity?: number | null;
-  unlimited?: boolean | null;
+  description?: string;
+  price: number;
+  currency: string;
+  quantity?: number;
+  unlimited?: boolean;
+  paystackId?: string;
+  slug?: string;
   metadata?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -92,20 +77,23 @@ export interface PaystackPlan {
   id?: string;
   name: string;
   description?: string;
-  amount: number;
-  currency: string;
-  interval: string;
-  planCode: string;
-  paystackId: string;
+  amount?: number;
+  currency?: string;
+  interval?: string;
+  planCode?: string;
+  paystackId?: string;
   seatAmount?: number;
   seatPlanCode?: string;
   invoiceLimit?: number;
   freeTrial?: {
     days?: number;
     onTrialStart?: (subscription: Subscription) => Promise<void>;
+    onTrialEnd?: (data: { subscription: Subscription }) => Promise<void>;
+    onTrialExpired?: (subscription: Subscription) => Promise<void>;
   };
   limits?: Record<string, unknown>;
-  metadata?: string;
+  features?: string[];
+  metadata?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -118,11 +106,12 @@ export type PaystackWebhookPayload = PaystackWebhookEvent;
 /**
  * Paystack SDK Result types
  */
-export type PaystackTransactionResponse = Record<string, unknown>;
-export type PaystackPlanResponse = Record<string, unknown>;
-export type PaystackCustomerResponse = Record<string, unknown>;
-export type PaystackSubscriptionResponse = Record<string, unknown>;
-export type PaystackProductResponse = Record<string, unknown>;
+export type PaystackTransactionResponse = components["schemas"]["VerifyResponse"]["data"];
+export type PaystackPlanResponse = components["schemas"]["PlanListResponseArray"];
+export type PaystackCustomerResponse =
+  components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"];
+export type PaystackSubscriptionResponse = components["schemas"]["SubscriptionListResponseArray"];
+export type PaystackProductResponse = components["schemas"]["ProductListsResponseArray"];
 
 export interface SubscriptionOptions {
   /**
@@ -146,15 +135,15 @@ export interface SubscriptionOptions {
    * Handlers for subscription events
    */
   onSubscriptionComplete?: (
-    data: { event: Record<string, unknown>; subscription: Subscription; plan: PaystackPlan },
+    data: { event: PaystackWebhookPayload; subscription: Subscription; plan: PaystackPlan },
     ctx: GenericEndpointContext,
   ) => Promise<void>;
   onSubscriptionCreated?: (
-    data: { event: Record<string, unknown>; subscription: Subscription; plan: PaystackPlan },
+    data: { event: PaystackWebhookPayload; subscription: Subscription; plan: PaystackPlan },
     ctx: GenericEndpointContext,
   ) => Promise<void>;
   onSubscriptionCancel?: (
-    data: { event: Record<string, unknown>; subscription: Subscription },
+    data: { event: PaystackWebhookPayload; subscription: Subscription },
     ctx: GenericEndpointContext,
   ) => Promise<void>;
   /**
@@ -243,19 +232,21 @@ export interface Subscription {
   organizationId?: string;
   plan: string;
   pendingPlan?: string | null;
-  paystackSubscriptionCode: string;
-  paystackCustomerCode: string;
-  paystackPlanCode: string;
-  paystackAuthorizationCode: string;
-  paystackTransactionReference: string;
+  paystackSubscriptionCode?: string;
+  paystackCustomerCode?: string;
+  paystackPlanCode?: string;
+  paystackAuthorizationCode?: string;
+  paystackTransactionReference?: string;
+  paystackEmailToken?: string;
   status: string;
   seats: number;
   referenceId: string;
-  periodStart: Date;
-  periodEnd: Date;
+  periodStart?: Date | null;
+  periodEnd?: Date | null;
   cancelAtPeriodEnd: boolean;
-  trialStart?: Date;
-  trialEnd?: Date;
+  trialStart?: Date | null;
+  trialEnd?: Date | null;
+  groupId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -267,54 +258,72 @@ export type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
  */
 export interface PaystackClientLike {
   transaction?: {
-    initialize: (
-      init: Record<string, unknown>,
-    ) => Promise<PaystackResponse<Record<string, unknown>>>;
-    verify: (init: {
-      params: { path: { reference: string } };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    chargeAuthorization: (init: {
+    initialize: (init: {
       body: Record<string, unknown>;
     }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    verify: (init: {
+      params: { path: { reference: string } };
+    }) => Promise<PaystackResponse<components["schemas"]["VerifyResponse"]["data"]>>;
+    chargeAuthorization: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]>>;
   };
   customer?: {
-    create: (init: Record<string, unknown>) => Promise<PaystackResponse<Record<string, unknown>>>;
+    create: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<
+      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
+    >;
     update: (init: {
       params: { path: { email_or_code: string } };
       body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    }) => Promise<
+      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
+    >;
     fetch: (init: {
       params: { path: { email_or_code: string } };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    }) => Promise<
+      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
+    >;
   };
   subscription?: {
-    create: (init: Record<string, unknown>) => Promise<PaystackResponse<Record<string, unknown>>>;
+    create: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
     update: (init: {
       params: { path: { code: string } };
       body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
     fetch: (init: {
       params: { path: { id_or_code: string } };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
+    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
     disable: (init: {
       body: { code: string; token: string };
     }) => Promise<PaystackResponse<Record<string, unknown>>>;
     enable: (init: {
       body: { code: string; token: string };
     }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    manageLink: (
-      code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<Record<string, unknown>>>;
+    manageLink: (init: {
+      params: { path: { code: string } };
+    }) => Promise<PaystackResponse<{ link: string }>>;
+    listLocal?: (init: {
+      query?: Record<string, unknown>;
+    }) => Promise<PaystackResponse<{ subscriptions: Record<string, unknown>[] }>>;
   };
   product?: {
     fetch: (init: {
       params: { path: { id_or_code: string } };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    list: (init?: Record<string, unknown>) => Promise<PaystackResponse<Record<string, unknown>[]>>;
+    }) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"]>>;
+    list: (init?: {
+      query?: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"][]>>;
   };
   plan?: {
-    list: (init?: Record<string, unknown>) => Promise<PaystackResponse<Record<string, unknown>[]>>;
-    create: (init: Record<string, unknown>) => Promise<PaystackResponse<Record<string, unknown>>>;
+    list: (init?: {
+      query?: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"][]>>;
+    create: (init: {
+      body: Record<string, unknown>;
+    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"]>>;
   };
 }

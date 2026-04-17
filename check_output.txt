@@ -1,0 +1,6 @@
+VITE+ - The Unified Toolchain for the Web
+
+[1m[31merror:[39m[0m Formatting issues found
+src/routes.ts (15ms)
+
+Found formatting issues in 1 file (1860ms, 8 threads). Run `vp check --fix` to fix them.

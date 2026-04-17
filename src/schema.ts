@@ -1,7 +1,7 @@
 import type { BetterAuthPluginDBSchema } from "@better-auth/core/db";
 import { mergeSchema } from "better-auth/db";
 
-import type { PaystackClientLike, PaystackOptions } from "./types";
+import type { PaystackOptions } from "./types";
 
 export const transactions = {
   paystackTransaction: {
@@ -270,7 +270,7 @@ export const plans = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const getSchema = (options: PaystackOptions<PaystackClientLike>) => {
+export const getSchema = (options: PaystackOptions) => {
   let baseSchema: BetterAuthPluginDBSchema;
 
   if (options.subscription?.enabled === true) {

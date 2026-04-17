@@ -36,7 +36,6 @@ void (async () => {
           throw res?.error ?? new Error("Zod parseAsync failed");
         });
       };
-      console.log("vitest.setup: injected Zod.parseAsync polyfill");
     }
   } catch {
     // no-op: do not mask real test failures

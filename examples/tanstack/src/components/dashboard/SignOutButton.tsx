@@ -8,7 +8,7 @@ export default function SignOutButton() {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    router.navigate({ to: "/" });
+    await router.navigate({ to: "/" });
   };
 
   return (

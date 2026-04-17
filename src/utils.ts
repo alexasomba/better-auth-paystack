@@ -27,9 +27,17 @@ export const getPlan = async (options: AnyPaystackOptions, planId: string) => {
 };
 
 export async function getPlanByName(options: AnyPaystackOptions, name: string) {
+  if (typeof name !== "string" || name.trim() === "") {
+    return null;
+  }
   if (options.subscription?.enabled === true) {
     const plans = await getPlans(options.subscription);
-    return plans.find((plan) => plan.name.toLowerCase() === name.toLowerCase()) ?? null;
+    const normalizedName = name.toLowerCase();
+    return (
+      plans.find(
+        (plan) => typeof plan.name === "string" && plan.name.toLowerCase() === normalizedName,
+      ) ?? null
+    );
   }
   return null;
 }
@@ -125,9 +133,9 @@ export async function syncProductQuantityFromPaystack(
     localProduct.paystackId === null ||
     localProduct.paystackId === ""
   ) {
-    // No local record with a Paystack ID — fall back to local decrement
+    // No local record with a Paystack ID - fall back to local decrement
     if (
-      localProduct !== null &&
+      localProduct?.id !== undefined &&
       localProduct.unlimited !== true &&
       typeof localProduct.quantity === "number" &&
       localProduct.quantity > 0
@@ -149,7 +157,7 @@ export async function syncProductQuantityFromPaystack(
     const sdkRes = unwrapSdkResult<PaystackProductResponse>(raw);
     const remoteQuantity = sdkRes?.quantity;
 
-    if (remoteQuantity !== undefined) {
+    if (remoteQuantity !== undefined && localProduct.id !== undefined) {
       await ctx.context.adapter.update({
         model: "paystackProduct",
         update: { quantity: remoteQuantity, updatedAt: new Date() },
@@ -159,7 +167,7 @@ export async function syncProductQuantityFromPaystack(
   } catch {
     // If API call fails, fall back to local decrement
     if (
-      localProduct !== null &&
+      localProduct?.id !== undefined &&
       localProduct.unlimited !== true &&
       typeof localProduct.quantity === "number" &&
       localProduct.quantity > 0
@@ -188,7 +196,8 @@ export async function decrementProductQuantity(ctx: GenericEndpointContext, prod
     if (
       product.unlimited !== true &&
       typeof product.quantity === "number" &&
-      product.quantity > 0
+      product.quantity > 0 &&
+      product.id !== undefined
     ) {
       await ctx.context.adapter.update({
         model: "paystackProduct",
@@ -224,11 +233,7 @@ export async function syncSubscriptionSeats(
   if (subscription === null || subscription === undefined) return;
   const plan = await getPlanByName(options, subscription.plan);
   if (plan === null || plan === undefined) return;
-  if (
-    plan.seatAmount === undefined &&
-    (plan as unknown as Record<string, unknown>).seatPriceId === undefined
-  )
-    return;
+  if (plan.seatAmount === undefined) return;
 
   const members = await adapter.findMany({
     model: "member",

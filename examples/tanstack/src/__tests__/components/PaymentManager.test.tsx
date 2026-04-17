@@ -44,14 +44,30 @@ vi.mock("@phosphor-icons/react", () => ({
 
 // Mock UI components that might be complex
 vi.mock("@/components/ui/select", () => ({
-  Select: ({ children, value, onValueChange, "data-testid": testId }: any) => (
+  Select: ({
+    children,
+    value,
+    onValueChange,
+    "data-testid": testId,
+  }: {
+    children: React.ReactNode;
+    value: string;
+    onValueChange: (v: string) => void;
+    "data-testid"?: string;
+  }) => (
     <select data-testid={testId} value={value} onChange={(e) => onValueChange(e.target.value)}>
       {children}
     </select>
   ),
-  SelectTrigger: ({ children }: any) => <>{children}</>,
-  SelectValue: ({ children, placeholder }: any) => <>{children || placeholder}</>,
-  SelectContent: ({ children }: any) => <>{children}</>,
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectValue: ({
+    children,
+    placeholder,
+  }: {
+    children?: React.ReactNode;
+    placeholder?: string;
+  }) => <>{children ?? placeholder}</>,
+  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
     <option value={value}>{children}</option>
   ),
@@ -62,19 +78,21 @@ describe("PaymentManager component", () => {
     vi.clearAllMocks();
 
     // Default mock returns
-    vi.mocked(authClient.paystack.getConfig).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.getConfig).mockResolvedValue({
       data: { plans: [], products: [] },
     } as any);
-    vi.mocked(authClient.paystack.subscription.listLocal).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.subscription.listLocal).mockResolvedValue({
       data: { subscriptions: [] },
     } as any);
-    vi.mocked(authClient.paystack.listProducts).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
       data: { products: [] },
     } as any);
-    vi.mocked(authClient.organization.list).mockResolvedValue({ data: [] } as any);
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: [] } as any);
 
     // Silence console errors in tests
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {
+      /* noop */
+    });
   });
 
   it("should render the native products section", async () => {
@@ -105,7 +123,7 @@ describe("PaymentManager component", () => {
         description: "Desc B",
       },
     ];
-    vi.mocked(authClient.paystack.listProducts).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
       data: { products: mockProducts },
     } as any);
 
@@ -118,10 +136,10 @@ describe("PaymentManager component", () => {
   });
 
   it("should call syncProducts when Sync Now is clicked", async () => {
-    vi.mocked(authClient.paystack.syncProducts).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.syncProducts).mockResolvedValue({
       data: { status: "success", count: 5 },
     } as any);
-    vi.mocked(authClient.paystack.listProducts).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
       data: { products: [] },
     } as any);
     window.alert = vi.fn();
@@ -134,7 +152,7 @@ describe("PaymentManager component", () => {
     });
 
     await waitFor(() => {
-      expect(authClient.paystack.syncProducts).toHaveBeenCalled();
+      expect((authClient as any).paystack.syncProducts).toHaveBeenCalled();
       expect(window.alert).toHaveBeenCalledWith("Successfully synced 5 products from Paystack.");
     });
   });
@@ -150,10 +168,10 @@ describe("PaymentManager component", () => {
         description: "Desc A",
       },
     ];
-    vi.mocked(authClient.paystack.listProducts).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
       data: { products: mockProducts },
     } as any);
-    vi.mocked(authClient.paystack.transaction.initialize).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.transaction.initialize).mockResolvedValue({
       data: { url: "https://paystack.com/pay/mock" },
     } as any);
 
@@ -168,7 +186,7 @@ describe("PaymentManager component", () => {
     });
 
     await waitFor(() => {
-      expect(authClient.paystack.transaction.initialize).toHaveBeenCalledWith(
+      expect((authClient as any).paystack.transaction.initialize).toHaveBeenCalledWith(
         expect.objectContaining({
           product: "Product A",
           amount: 1000,
@@ -194,7 +212,7 @@ describe("PaymentManager component", () => {
       { paystackId: "1", name: "Plan A", amount: 500000, currency: "NGN", interval: "annually" },
       { planCode: "PLN_2", name: "Plan B", amount: 5000, currency: "NGN", interval: "monthly" },
     ];
-    vi.mocked(authClient.paystack.listPlans).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.listPlans).mockResolvedValue({
       data: { plans: mockPlans },
     } as any);
 
@@ -210,10 +228,12 @@ describe("PaymentManager component", () => {
   });
 
   it("should call syncPlans when Sync Native Plans is clicked", async () => {
-    vi.mocked(authClient.paystack.syncPlans).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.syncPlans).mockResolvedValue({
       data: { status: "success", count: 3 },
     } as any);
-    vi.mocked(authClient.paystack.listPlans).mockResolvedValue({ data: { plans: [] } } as any);
+    vi.mocked((authClient as any).paystack.listPlans).mockResolvedValue({
+      data: { plans: [] },
+    } as any);
     window.alert = vi.fn();
 
     render(<PaymentManager activeTab="subscriptions" />);
@@ -224,18 +244,18 @@ describe("PaymentManager component", () => {
     });
 
     await waitFor(() => {
-      expect(authClient.paystack.syncPlans).toHaveBeenCalled();
+      expect((authClient as any).paystack.syncPlans).toHaveBeenCalled();
       expect(window.alert).toHaveBeenCalledWith("Successfully synced 3 plans from Paystack.");
     });
   });
 
   it("should pass quantity when subscribing for an organization", async () => {
     const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
-    vi.mocked(authClient.organization.list).mockResolvedValue({ data: mockOrgs } as any);
-    vi.mocked(authClient.paystack.getConfig).mockResolvedValue({
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
+    vi.mocked((authClient as any).paystack.getConfig).mockResolvedValue({
       data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
     } as any);
-    vi.mocked(authClient.paystack.transaction.initialize).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.transaction.initialize).mockResolvedValue({
       data: { url: "https://paystack.com/pay/mock" },
     } as any);
 
@@ -266,7 +286,7 @@ describe("PaymentManager component", () => {
     fireEvent.click(subscribeButton);
 
     await waitFor(() => {
-      expect(authClient.paystack.transaction.initialize).toHaveBeenCalledWith(
+      expect((authClient as any).paystack.transaction.initialize).toHaveBeenCalledWith(
         expect.objectContaining({
           plan: "Starter",
           referenceId: "org_123",
@@ -278,8 +298,8 @@ describe("PaymentManager component", () => {
 
   it("should update displayed price when quantity changes", async () => {
     const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
-    vi.mocked(authClient.organization.list).mockResolvedValue({ data: mockOrgs } as any);
-    vi.mocked(authClient.paystack.getConfig).mockResolvedValue({
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
+    vi.mocked((authClient as any).paystack.getConfig).mockResolvedValue({
       data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
     } as any);
 

@@ -15,7 +15,8 @@ export const Route = createFileRoute("/dashboard")({
   loader: async () => {
     const session = await getSession();
 
-    if (!session) {
+    if (session?.user === null || session?.user === undefined) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: "/" });
     }
 
@@ -27,5 +28,5 @@ export const Route = createFileRoute("/dashboard")({
 
 function DashboardPage() {
   const { session } = Route.useLoaderData();
-  return <DashboardContent session={session as any} />;
+  return <DashboardContent session={session} />;
 }

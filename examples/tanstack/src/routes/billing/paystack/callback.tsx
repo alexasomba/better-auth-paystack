@@ -16,15 +16,15 @@ function CallbackPage() {
   const processedRef = useRef(false);
 
   useEffect(() => {
-    if (!reference || processedRef.current) return;
+    if (reference === undefined || reference === "" || processedRef.current) return;
     processedRef.current = true;
 
     const verify = async () => {
       try {
-        await authClient.paystack.transaction.verify({ reference });
+        await (authClient as any).paystack.transaction.verify({ reference });
         setStatus("success");
         setTimeout(() => {
-          router.navigate({ to: "/dashboard" });
+          void router.navigate({ to: "/dashboard" });
         }, 2000);
       } catch (e: unknown) {
         console.error(e);
@@ -35,10 +35,10 @@ function CallbackPage() {
       }
     };
 
-    verify();
+    void verify();
   }, [reference, router]);
 
-  if (!reference) {
+  if (reference === undefined || reference === "") {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <Card>

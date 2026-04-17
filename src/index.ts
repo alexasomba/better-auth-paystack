@@ -65,16 +65,13 @@ export const paystack = <
       initializeTransaction: initializeTransaction(routeOptions),
       verifyTransaction: verifyTransaction(routeOptions),
       listSubscriptions: listSubscriptions(routeOptions),
-      paystackWebhook: paystackWebhook(routeOptions),
+      webhook: paystackWebhook(routeOptions),
       listTransactions: listTransactions(routeOptions),
       getConfig: getConfig(routeOptions),
       disableSubscription: disablePaystackSubscription(routeOptions),
       enableSubscription: enablePaystackSubscription(routeOptions),
       getSubscriptionManageLink: getSubscriptionManageLink(routeOptions),
-      subscriptionManageLink: getSubscriptionManageLink(
-        routeOptions,
-        "/paystack/subscription/manage-link",
-      ), // Historical alias
+      subscriptionManageLink: getSubscriptionManageLink(routeOptions, "/subscription/manage-link"), // Historical alias
       createSubscription: createSubscription(routeOptions),
       upgradeSubscription: upgradeSubscription(routeOptions),
       cancelSubscription: cancelSubscription(routeOptions),

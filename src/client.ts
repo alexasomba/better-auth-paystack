@@ -1,6 +1,6 @@
 import type { BetterAuthClientPlugin } from "better-auth";
 import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
-import type { PaystackProduct, PaystackTransaction, Subscription } from "./types";
+import type { PaystackPlan, PaystackProduct, PaystackTransaction, Subscription } from "./types";
 
 import type { paystack } from "./index";
 
@@ -38,7 +38,7 @@ export const paystackClient = <
           reference: string;
           accessCode: string;
           redirect: boolean;
-        }>("paystack/initialize-transaction", {
+        }>("initialize-transaction", {
           method: "POST",
           body: data,
           ...options,
@@ -59,7 +59,7 @@ export const paystackClient = <
           status: string;
           reference: string;
           data: unknown;
-        }>("paystack/verify-transaction", {
+        }>("verify-transaction", {
           method: "POST",
           body: data,
           ...options,
@@ -76,7 +76,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           transactions: PaystackTransaction[];
-        }>("paystack/list-transactions", {
+        }>("list-transactions", {
           method: "GET",
           query: data.query,
           ...options,
@@ -93,7 +93,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           subscriptions: Subscription[];
-        }>("paystack/list-subscriptions", {
+        }>("list-subscriptions", {
           method: "GET",
           query: data.query,
           ...options,
@@ -110,7 +110,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           link: string;
-        }>("paystack/get-subscription-manage-link", {
+        }>("subscription-manage-link", {
           method: "GET",
           query: data,
           ...options,
@@ -131,7 +131,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           status: string;
-        }>("paystack/disable-subscription", {
+        }>("disable-subscription", {
           method: "POST",
           body: data,
           ...options,
@@ -151,7 +151,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           status: string;
-        }>("paystack/enable-subscription", {
+        }>("enable-subscription", {
           method: "POST",
           body: data,
           ...options,
@@ -203,17 +203,17 @@ export const paystackClient = <
         listSubscriptions,
         getSubscriptionManageLink,
         getConfig: async (): Promise<BetterFetchResponse<Record<string, unknown>>> => {
-          return fetch<Record<string, unknown>>("paystack/get-config", {
+          return fetch<Record<string, unknown>>("get-config", {
             method: "GET",
           });
         },
         syncProducts: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
-          return fetch<{ status: string; count: number }>("paystack/sync-products", {
+          return fetch<{ status: string; count: number }>("sync-products", {
             method: "POST",
           });
         },
         syncPlans: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
-          return fetch<{ status: string; count: number }>("paystack/sync-plans", {
+          return fetch<{ status: string; count: number }>("sync-plans", {
             method: "POST",
           });
         },
@@ -226,7 +226,7 @@ export const paystackClient = <
         > => {
           return fetch<{
             products: PaystackProduct[];
-          }>("paystack/list-products", {
+          }>("list-products", {
             method: "GET",
             ...options,
           });
@@ -235,12 +235,12 @@ export const paystackClient = <
           options?: BetterFetchOption,
         ): Promise<
           BetterFetchResponse<{
-            plans: unknown[];
+            plans: PaystackPlan[];
           }>
         > => {
           return fetch<{
-            plans: unknown[];
-          }>("paystack/list-plans", {
+            plans: PaystackPlan[];
+          }>("list-plans", {
             method: "GET",
             ...options,
           });

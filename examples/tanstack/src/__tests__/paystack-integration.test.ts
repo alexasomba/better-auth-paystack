@@ -7,7 +7,7 @@ import { createPaystack } from "@alexasomba/paystack-node";
 
 describe("TanStack Example - Paystack Integration", () => {
   let auth: any;
-  const data: any = {
+  const data: Record<string, unknown[]> = {
     user: [],
     session: [],
     verification: [],
@@ -49,8 +49,9 @@ describe("TanStack Example - Paystack Integration", () => {
         anonymous(),
         organization(),
         paystack({
-          paystackClient,
-          paystackWebhookSecret: "whsec_test_mock",
+          paystackClient: paystackClient as any,
+          secretKey: "sk_test_mock",
+          webhook: { secret: "whsec_test_mock" },
           products: {
             products: [
               {

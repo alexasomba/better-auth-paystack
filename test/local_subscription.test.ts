@@ -7,7 +7,6 @@ import { setCookieToHeader } from "better-auth/cookies";
 import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 
 import { paystack } from "../src/index";
-import { paystackClient } from "../src/client";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Local Custom Subscriptions", () => {
@@ -15,15 +14,18 @@ describe("Local Custom Subscriptions", () => {
     transaction: {
       verify: vi.fn(),
       chargeAuthorization: vi.fn(),
+      initialize: vi.fn(),
     },
     subscription: {
       fetch: vi.fn(),
       disable: vi.fn(),
+      update: vi.fn(),
     },
-  } as unknown as PaystackClientLike;
+  };
+  const paystackClient = paystackSdk as any;
 
   const options = {
-    paystackClient: paystackSdk,
+    paystackClient,
     secretKey: "test_key",
     webhook: {
       secret: "whsec_test",
@@ -61,7 +63,7 @@ describe("Local Custom Subscriptions", () => {
     database: memory,
     baseURL: "http://localhost:3000",
     emailAndPassword: { enabled: true },
-    plugins: [paystack<PaystackClientLike>(options)],
+    plugins: [paystack<PaystackClientLike>(options as any)],
   });
 
   const authClient = createAuthClient({
@@ -87,7 +89,7 @@ describe("Local Custom Subscriptions", () => {
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
     // Mock transaction verify response
-    paystackSdk.transaction.verify.mockResolvedValue({
+    (paystackSdk.transaction.verify as any).mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -137,7 +139,10 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    await authClient.paystack.verifyTransaction({ reference: "ref_local_123" }, { headers });
+    await (authClient as any).paystack.verifyTransaction(
+      { reference: "ref_local_123" },
+      { headers },
+    );
 
     const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
 
@@ -165,7 +170,7 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    paystackSdk.transaction.chargeAuthorization.mockResolvedValue({
+    (paystackSdk.transaction.chargeAuthorization as any).mockResolvedValue({
       data: {
         status: true,
         data: {
@@ -283,7 +288,10 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    await authClient.paystack.verifyTransaction({ reference: "ref_local_trial_123" }, { headers });
+    await (authClient as any).paystack.verifyTransaction(
+      { reference: "ref_local_trial_123" },
+      { headers },
+    );
 
     const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
 
@@ -319,12 +327,21 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    await authClient.paystack.subscription.cancel(
-      {
-        subscriptionCode: "LOC_ref_999",
-      },
-      { headers },
+    const response = await auth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/disable-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          subscriptionCode: "LOC_ref_999",
+        }),
+      }),
     );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "success" });
 
     expect(paystackSdk.subscription.disable).not.toHaveBeenCalled();
 

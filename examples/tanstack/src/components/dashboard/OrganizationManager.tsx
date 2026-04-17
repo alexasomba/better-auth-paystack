@@ -55,13 +55,13 @@ export default function OrganizationManager() {
 
   // Load organizations
   useEffect(() => {
-    loadOrganizations();
+    void loadOrganizations();
   }, []);
 
   // Load members when active org changes
   useEffect(() => {
-    if (activeOrg) {
-      loadMembers(activeOrg.id);
+    if (activeOrg !== null) {
+      void loadMembers(activeOrg.id);
     }
   }, [activeOrg]);
 
@@ -69,9 +69,9 @@ export default function OrganizationManager() {
     setLoading(true);
     try {
       const result = await authClient.organization.list();
-      if (result.data) {
+      if (result.data !== null && result.data !== undefined) {
         setOrganizations(result.data as Organization[]);
-        if (result.data.length > 0 && !activeOrg) {
+        if (result.data.length > 0 && activeOrg === null) {
           setActiveOrg(result.data[0] as Organization);
         }
       }
@@ -87,7 +87,7 @@ export default function OrganizationManager() {
       // Set active org first
       await authClient.organization.setActive({ organizationId: orgId });
       const result = await authClient.organization.getFullOrganization();
-      if (result.data?.members) {
+      if (result.data?.members !== null && result.data?.members !== undefined) {
         setMembers(result.data.members as Member[]);
       }
     } catch (error) {
@@ -97,22 +97,23 @@ export default function OrganizationManager() {
 
   async function createOrganization(e: React.FormEvent) {
     e.preventDefault();
-    if (!orgName.trim()) return;
+    if (orgName.trim() === "") return;
 
     setCreating(true);
     try {
       const slug =
-        orgSlug.trim() ||
-        orgName
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, "");
+        orgSlug.trim() !== ""
+          ? orgSlug.trim()
+          : orgName
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^a-z0-9-]/g, "");
       const result = await authClient.organization.create({
         name: orgName.trim(),
         slug,
       });
 
-      if (result.data) {
+      if (result.data !== null && result.data !== undefined) {
         await loadOrganizations();
         setActiveOrg(result.data as Organization);
         setOrgName("");
@@ -121,7 +122,7 @@ export default function OrganizationManager() {
       }
     } catch (error: any) {
       console.error("Failed to create organization:", error);
-      alert(error?.message || "Failed to create organization");
+      alert((error as { message?: string })?.message ?? "Failed to create organization");
     } finally {
       setCreating(false);
     }
@@ -138,14 +139,16 @@ export default function OrganizationManager() {
       await loadOrganizations();
     } catch (error: any) {
       console.error("Failed to delete organization:", error);
-      alert(error?.message || "Failed to delete organization");
+      alert((error as { message?: string })?.message ?? "Failed to delete organization");
     }
   }
 
   function copyOrgId(orgId: string) {
-    navigator.clipboard.writeText(orgId);
+    void navigator.clipboard.writeText(orgId);
     setCopiedId(orgId);
-    setTimeout(() => setCopiedId(null), 2000);
+    setTimeout(() => {
+      setCopiedId(null);
+    }, 2000);
   }
 
   function getRoleIcon(role: string) {
@@ -183,7 +186,9 @@ export default function OrganizationManager() {
               <CardDescription>Manage your organizations for team billing</CardDescription>
             </div>
             <Button
-              onClick={() => setShowCreateForm(!showCreateForm)}
+              onClick={() => {
+                setShowCreateForm(!showCreateForm);
+              }}
               variant={showCreateForm ? "outline" : "default"}
               size="sm"
             >
@@ -195,7 +200,12 @@ export default function OrganizationManager() {
 
         {showCreateForm && (
           <CardContent>
-            <form onSubmit={createOrganization} className="space-y-4">
+            <form
+              onSubmit={(e) => {
+                void createOrganization(e);
+              }}
+              className="space-y-4"
+            >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="orgName">Organization Name *</Label>
@@ -203,7 +213,9 @@ export default function OrganizationManager() {
                     id="orgName"
                     placeholder="My Company"
                     value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
+                    onChange={(e) => {
+                      setOrgName(e.target.value);
+                    }}
                     required
                   />
                 </div>
@@ -213,11 +225,13 @@ export default function OrganizationManager() {
                     id="orgSlug"
                     placeholder="my-company"
                     value={orgSlug}
-                    onChange={(e) => setOrgSlug(e.target.value)}
+                    onChange={(e) => {
+                      setOrgSlug(e.target.value);
+                    }}
                   />
                 </div>
               </div>
-              <Button type="submit" disabled={creating || !orgName.trim()}>
+              <Button type="submit" disabled={creating || orgName.trim() === ""}>
                 {creating ? "Creating..." : "Create Organization"}
               </Button>
             </form>
@@ -244,7 +258,9 @@ export default function OrganizationManager() {
               className={`cursor-pointer transition-all ${
                 activeOrg?.id === org.id ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"
               }`}
-              onClick={() => setActiveOrg(org)}
+              onClick={() => {
+                setActiveOrg(org);
+              }}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -275,7 +291,7 @@ export default function OrganizationManager() {
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteOrganization(org.id);
+                        void deleteOrganization(org.id);
                       }}
                       title="Delete organization"
                     >
@@ -290,15 +306,17 @@ export default function OrganizationManager() {
                     <span className="font-medium">ID:</span>
                     <code className="bg-muted px-1 rounded text-[10px]">{org.id}</code>
                   </div>
-                  {org.paystackCustomerCode && (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CreditCard size={12} weight="duotone" />
-                      <span className="font-medium">Paystack:</span>
-                      <code className="bg-green-50 px-1 rounded text-[10px]">
-                        {org.paystackCustomerCode}
-                      </code>
-                    </div>
-                  )}
+                  {org.paystackCustomerCode !== null &&
+                    org.paystackCustomerCode !== undefined &&
+                    org.paystackCustomerCode !== "" && (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CreditCard size={12} weight="duotone" />
+                        <span className="font-medium">Paystack:</span>
+                        <code className="bg-green-50 px-1 rounded text-[10px]">
+                          {org.paystackCustomerCode}
+                        </code>
+                      </div>
+                    )}
                   <p className="text-[10px] text-muted-foreground/70">
                     Use this ID as <code className="bg-muted px-1 rounded">referenceId</code> for
                     org billing
@@ -311,7 +329,7 @@ export default function OrganizationManager() {
       )}
 
       {/* Active Organization Members */}
-      {activeOrg && (
+      {activeOrg !== null && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -336,7 +354,7 @@ export default function OrganizationManager() {
                       {getRoleIcon(member.role)}
                       <div>
                         <p className="text-sm font-medium">
-                          {member.user?.name || member.user?.email || "Unknown"}
+                          {member.user?.name ?? member.user?.email ?? "Unknown"}
                         </p>
                         <p className="text-xs text-muted-foreground">{member.user?.email}</p>
                       </div>
@@ -353,7 +371,7 @@ export default function OrganizationManager() {
       )}
 
       {/* Billing Info Card */}
-      {activeOrg && (
+      {activeOrg !== null && (
         <Card className="bg-muted/30 border-dashed">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">

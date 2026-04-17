@@ -22,6 +22,7 @@ interface DashboardContentProps {
       name: string;
       email?: string | null;
       image?: string | null;
+      paystackCustomerCode?: string | null;
     };
   };
 }
@@ -106,7 +107,7 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                   <div className="flex items-center gap-4 mb-4">
                     <Avatar size="lg" className="ring-2 ring-primary/10">
                       <AvatarImage
-                        src={session.user.image || undefined}
+                        src={session.user.image ?? undefined}
                         alt={session.user.name || ""}
                       />
                       <AvatarFallback>
@@ -122,30 +123,38 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                       <p className="text-sm text-muted-foreground">Logged in via better-auth</p>
                     </div>
                   </div>
-                  {session.user.email && (
-                    <p className="text-md wrap-break-word">
-                      <strong>Email:</strong>{" "}
-                      <span className="break-all">{session.user.email}</span>
-                    </p>
-                  )}
-                  {!session.user.email && (
+                  {session.user.email !== null &&
+                    session.user.email !== undefined &&
+                    session.user.email !== "" && (
+                      <p className="text-md wrap-break-word">
+                        <strong>Email:</strong>{" "}
+                        <span className="break-all">{session.user.email}</span>
+                      </p>
+                    )}
+                  {(session.user.email === null ||
+                    session.user.email === undefined ||
+                    session.user.email === "") && (
                     <p className="text-md">
                       <strong>Account Type:</strong> Anonymous
                     </p>
                   )}
-                  {session.user.id && (
-                    <p className="text-md">
-                      <strong>User ID:</strong> {session.user.id}
-                    </p>
-                  )}
-                  {(session.user as any).paystackCustomerCode && (
-                    <p className="text-md">
-                      <strong>Paystack Customer ID:</strong>{" "}
-                      <code className="bg-muted px-1 rounded text-sm text-primary">
-                        {(session.user as any).paystackCustomerCode}
-                      </code>
-                    </p>
-                  )}
+                  {session.user.id !== null &&
+                    session.user.id !== undefined &&
+                    session.user.id !== "" && (
+                      <p className="text-md">
+                        <strong>User ID:</strong> {session.user.id}
+                      </p>
+                    )}
+                  {session.user.paystackCustomerCode !== null &&
+                    session.user.paystackCustomerCode !== undefined &&
+                    session.user.paystackCustomerCode !== "" && (
+                      <p className="text-md">
+                        <strong>Paystack Customer ID:</strong>{" "}
+                        <code className="bg-muted px-1 rounded text-sm text-primary">
+                          {session.user.paystackCustomerCode}
+                        </code>
+                      </p>
+                    )}
                   <SignOutButton />
                 </CardContent>
               </Card>

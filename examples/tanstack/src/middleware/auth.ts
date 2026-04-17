@@ -7,7 +7,8 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
   const headers = getRequestHeaders();
   const session = await auth.api.getSession({ headers });
 
-  if (!session) {
+  if (session === null || session === undefined) {
+    // eslint-disable-next-line @typescript-eslint/only-throw-error
     throw redirect({ to: "/" });
   }
 

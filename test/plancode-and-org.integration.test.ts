@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { paystack } from "../src";
 import { paystackClient } from "../src/client";
-import type { Member, Subscription } from "../src/types";
+import type { Member } from "../src/types";
 
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
 

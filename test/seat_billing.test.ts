@@ -9,7 +9,6 @@ import { organizationClient } from "better-auth/client/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
 
 import { paystack } from "../src/index";
-import { paystackClient } from "../src/client";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Seat-Based Billing & Scheduled Changes", () => {
@@ -27,10 +26,11 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     customer: {
       update: vi.fn(),
     },
-  } as unknown as PaystackClientLike;
+  };
+  const paystackClient = paystackSdk as any;
 
   const options = {
-    paystackClient: paystackSdk,
+    paystackClient,
     secretKey: "whsec_test",
     webhook: {
       secret: "whsec_test",
@@ -40,9 +40,10 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       plans: [
         {
           name: "team-plan",
-          amount: 100000, // 1000 NGN base
+          amount: 100000,
           interval: "monthly",
-          seatAmount: 50000, // 500 NGN per seat
+          currency: "NGN",
+          seatAmount: 50000,
         },
       ],
     },
@@ -66,7 +67,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     database: adapter,
     baseURL: "http://localhost:3000",
     emailAndPassword: { enabled: true },
-    plugins: [organization(), paystack<PaystackClientLike>(options)],
+    plugins: [organization(), paystack<PaystackClientLike>(options as any)],
   });
 
   const authClient = createAuthClient({
@@ -94,7 +95,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const headers = new Headers();
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-    const orgRes = await authClient.organization.create(
+    const orgRes = await (authClient as any).organization.create(
       {
         name: "Test Org",
         slug: "test-org",
@@ -150,7 +151,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const headers = new Headers();
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-    const orgRes = await authClient.organization.create(
+    const orgRes = await (authClient as any).organization.create(
       {
         name: "Qty Org",
         slug: "qty-org",
