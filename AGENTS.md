@@ -1,4 +1,4 @@
-# Gemini Context: @alexasomba/better-auth-paystack
+# Agents Context: @alexasomba/better-auth-paystack
 
 > **Note:** For deep technical details, refer to [README.md](file:///Users/alexasomba/Documents/GitHub/alexasomba/better-auth-paystack/README.md).
 
