@@ -6,7 +6,7 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 
 ![npm downloads](https://img.shields.io/npm/dm/@alexasomba/better-auth-paystack.svg)
 [![GitHub stars](https://img.shields.io/github/stars/alexasomba/better-auth-paystack.svg?style=social&label=Star)](https://github.com/alexasomba/better-auth-paystack/stargazers)
-[![GitHub release](https://img.shields.io/github/v/release/alexasomba/better-auth-paystack)](https://github.com/alexasomba/better-auth-paystack/releases) 
+[![GitHub release](https://img.shields.io/github/v/release/alexasomba/better-auth-paystack)](https://github.com/alexasomba/better-auth-paystack/releases)
 [![bundlephobia](https://img.shields.io/bundlephobia/minzip/@alexasomba/better-auth-paystack)](https://bundlephobia.com/result?p=@alexasomba/better-auth-paystack)
 [![Follow on Twitter](https://img.shields.io/twitter/follow/alexasomba?style=social)](https://twitter.com/alexasomba)
 ![GitHub License](https://img.shields.io/github/license/alexasomba/better-auth-paystack)
@@ -31,6 +31,11 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 ---
 
 ## Quick Start
+
+### Prerequisites
+
+- **Node.js**: `v24.0.0` or higher.
+- **Better Auth**: `v1.6.5` or higher.
 
 ### 1. Install Plugin & SDKs
 
@@ -584,20 +589,23 @@ POST /api/auth/paystack/sync-products
 
 ## 🏗️ Development & Contributing
 
-This repository is set up as a pnpm workspace. You can run and build examples via `--filter`.
+This repository is powered by **Vite+**. You use the `vp` CLI to manage the entire workspace.
 
 ```bash
-# Install everything
-pnpm install
+# Install dependencies
+vp i
+
+# Check project health (format, lint, types)
+vp check --fix
 
 # Build the core library
-pnpm --filter "@alexasomba/better-auth-paystack" build
+vp build
 
-# Run Next.js example (Next.js + Better Auth)
-pnpm --filter nextjs-better-auth-paystack dev
+# Run tests
+vp test
 
-# Run TanStack Start example (TanStack Start + Better Auth)
-pnpm --filter tanstack-start-better-auth-paystack dev
+# Run the TanStack Start example
+vp run examples/tanstack dev
 ```
 
 Contributions are welcome! Please open an issue or pull request.
