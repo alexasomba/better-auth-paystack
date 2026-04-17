@@ -3,13 +3,16 @@ import type { GenericEndpointContext } from "better-auth";
 import type {
   AnyPaystackOptions,
   PaystackClientLike,
+  PaystackPlan,
   PaystackProduct,
   Subscription,
   PaystackProductResponse,
 } from "./types";
 import { unwrapSdkResult } from "./paystack-sdk";
 
-export async function getPlans(subscriptionOptions: AnyPaystackOptions["subscription"]) {
+export async function getPlans(
+  subscriptionOptions: AnyPaystackOptions["subscription"],
+): Promise<PaystackPlan[]> {
   if (subscriptionOptions?.enabled === true) {
     return typeof subscriptionOptions.plans === "function"
       ? subscriptionOptions.plans()
@@ -18,7 +21,10 @@ export async function getPlans(subscriptionOptions: AnyPaystackOptions["subscrip
   throw new Error("Subscriptions are not enabled in the Paystack options.");
 }
 
-export const getPlan = async (options: AnyPaystackOptions, planId: string) => {
+export const getPlan: (
+  options: AnyPaystackOptions,
+  planId: string,
+) => Promise<PaystackPlan | null> = async (options, planId) => {
   if (options.subscription?.enabled === true) {
     const plans = await getPlans(options.subscription);
     return plans.find((plan) => plan.name === planId) ?? null;
@@ -26,7 +32,10 @@ export const getPlan = async (options: AnyPaystackOptions, planId: string) => {
   return null;
 };
 
-export async function getPlanByName(options: AnyPaystackOptions, name: string) {
+export async function getPlanByName(
+  options: AnyPaystackOptions,
+  name: string,
+): Promise<PaystackPlan | null> {
   if (typeof name !== "string" || name.trim() === "") {
     return null;
   }
@@ -42,7 +51,10 @@ export async function getPlanByName(options: AnyPaystackOptions, name: string) {
   return null;
 }
 
-export async function getPlanByPriceId(options: AnyPaystackOptions, priceId: string) {
+export async function getPlanByPriceId(
+  options: AnyPaystackOptions,
+  priceId: string,
+): Promise<PaystackPlan | null> {
   if (options.subscription?.enabled === true) {
     const plans = await getPlans(options.subscription);
     return plans.find((plan) => plan.name === priceId) ?? null;
@@ -50,7 +62,9 @@ export async function getPlanByPriceId(options: AnyPaystackOptions, priceId: str
   return null;
 }
 
-export async function getProducts(productOptions: AnyPaystackOptions["products"]) {
+export async function getProducts(
+  productOptions: AnyPaystackOptions["products"],
+): Promise<PaystackProduct[]> {
   if (productOptions?.products) {
     return typeof productOptions.products === "function"
       ? await productOptions.products()
@@ -59,7 +73,10 @@ export async function getProducts(productOptions: AnyPaystackOptions["products"]
   return [];
 }
 
-export async function getProductByName(options: AnyPaystackOptions, name: string) {
+export async function getProductByName(
+  options: AnyPaystackOptions,
+  name: string,
+): Promise<PaystackProduct | null> {
   return await getProducts(options.products).then((products) =>
     products !== undefined && products !== null
       ? (products.find((product) => product.name.toLowerCase() === name.toLowerCase()) ?? null)
@@ -151,9 +168,7 @@ export async function syncProductQuantityFromPaystack(
 
   // Fetch the latest quantity from Paystack
   try {
-    const raw = await paystackClient.product?.fetch({
-      params: { path: { id_or_code: localProduct.paystackId } },
-    });
+    const raw = await paystackClient.product?.fetch(localProduct.paystackId);
     const sdkRes = unwrapSdkResult<PaystackProductResponse>(raw);
     const remoteQuantity = sdkRes?.quantity;
 
@@ -181,7 +196,10 @@ export async function syncProductQuantityFromPaystack(
   }
 }
 
-export async function decrementProductQuantity(ctx: GenericEndpointContext, productName: string) {
+export async function decrementProductQuantity(
+  ctx: GenericEndpointContext,
+  productName: string,
+): Promise<void> {
   let product = await ctx.context.adapter.findOne<PaystackProduct>({
     model: "paystackProduct",
     where: [{ field: "name", value: productName }],
@@ -257,8 +275,7 @@ export async function syncSubscriptionSeats(
 
     // Paystack subscription update doesn't natively support quantity in the same way as Stripe
     // but we can update the amount or the plan.
-    const raw = await client.subscription?.update({
-      params: { path: { code: subscription.paystackSubscriptionCode } },
+    const raw = await client.subscription?.update(subscription.paystackSubscriptionCode, {
       body: { amount: totalAmount },
     });
     unwrapSdkResult(raw);

@@ -12,7 +12,7 @@ A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin w
 - [x] Subscription management (list, cancel)
 - [x] **Organization billing** - Bill subscriptions to organizations instead of personal accounts
 - [x] **Plan Code subscriptions** - Use Paystack-managed plans (`planCode`)
-- [x] Dynamic plan configuration via `/paystack/get-config`
+- [x] Dynamic plan configuration via `/paystack/config`
 
 ## Tech Stack
 
@@ -142,7 +142,7 @@ export const authClient = createAuthClient({
 
 ```ts
 // Initialize a subscription for an organization
-const result = await authClient.paystack.transaction.initialize({
+const result = await authClient.paystack.initializeTransaction({
   plan: "team",
   callbackURL: `${window.location.origin}/billing/paystack/callback`,
   referenceId: "org_123", // Organization ID

@@ -50,8 +50,7 @@
     "react-dom": "catalog:",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
-    "tw-animate-css": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "tw-animate-css": "catalog:"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

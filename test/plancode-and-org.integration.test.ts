@@ -9,8 +9,8 @@ import { organizationClient } from "better-auth/client/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src";
-import { paystackClient } from "../src/client";
+import { paystack } from "../src/index.ts";
+import { paystackClient } from "../src/client.ts";
 import type { Member } from "../src/types";
 
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
@@ -122,7 +122,7 @@ describe("planCode and organization referenceId tests", () => {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const init = await (authClient as any).paystack.transaction.initialize({ plan: "starter" });
+      const init = await (authClient as any).paystack.initializeTransaction({ plan: "starter" });
       if (init.error) throw new Error("Initialization failed");
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_plancode_123");
@@ -216,7 +216,7 @@ describe("planCode and organization referenceId tests", () => {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const init = await (authClient as any).paystack.transaction.initialize({ plan: "team" });
+      const init = await (authClient as any).paystack.initializeTransaction({ plan: "team" });
 
       if (init.error) throw new Error("Initialization failed");
       expect(init.data.url).toBe("https://paystack/checkout");
@@ -341,7 +341,7 @@ describe("planCode and organization referenceId tests", () => {
       const orgId = org.data?.id;
       expect(orgId).toBeDefined();
 
-      const init = await (authClient as any).paystack.transaction.initialize({
+      const init = await (authClient as any).paystack.initializeTransaction({
         plan: "team",
         referenceId: orgId,
       });
@@ -447,7 +447,7 @@ describe("planCode and organization referenceId tests", () => {
       const fakeOrgId = "org_fake_123";
 
       try {
-        await (authClient as any).paystack.transaction.initialize(
+        await (authClient as any).paystack.initializeTransaction(
           { plan: "team", referenceId: fakeOrgId },
           { throw: true },
         );

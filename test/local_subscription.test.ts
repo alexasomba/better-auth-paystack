@@ -6,7 +6,8 @@ import { createAuthClient } from "better-auth/client";
 import { setCookieToHeader } from "better-auth/cookies";
 import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 
-import { paystack } from "../src/index";
+import { chargeSubscriptionRenewal, paystack } from "../src/index.ts";
+import { paystackClient as createPaystackClient } from "../src/client.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Local Custom Subscriptions", () => {
@@ -22,10 +23,10 @@ describe("Local Custom Subscriptions", () => {
       update: vi.fn(),
     },
   };
-  const paystackClient = paystackSdk as any;
+  const sdkClient = paystackSdk as any;
 
   const options = {
-    paystackClient,
+    paystackClient: sdkClient,
     secretKey: "test_key",
     webhook: {
       secret: "whsec_test",
@@ -68,7 +69,7 @@ describe("Local Custom Subscriptions", () => {
 
   const authClient = createAuthClient({
     baseURL: "http://localhost:3000",
-    plugins: [paystackClient({ subscription: true })],
+    plugins: [createPaystackClient({ subscription: true })],
     fetchOptions: {
       customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
     },
@@ -180,17 +181,12 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    const res = await auth.handler(
-      new Request("http://localhost:3000/api/auth/paystack/charge-recurring", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: sub.id }),
-      }),
-    );
+    const operationCtx = { context: await auth.$context } as any;
+    const result = await chargeSubscriptionRenewal(operationCtx, options as any, {
+      subscriptionId: sub.id,
+    });
 
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.status).toBe("success");
+    expect(result.status).toBe("success");
 
     const updatedSub = data.subscription.find((s) => (s as any).id === sub.id) as any;
     expect(updatedSub.paystackTransactionReference).toBe("ref_recurring_456");
@@ -221,17 +217,13 @@ describe("Local Custom Subscriptions", () => {
     // Our charge-recurring uses the plan's amount.
     // To test this effectively, we'd need a plan with a very low amount in its definition.
 
-    const res = await auth.handler(
-      new Request("http://localhost:3000/api/auth/paystack/charge-recurring", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: sub.id, amount: 1000 }), // Override amount to be below min
+    const operationCtx = { context: await auth.$context } as any;
+    await expect(
+      chargeSubscriptionRenewal(operationCtx, options as any, {
+        subscriptionId: sub.id,
+        amount: 1000,
       }),
-    );
-
-    expect(res.status).toBe(400); // BAD_REQUEST
-    const json = await res.json();
-    expect(json.message).toContain("less than the minimum");
+    ).rejects.toThrow(/less than the minimum/i);
   });
 
   it("should handle trials for local subscriptions", async () => {

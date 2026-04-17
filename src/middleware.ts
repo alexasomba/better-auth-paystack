@@ -1,4 +1,4 @@
-import { createAuthMiddleware } from "@better-auth/core/api";
+import { createAuthMiddleware, type AuthMiddleware } from "@better-auth/core/api";
 import { logger } from "better-auth";
 import { APIError } from "better-auth/api";
 
@@ -14,7 +14,7 @@ export const referenceMiddleware = (
     | "disable-subscription"
     | "enable-subscription"
     | "get-subscription-manage-link",
-) =>
+): AuthMiddleware =>
   createAuthMiddleware(async (ctx) => {
     const session = ctx.context.session as {
       user: User;

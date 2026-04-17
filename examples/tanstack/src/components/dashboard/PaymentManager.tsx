@@ -77,8 +77,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       setIsLoading(true);
       try {
         const [configRes, subsRes] = await Promise.all([
-          (authClient as any).paystack.getConfig(),
-          (authClient as any).paystack.subscription.listLocal({
+          (authClient as any).paystack.config(),
+          authClient.subscription.list({
             query: {
               referenceId: selectedBillingTarget !== "personal" ? selectedBillingTarget : undefined,
             },
@@ -94,7 +94,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           );
         }
         if (subsRes.data?.subscriptions !== undefined && subsRes.data?.subscriptions !== null) {
-          setSubscriptions(subsRes.data.subscriptions as Subscription[]);
+          setSubscriptions(subsRes.data.subscriptions);
         }
       } catch (e) {
         console.error("Failed to fetch data", e);
@@ -106,38 +106,6 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     void fetchNativeProducts();
     void fetchNativePlans();
   }, [selectedBillingTarget, fetchNativeProducts, fetchNativePlans]);
-
-  const handleSyncProducts = async () => {
-    setActionLoading(true);
-    try {
-      const res = await (authClient as any).paystack.syncProducts();
-      if (typeof res.data?.status === "string" && res.data.status === "success") {
-        await fetchNativeProducts();
-        alert(`Successfully synced ${res.data.count} products from Paystack.`);
-      }
-    } catch (e) {
-      console.error("Failed to sync products", e);
-      alert("Failed to sync products from Paystack.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleSyncPlans = async () => {
-    setActionLoading(true);
-    try {
-      const res = await (authClient as any).paystack.syncPlans();
-      if (typeof res.data?.status === "string" && res.data.status === "success") {
-        await fetchNativePlans();
-        alert(`Successfully synced ${res.data.count} plans from Paystack.`);
-      }
-    } catch (e) {
-      console.error("Failed to sync plans", e);
-      alert("Failed to sync plans from Paystack.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   // Fetch organizations for billing target selection
   useEffect(() => {
@@ -169,7 +137,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           (initPayload as Record<string, unknown>).quantity = quantity;
         }
       }
-      const res = await (authClient as any).paystack.transaction.initialize(initPayload);
+      const res = await (authClient as any).paystack.initializeTransaction(initPayload);
       if (typeof res.data?.url === "string") {
         window.location.href = res.data.url;
       } else {
@@ -189,7 +157,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     try {
       const metadata =
         typeof product.metadata === "string" ? JSON.parse(product.metadata) : product.metadata;
-      const res = await (authClient as any).paystack.transaction.initialize({
+      const res = await (authClient as any).paystack.initializeTransaction({
         product: product.name,
         amount: product.price ?? 0,
         currency: product.currency ?? "NGN",
@@ -213,7 +181,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const handleManageBilling = async (subscriptionCode: string) => {
     setActionLoading(true);
     try {
-      const res = await (authClient as any).paystack.subscription.manageLink({
+      const res = await authClient.subscription.billingPortal({
         subscriptionCode,
       });
       if (res.data?.link !== undefined && res.data?.link !== null && res.data.link !== "") {
@@ -268,16 +236,6 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             <CardTitle className="text-xl font-semibold">Subscription Plans</CardTitle>
             <p className="text-sm text-muted-foreground">Choose a plan that fits your needs.</p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSyncPlans}
-            disabled={actionLoading}
-            className="gap-2"
-          >
-            <ArrowRight className={cn("transition-transform", actionLoading && "animate-spin")} />
-            Sync Native Plans
-          </Button>
         </CardHeader>
         <CardContent className="space-y-8">
           {/* Active Subscription Summary */}
@@ -417,7 +375,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 ))
               ) : (
                 <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-                  No native plans found. Click "Sync Native Plans" to import from Paystack.
+                  No native plans are currently available from the synced catalog.
                 </div>
               )}
             </div>
@@ -483,25 +441,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           </div>
 
           <div className="space-y-4 pt-4 border-t border-dashed">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Paystack-&gt;DB Synced Products</h3>
-                <p className="text-xs text-muted-foreground">
-                  Products synced automatically from your Paystack dashboard.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSyncProducts}
-                disabled={actionLoading}
-                className="gap-2"
-              >
-                <ArrowRight
-                  className={cn("transition-transform", actionLoading && "animate-spin")}
-                />
-                Sync Now
-              </Button>
+            <div>
+              <h3 className="text-lg font-semibold">Paystack-&gt;DB Synced Products</h3>
+              <p className="text-xs text-muted-foreground">
+                Products synced automatically from your Paystack dashboard.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -535,7 +479,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 ))
               ) : (
                 <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-                  No native products found. Click "Sync Now" to import from Paystack.
+                  No native products are currently available from the synced catalog.
                 </div>
               )}
             </div>

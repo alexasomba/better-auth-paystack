@@ -1,5 +1,5 @@
 import { defineConfig } from "vite-plus";
-export default defineConfig({
+const config = defineConfig({
   fmt: {},
   pack: {
     tsconfig: "./tsconfig.build.json",
@@ -29,6 +29,8 @@ export default defineConfig({
       "**/*.d.ts",
       "**/*.test.js",
       "**/dist/**",
+      "docs/**",
+      "**/.agents/**",
       "**/node_modules/**",
       "**/examples/**",
       ...(process.env.RUN_INTEGRATION_TESTS === "true" ? [] : ["**/*.integration.test.ts"]),
@@ -58,6 +60,7 @@ export default defineConfig({
       "**/.turbo/**",
       "**/.cache/**",
       "docs/**",
+      "**/.agents/**",
       "scripts/**",
       "examples/**",
       "vitest.config.ts",
@@ -330,3 +333,4 @@ export default defineConfig({
     ],
   },
 });
+export default config;

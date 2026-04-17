@@ -10,7 +10,7 @@ import { bearer, organization } from "better-auth/plugins";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vite-plus/test";
 import type { DBAdapter } from "@better-auth/core/db/adapter";
 
-import { paystackClient } from "../src/client";
+import { paystackClient } from "../src/client.ts";
 import type {
   Subscription,
   PaystackOptions,
@@ -21,7 +21,7 @@ import type {
   PaystackCustomerResponse,
 } from "../src/types";
 
-import { paystack } from "../src";
+import { paystack, syncPaystackPlans, syncPaystackProducts } from "../src/index.ts";
 
 describe("paystack type", () => {
   const options = {
@@ -52,6 +52,14 @@ describe("paystack type", () => {
     expectTypeOf(authClient.subscription.restore).toExtend<(...args: any[]) => any>();
     expectTypeOf(authClient.subscription.cancel).toExtend<(...args: any[]) => any>();
     expectTypeOf(authClient.subscription.list).toExtend<(...args: any[]) => any>();
+  });
+
+  it("should not expose operator-only actions on authClient", () => {
+    const plugin = paystackClient({ subscription: true }) as any;
+    const actions = plugin.getActions(vi.fn(), null, null) as Record<string, unknown>;
+
+    expect(actions.syncProducts).toBeUndefined();
+    expect(actions.syncPlans).toBeUndefined();
   });
 });
 
@@ -215,6 +223,96 @@ describe("paystack", () => {
       where: [{ field: "id", value: res.user.id }],
     });
     expect((dbUser as PaystackUser | null)?.paystackCustomerCode).toBe("CUS_test_123");
+  });
+
+  it("should sync products via the trusted server operation", async () => {
+    const paystackSdk = {
+      product: {
+        list: vi.fn().mockResolvedValue({
+          data: {
+            status: true,
+            data: [
+              {
+                id: 101,
+                name: "Growth Credits",
+                description: "Extra credits",
+                price: 250000,
+                currency: "NGN",
+                quantity: 20,
+                unlimited: false,
+              },
+            ],
+          },
+        }),
+      },
+    } as unknown as PaystackClientLike;
+
+    const auth = betterAuth({
+      baseURL: "http://localhost:3000",
+      database: memory,
+      emailAndPassword: { enabled: true },
+      plugins: [
+        paystack<PaystackClientLike>({
+          paystackClient: paystackSdk,
+          secretKey: "sk_test_123",
+          webhook: { secret: "whsec_test" },
+        }),
+      ],
+    });
+
+    const result = await syncPaystackProducts({ context: await auth.$context } as any, {
+      paystackClient: paystackSdk,
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    });
+
+    expect(result).toEqual({ status: "success", count: 1 });
+    expect(data.paystackProduct).toHaveLength(1);
+  });
+
+  it("should sync plans via the trusted server operation", async () => {
+    const paystackSdk = {
+      plan: {
+        list: vi.fn().mockResolvedValue({
+          data: {
+            status: true,
+            data: [
+              {
+                id: 202,
+                name: "Pro Annual",
+                description: "Annual plan",
+                amount: 1000000,
+                currency: "NGN",
+                interval: "annually",
+                plan_code: "PLN_pro_annual",
+              },
+            ],
+          },
+        }),
+      },
+    } as unknown as PaystackClientLike;
+
+    const auth = betterAuth({
+      baseURL: "http://localhost:3000",
+      database: memory,
+      emailAndPassword: { enabled: true },
+      plugins: [
+        paystack<PaystackClientLike>({
+          paystackClient: paystackSdk,
+          secretKey: "sk_test_123",
+          webhook: { secret: "whsec_test" },
+        }),
+      ],
+    });
+
+    const result = await syncPaystackPlans({ context: await auth.$context } as any, {
+      paystackClient: paystackSdk,
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    });
+
+    expect(result).toEqual({ status: "success", count: 1 });
+    expect(data.paystackPlan).toHaveLength(1);
   });
 
   it("should disable subscription without emailToken by fetching it", async () => {
@@ -523,11 +621,7 @@ describe("paystack", () => {
 
     if (res.error) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
     expect(res.data?.link).toBe("https://paystack.com/manage/SUB_123/token");
-    expect(paystackSdk.subscription.manageLink).toHaveBeenCalledWith(
-      expect.objectContaining({
-        params: { path: { code: "SUB_test_123" } },
-      }),
-    );
+    expect(paystackSdk.subscription.manageLink).toHaveBeenCalledWith("SUB_test_123");
   });
   it("should reject untrusted callbackURL", async () => {
     const headers = new Headers();
@@ -1655,41 +1749,10 @@ describe("paystack", () => {
       plugins: [paystack<PaystackClientLike>(options)],
     });
 
-    // Sign up and sign in to get a session cookie
-    await auth.handler(
-      new Request("http://localhost:3000/api/auth/sign-up/email", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: "syncer@test.com", password: "password123", name: "Syncer" }),
-      }),
+    const json = await syncPaystackProducts(
+      { context: await auth.$context } as any,
+      options as any,
     );
-
-    const signInRes = await auth.handler(
-      new Request("http://localhost:3000/api/auth/sign-in/email", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: "syncer@test.com", password: "password123" }),
-      }),
-    );
-
-    // Extract session cookie from sign-in response
-    const setCookieHeader = signInRes.headers.get("set-cookie") ?? "";
-    const sessionCookieMatch = /better-auth\.session_token=[^;]+/.exec(setCookieHeader);
-    const sessionCookie = sessionCookieMatch?.[0] ?? "";
-
-    // Call sync-products with the session cookie
-    const req = new Request("http://localhost:3000/api/auth/paystack/sync-products", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        cookie: sessionCookie,
-      },
-    });
-
-    const res = await auth.handler(req);
-    expect(res.status).toBe(200);
-
-    const json = (await res.json()) as { status: string; count: number };
     expect(json.status).toBe("success");
     expect(json.count).toBe(1);
 

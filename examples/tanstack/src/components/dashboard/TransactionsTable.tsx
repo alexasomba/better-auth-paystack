@@ -243,7 +243,7 @@ export default function TransactionsTable() {
     async function fetchTransactions() {
       try {
         // Fetch personal transactions
-        const personalRes = await (authClient as any).paystack.transaction.list({
+        const personalRes = await (authClient as any).paystack.listTransactions({
           query: {},
         });
 
@@ -262,7 +262,7 @@ export default function TransactionsTable() {
           if (orgsRes.data !== undefined && orgsRes.data !== null && Array.isArray(orgsRes.data)) {
             for (const org of orgsRes.data) {
               try {
-                const orgRes = await (authClient as any).paystack.transaction.list({
+                const orgRes = await (authClient as any).paystack.listTransactions({
                   query: { referenceId: org.id },
                 });
                 if (orgRes.data?.transactions !== undefined && orgRes.data?.transactions !== null) {

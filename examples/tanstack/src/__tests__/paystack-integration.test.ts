@@ -1,12 +1,15 @@
-import { beforeAll, describe, expect, it, vi } from "vite-plus/test";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { betterAuth } from "better-auth";
+import { createAuthClient } from "better-auth/react";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { anonymous, organization } from "better-auth/plugins";
 import { paystack } from "@alexasomba/better-auth-paystack";
+import { paystackClient } from "@alexasomba/better-auth-paystack/client";
 import { createPaystack } from "@alexasomba/paystack-node";
 
 describe("TanStack Example - Paystack Integration", () => {
   let auth: any;
+  let requestLog: string[];
   const data: Record<string, unknown[]> = {
     user: [],
     session: [],
@@ -19,6 +22,10 @@ describe("TanStack Example - Paystack Integration", () => {
     member: [],
     invitation: [],
   };
+
+  beforeEach(() => {
+    requestLog = [];
+  });
 
   beforeAll(() => {
     vi.stubEnv("PAYSTACK_SECRET_KEY", "sk_test_mock");
@@ -52,6 +59,10 @@ describe("TanStack Example - Paystack Integration", () => {
           paystackClient: paystackClient as any,
           secretKey: "sk_test_mock",
           webhook: { secret: "whsec_test_mock" },
+          subscription: {
+            enabled: true,
+            plans: [],
+          },
           products: {
             products: [
               {
@@ -74,7 +85,7 @@ describe("TanStack Example - Paystack Integration", () => {
     expect(endpoints.paystackWebhook).toBeDefined();
     expect(endpoints.listTransactions).toBeDefined();
     expect(endpoints.listSubscriptions).toBeDefined();
-    expect(endpoints.syncProducts).toBeDefined();
+    expect((endpoints as Record<string, unknown>).syncProducts).toBeUndefined();
   });
 
   it("should successfully call list-products", async () => {
@@ -92,7 +103,7 @@ describe("TanStack Example - Paystack Integration", () => {
   });
 
   it("should have products and plans configured in the plugin", async () => {
-    const req = new Request("http://localhost:8787/api/auth/paystack/get-config", {
+    const req = new Request("http://localhost:8787/api/auth/paystack/config", {
       method: "GET",
     });
     const res = await auth.handler(req);
@@ -103,13 +114,135 @@ describe("TanStack Example - Paystack Integration", () => {
     expect(config.products.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("should successfully handle protected sync-products (mocking unauthorized)", async () => {
-    const req = new Request("http://localhost:8787/api/auth/paystack/sync-products", {
-      method: "POST",
-    });
-    const res = await auth.handler(req);
+  it("uses the stable auth client endpoints for config and subscription listing", async () => {
+    const cookieHeaders = new Headers();
+    const authClient = createAuthClient({
+      baseURL: "http://localhost:8787",
+      plugins: [paystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => {
+          const nextUrl = typeof url === "string" ? url : url.toString();
+          requestLog.push(nextUrl);
 
-    // Should be 401 as it's protected and we have no session
-    expect(res.status).toBe(401);
+          const mergedHeaders = new Headers(init?.headers ?? {});
+          cookieHeaders.forEach((value, key) => {
+            mergedHeaders.set(key, value);
+          });
+
+          if (!mergedHeaders.has("origin")) {
+            mergedHeaders.set("origin", "http://localhost:8787");
+          }
+
+          const response = await auth.handler(
+            new Request(nextUrl, { ...init, headers: mergedHeaders }),
+          );
+          const setCookie = response.headers.get("set-cookie");
+          if (setCookie !== null) {
+            cookieHeaders.set("cookie", setCookie);
+          }
+          return response;
+        },
+      },
+    });
+
+    expect(typeof (authClient as any).paystack.config).toBe("function");
+    expect(typeof (authClient as any).subscription.list).toBe("function");
+
+    const user = {
+      email: "tanstack-client@example.com",
+      password: "password123",
+      name: "TanStack Client User",
+    };
+
+    await authClient.signUp.email(user, { throw: true });
+    await authClient.signIn.email(user, { throw: true });
+    requestLog = [];
+
+    const configRes = await (authClient as any).paystack.config();
+    expect(configRes.error).toBeNull();
+    expect(configRes.data?.products).toBeDefined();
+
+    const listRes = await authClient.subscription.list({});
+    expect(listRes.error).toBeNull();
+    expect(Array.isArray(listRes.data?.subscriptions)).toBe(true);
+
+    expect(requestLog.some((url) => url.includes("/api/auth/paystack/config"))).toBe(true);
+    expect(requestLog.some((url) => url.includes("/api/auth/paystack/list-subscriptions"))).toBe(
+      true,
+    );
+    expect(requestLog.some((url) => url.includes("/api/auth/paystack/get-config"))).toBe(false);
+    expect(
+      requestLog.some((url) => url.includes("/api/auth/paystack/subscription/list-local")),
+    ).toBe(false);
+  });
+
+  it("uses the stable auth client endpoints for verify, transactions, and manage-link flows", async () => {
+    const cookieHeaders = new Headers();
+    const authClient = createAuthClient({
+      baseURL: "http://localhost:8787",
+      plugins: [paystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => {
+          const nextUrl = typeof url === "string" ? url : url.toString();
+          requestLog.push(nextUrl);
+
+          const mergedHeaders = new Headers(init?.headers ?? {});
+          cookieHeaders.forEach((value, key) => {
+            mergedHeaders.set(key, value);
+          });
+
+          if (!mergedHeaders.has("origin")) {
+            mergedHeaders.set("origin", "http://localhost:8787");
+          }
+
+          const response = await auth.handler(
+            new Request(nextUrl, { ...init, headers: mergedHeaders }),
+          );
+          const setCookie = response.headers.get("set-cookie");
+          if (setCookie !== null) {
+            cookieHeaders.set("cookie", setCookie);
+          }
+          return response;
+        },
+      },
+    });
+
+    const user = {
+      email: "tanstack-stable-routes@example.com",
+      password: "password123",
+      name: "TanStack Stable Routes",
+    };
+
+    await authClient.signUp.email(user, { throw: true });
+    await authClient.signIn.email(user, { throw: true });
+    requestLog = [];
+
+    await Promise.allSettled([
+      (authClient as any).paystack.verifyTransaction({ reference: "ref_123" }),
+      (authClient as any).paystack.listTransactions({ query: {} }),
+      authClient.subscription.billingPortal({
+        subscriptionCode: "SUB_123",
+      }),
+    ]);
+
+    expect(requestLog.some((url) => url.includes("/api/auth/paystack/verify-transaction"))).toBe(
+      true,
+    );
+    expect(requestLog.some((url) => url.includes("/api/auth/paystack/list-transactions"))).toBe(
+      true,
+    );
+    expect(
+      requestLog.some((url) => url.includes("/api/auth/paystack/subscription-manage-link")),
+    ).toBe(true);
+
+    expect(requestLog.some((url) => url.includes("/api/auth/paystack/transaction/verify"))).toBe(
+      false,
+    );
+    expect(requestLog.some((url) => url.includes("/api/auth/paystack/transaction/list"))).toBe(
+      false,
+    );
+    expect(
+      requestLog.some((url) => url.includes("/api/auth/paystack/subscription/manage-link")),
+    ).toBe(false);
   });
 });

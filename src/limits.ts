@@ -18,7 +18,7 @@ export const checkSeatLimit = async (
   ctx: GenericEndpointContext,
   organizationId: string,
   seatsToAdd = 1,
-) => {
+): Promise<boolean> => {
   const subscription = await getOrganizationSubscription(ctx, organizationId);
 
   if (subscription?.seats === null) {
@@ -47,7 +47,7 @@ export const checkTeamLimit = async (
   ctx: GenericEndpointContext,
   organizationId: string,
   maxTeams: number,
-) => {
+): Promise<boolean> => {
   const teams = await ctx.context.adapter.findMany({
     model: "team",
     where: [{ field: "organizationId", value: organizationId }],

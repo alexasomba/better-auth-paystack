@@ -5,7 +5,13 @@ import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "bet
 /* oxlint-disable no-restricted-imports */
 import { z } from "zod";
 import type { components } from "@alexasomba/paystack-node";
-import type { GenericEndpointContext } from "better-auth";
+import type {
+  GenericEndpointContext,
+  MiddlewareInputContext,
+  MiddlewareOptions,
+  RawError,
+  StrictEndpoint,
+} from "better-auth";
 
 import type {
   InputPaystackProduct,
@@ -34,7 +40,16 @@ import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 import { getOrganizationSubscription } from "./limits";
 
-const PAYSTACK_ERROR_CODES = defineErrorCodes({
+const PAYSTACK_ERROR_CODES: {
+  SUBSCRIPTION_NOT_FOUND: RawError<"SUBSCRIPTION_NOT_FOUND">;
+  SUBSCRIPTION_PLAN_NOT_FOUND: RawError<"SUBSCRIPTION_PLAN_NOT_FOUND">;
+  UNABLE_TO_CREATE_CUSTOMER: RawError<"UNABLE_TO_CREATE_CUSTOMER">;
+  FAILED_TO_INITIALIZE_TRANSACTION: RawError<"FAILED_TO_INITIALIZE_TRANSACTION">;
+  FAILED_TO_VERIFY_TRANSACTION: RawError<"FAILED_TO_VERIFY_TRANSACTION">;
+  FAILED_TO_DISABLE_SUBSCRIPTION: RawError<"FAILED_TO_DISABLE_SUBSCRIPTION">;
+  FAILED_TO_ENABLE_SUBSCRIPTION: RawError<"FAILED_TO_ENABLE_SUBSCRIPTION">;
+  EMAIL_VERIFICATION_REQUIRED: RawError<"EMAIL_VERIFICATION_REQUIRED">;
+} = defineErrorCodes({
   SUBSCRIPTION_NOT_FOUND: "Subscription not found",
   SUBSCRIPTION_PLAN_NOT_FOUND: "Subscription plan not found",
   UNABLE_TO_CREATE_CUSTOMER: "Unable to create customer",
@@ -69,7 +84,23 @@ async function hmacSha512Hex(secret: string, message: string): Promise<string> {
 export const paystackWebhook = <P extends string = "/webhook">(
   options: AnyPaystackOptions,
   path: P = "/webhook" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    metadata: {
+      openapi: {
+        operationId: string;
+      };
+      scope: "server";
+    };
+    cloneRequest: true;
+    disableBody: true;
+  },
+  {
+    received: boolean;
+  }
+> => {
   return createAuthEndpoint(
     path,
     {
@@ -426,7 +457,52 @@ const initializeTransactionBodySchema = z.object({
 export const initializeTransaction = <P extends string = "/initialize-transaction">(
   options: AnyPaystackOptions,
   path: P = "/initialize-transaction" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        plan: z.ZodOptional<z.ZodString>;
+        product: z.ZodOptional<z.ZodString>;
+        amount: z.ZodOptional<z.ZodNumber>;
+        currency: z.ZodOptional<z.ZodString>;
+        email: z.ZodOptional<z.ZodString>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        referenceId: z.ZodOptional<z.ZodString>;
+        callbackURL: z.ZodOptional<z.ZodString>;
+        quantity: z.ZodOptional<z.ZodNumber>;
+        scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  | {
+      status: string;
+      message: string;
+      scheduled: boolean;
+    }
+  | {
+      status: string;
+      message: string;
+      prorated: boolean;
+    }
+  | {
+      url: string;
+      reference: string;
+      accessCode: string;
+      redirect: boolean;
+    }
+  | undefined
+> => {
   const subscriptionOptions = options.subscription;
   const useMiddlewares =
     subscriptionOptions?.enabled === true
@@ -762,8 +838,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             const ops = getPaystackOps(options.paystackClient);
             // Only update if email is present
             if (ops !== undefined && ops !== null && initBody.email !== "") {
-              await ops.customer?.update({
-                params: { path: { email_or_code: paystackCustomerCode } },
+              await ops.customer?.update(paystackCustomerCode, {
                 body: { email: initBody.email },
               });
             }
@@ -886,8 +961,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
               // 5. Update Subscription Future Cycle in Paystack
               const ops = getPaystackOps(options.paystackClient);
               if (ops !== undefined && ops !== null) {
-                await ops.subscription?.update({
-                  params: { path: { code: existingSub.paystackSubscriptionCode } },
+                await ops.subscription?.update(existingSub.paystackSubscriptionCode, {
                   body: {
                     amount: newAmount,
                     plan: plan.planCode,
@@ -1053,27 +1127,265 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
 export const createSubscription = <P extends string = "/create-subscription">(
   options: AnyPaystackOptions,
   path: P = "/create-subscription" as P,
-) => initializeTransaction(options, path);
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        plan: z.ZodOptional<z.ZodString>;
+        product: z.ZodOptional<z.ZodString>;
+        amount: z.ZodOptional<z.ZodNumber>;
+        currency: z.ZodOptional<z.ZodString>;
+        email: z.ZodOptional<z.ZodString>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        referenceId: z.ZodOptional<z.ZodString>;
+        callbackURL: z.ZodOptional<z.ZodString>;
+        quantity: z.ZodOptional<z.ZodNumber>;
+        scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  | {
+      status: string;
+      message: string;
+      scheduled: boolean;
+    }
+  | {
+      status: string;
+      message: string;
+      prorated: boolean;
+    }
+  | {
+      url: string;
+      reference: string;
+      accessCode: string;
+      redirect: boolean;
+    }
+  | undefined
+> => initializeTransaction(options, path);
 
 export const upgradeSubscription = <P extends string = "/upgrade-subscription">(
   options: AnyPaystackOptions,
   path: P = "/upgrade-subscription" as P,
-) => initializeTransaction(options, path);
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        plan: z.ZodOptional<z.ZodString>;
+        product: z.ZodOptional<z.ZodString>;
+        amount: z.ZodOptional<z.ZodNumber>;
+        currency: z.ZodOptional<z.ZodString>;
+        email: z.ZodOptional<z.ZodString>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        referenceId: z.ZodOptional<z.ZodString>;
+        callbackURL: z.ZodOptional<z.ZodString>;
+        quantity: z.ZodOptional<z.ZodNumber>;
+        scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+        prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  | {
+      status: string;
+      message: string;
+      scheduled: boolean;
+    }
+  | {
+      status: string;
+      message: string;
+      prorated: boolean;
+    }
+  | {
+      url: string;
+      reference: string;
+      accessCode: string;
+      redirect: boolean;
+    }
+  | undefined
+> => initializeTransaction(options, path);
 
 export const cancelSubscription = <P extends string = "/cancel-subscription">(
   options: AnyPaystackOptions,
   path: P = "/cancel-subscription" as P,
-) => disablePaystackSubscription(options, path);
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionCode: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    status: string;
+  }
+> => disablePaystackSubscription(options, path);
 
 export const restoreSubscription = <P extends string = "/restore-subscription">(
   options: AnyPaystackOptions,
   path: P = "/restore-subscription" as P,
-) => enablePaystackSubscription(options, path);
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionCode: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    status: string;
+  }
+> => enablePaystackSubscription(options, path);
 
 export const verifyTransaction = <P extends string = "/verify-transaction">(
   options: AnyPaystackOptions,
   path: P = "/verify-transaction" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        reference: z.ZodString;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    status: string;
+    reference: string;
+    data: {
+      id: number;
+      domain: string;
+      status: string;
+      reference: string;
+      receipt_number: string | null;
+      amount: number;
+      message: string | null;
+      gateway_response: string;
+      channel: string;
+      currency: string;
+      ip_address: string | null;
+      metadata: (string | Record<string, never> | number) | null;
+      log: {
+        start_time: number;
+        time_spent: number;
+        attempts: number;
+        errors: number;
+        success: boolean;
+        mobile: boolean;
+        input: unknown[];
+        history: {
+          type: string;
+          message: string;
+          time: number;
+        }[];
+      } | null;
+      fees: number | null;
+      fees_split: unknown;
+      authorization: {
+        authorization_code?: string;
+        bin?: string | null;
+        last4?: string;
+        exp_month?: string;
+        exp_year?: string;
+        channel?: string;
+        card_type?: string;
+        bank?: string;
+        country_code?: string;
+        brand?: string;
+        reusable?: boolean;
+        signature?: string;
+        account_name?: string | null;
+        receiver_bank_account_number?: string | null;
+        receiver_bank?: string | null;
+      };
+      customer: {
+        id: number;
+        first_name: string | null;
+        last_name: string | null;
+        email: string;
+        customer_code: string;
+        phone: string | null;
+        metadata: Record<string, never> | null;
+        risk_action: string;
+        international_format_phone?: string | null;
+      };
+      plan: (string | Record<string, never>) | null;
+      split: Record<string, never> | null;
+      order_id: unknown;
+      paidAt: string | null;
+      createdAt: string;
+      requested_amount: number;
+      pos_transaction_data: unknown;
+      source: unknown;
+      fees_breakdown: unknown;
+      connect: unknown;
+      transaction_date: string;
+      plan_object: {
+        id?: number;
+        name?: string;
+        plan_code?: string;
+        description?: unknown;
+        amount?: number;
+        interval?: string;
+        send_invoices?: boolean;
+        send_sms?: boolean;
+        currency?: string;
+      };
+      subaccount: Record<string, never> | null;
+    };
+  }
+> => {
   const verifyBodySchema = z.object({
     reference: z.string(),
   });
@@ -1096,9 +1408,7 @@ export const verifyTransaction = <P extends string = "/verify-transaction">(
       let data: PaystackTransactionResponse | undefined;
 
       try {
-        const verifyRaw = await paystack?.transaction?.verify({
-          params: { path: { reference: ctx.body.reference } },
-        });
+        const verifyRaw = await paystack?.transaction?.verify(ctx.body.reference);
         // unwrapSdkResult might return the data field or the whole body depending on its impl.
         // But with PaystackResponse and ours, it should give us the 'data' part for success.
         data = unwrapSdkResult<PaystackTransactionResponse>(verifyRaw);
@@ -1404,7 +1714,27 @@ export const verifyTransaction = <P extends string = "/verify-transaction">(
 export const listSubscriptions = <P extends string = "/list-subscriptions">(
   options: AnyPaystackOptions,
   path: P = "/list-subscriptions" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "GET";
+    query: z.ZodObject<
+      {
+        referenceId: z.ZodOptional<z.ZodString>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    subscriptions: Subscription[];
+  }
+> => {
   const listQuerySchema = z.object({
     referenceId: z.string().optional(),
   });
@@ -1447,7 +1777,27 @@ export const listSubscriptions = <P extends string = "/list-subscriptions">(
 export const listTransactions = <P extends string = "/list-transactions">(
   options: AnyPaystackOptions,
   path: P = "/list-transactions" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "GET";
+    query: z.ZodObject<
+      {
+        referenceId: z.ZodOptional<z.ZodString>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    transactions: PaystackTransaction[];
+  }
+> => {
   const listQuerySchema = z.object({
     referenceId: z.string().optional(),
   });
@@ -1521,7 +1871,30 @@ function tryGetEmailTokenFromSubscriptionManageLink(link: string): string | unde
 export const disablePaystackSubscription = <P extends string = "/disable-subscription">(
   options: AnyPaystackOptions,
   path: P = "/disable-subscription" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionCode: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    status: string;
+  }
+> => {
   const subscriptionOptions = options.subscription;
   const useMiddlewares =
     subscriptionOptions?.enabled === true
@@ -1560,9 +1933,7 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
         let nextPaymentDate: string | undefined;
 
         try {
-          const raw = await paystack?.subscription?.fetch({
-            params: { path: { id_or_code: subscriptionCode } },
-          });
+          const raw = await paystack?.subscription?.fetch(subscriptionCode);
           const fetchRes =
             unwrapSdkResult<components["schemas"]["SubscriptionListResponseArray"]>(raw);
 
@@ -1576,9 +1947,7 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
 
         if (emailToken === undefined || emailToken === null || emailToken === "") {
           try {
-            const raw = await paystack?.subscription?.manageLink({
-              params: { path: { code: subscriptionCode } },
-            });
+            const raw = await paystack?.subscription?.manageLink(subscriptionCode);
             const linkRes = unwrapSdkResult<{ link: string }>(raw);
             const link = linkRes?.link;
             if (link !== undefined && link !== null && link !== "") {
@@ -1643,7 +2012,30 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
 export const enablePaystackSubscription = <P extends string = "/enable-subscription">(
   options: AnyPaystackOptions,
   path: P = "/enable-subscription" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionCode: z.ZodString;
+        emailToken: z.ZodOptional<z.ZodString>;
+        atPeriodEnd: z.ZodOptional<z.ZodBoolean>;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    status: string;
+  }
+> => {
   const subscriptionOptions = options.subscription;
   const useMiddlewares =
     subscriptionOptions?.enabled === true
@@ -1660,9 +2052,7 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
         let emailToken = ctx.body.emailToken;
         if (emailToken === undefined || emailToken === null || emailToken === "") {
           try {
-            const raw = await paystack?.subscription?.fetch({
-              params: { path: { id_or_code: subscriptionCode } },
-            });
+            const raw = await paystack?.subscription?.fetch(subscriptionCode);
             const fetchRes =
               unwrapSdkResult<components["schemas"]["SubscriptionListResponseArray"]>(raw);
             if (fetchRes !== undefined && fetchRes !== null) {
@@ -1675,9 +2065,7 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
 
         if (emailToken === undefined || emailToken === null || emailToken === "") {
           try {
-            const raw = await paystack?.subscription?.manageLink({
-              params: { path: { code: subscriptionCode } },
-            });
+            const raw = await paystack?.subscription?.manageLink(subscriptionCode);
             const linkRes = unwrapSdkResult<{ link: string }>(raw);
             const link = linkRes?.link;
             if (link !== undefined && link !== null && link !== "") {
@@ -1727,7 +2115,27 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
 export const getSubscriptionManageLink = <P extends string = "/subscription-manage-link">(
   options: AnyPaystackOptions,
   path: P = "/subscription-manage-link" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "GET";
+    query: z.ZodObject<
+      {
+        subscriptionCode: z.ZodString;
+      },
+      z.core.$strip
+    >;
+    use: (
+      | ((
+          getValue: (ctx: GenericEndpointContext) => string | string[],
+        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
+      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
+    )[];
+  },
+  {
+    link: string | null;
+  }
+> => {
   const manageLinkQuerySchema = z.object({
     subscriptionCode: z.string(),
   });
@@ -1753,9 +2161,7 @@ export const getSubscriptionManageLink = <P extends string = "/subscription-mana
 
     const paystack = getPaystackOps(options.paystackClient);
     try {
-      const raw = await paystack?.subscription?.manageLink({
-        params: { path: { code: subscriptionCode as string } },
-      });
+      const raw = await paystack?.subscription?.manageLink(subscriptionCode as string);
       const res = unwrapSdkResult<{ link: string }>(raw);
       return ctx.json({ link: res?.link || null });
     } catch (error: unknown) {
@@ -1782,7 +2188,46 @@ export const getSubscriptionManageLink = <P extends string = "/subscription-mana
 export const syncProducts = <P extends string = "/sync-products">(
   options: AnyPaystackOptions,
   path: P = "/sync-products" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    metadata: {
+      scope: "server";
+    };
+    disableBody: true;
+    use: ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<{
+      session: {
+        session: Record<string, unknown> & {
+          id: string;
+          createdAt: Date;
+          updatedAt: Date;
+          userId: string;
+          expiresAt: Date;
+          token: string;
+          ipAddress?: string | null | undefined;
+          userAgent?: string | null | undefined;
+        };
+        user: Record<string, unknown> & {
+          id: string;
+          createdAt: Date;
+          updatedAt: Date;
+          email: string;
+          emailVerified: boolean;
+          name: string;
+          image?: string | null | undefined;
+        };
+      };
+    }>)[];
+  },
+  | {
+      products: never[];
+    }
+  | {
+      status: string;
+      count: number;
+    }
+> => {
   return createAuthEndpoint(
     path,
     {
@@ -1861,7 +2306,20 @@ export const syncProducts = <P extends string = "/sync-products">(
 export const listProducts = <P extends string = "/list-products">(
   _options: AnyPaystackOptions,
   path: P = "/list-products" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "GET";
+    metadata: {
+      openapi: {
+        operationId: string;
+      };
+    };
+  },
+  {
+    products: PaystackProduct[];
+  }
+> => {
   return createAuthEndpoint(
     path,
     {
@@ -1885,7 +2343,43 @@ export const listProducts = <P extends string = "/list-products">(
 export const syncPlans = <P extends string = "/sync-plans">(
   options: AnyPaystackOptions,
   path: P = "/sync-plans" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    metadata: {
+      scope: "server";
+    };
+    disableBody: true;
+    use: ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<{
+      session: {
+        session: Record<string, unknown> & {
+          id: string;
+          createdAt: Date;
+          updatedAt: Date;
+          userId: string;
+          expiresAt: Date;
+          token: string;
+          ipAddress?: string | null | undefined;
+          userAgent?: string | null | undefined;
+        };
+        user: Record<string, unknown> & {
+          id: string;
+          createdAt: Date;
+          updatedAt: Date;
+          email: string;
+          emailVerified: boolean;
+          name: string;
+          image?: string | null | undefined;
+        };
+      };
+    }>)[];
+  },
+  {
+    status: string;
+    count: number;
+  }
+> => {
   return createAuthEndpoint(
     path,
     {
@@ -1956,7 +2450,41 @@ export const syncPlans = <P extends string = "/sync-plans">(
 export const listPlans = <P extends string = "/list-plans">(
   _options: AnyPaystackOptions,
   path: P = "/list-plans" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "GET";
+    metadata: {
+      scope: "server";
+    };
+    use: ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<{
+      session: {
+        session: Record<string, unknown> & {
+          id: string;
+          createdAt: Date;
+          updatedAt: Date;
+          userId: string;
+          expiresAt: Date;
+          token: string;
+          ipAddress?: string | null | undefined;
+          userAgent?: string | null | undefined;
+        };
+        user: Record<string, unknown> & {
+          id: string;
+          createdAt: Date;
+          updatedAt: Date;
+          email: string;
+          emailVerified: boolean;
+          name: string;
+          image?: string | null | undefined;
+        };
+      };
+    }>)[];
+  },
+  {
+    plans: PaystackPlan[];
+  }
+> => {
   return createAuthEndpoint(
     path,
     {
@@ -1984,7 +2512,21 @@ export const listPlans = <P extends string = "/list-plans">(
 export const getConfig = <P extends string = "/get-config">(
   options: AnyPaystackOptions,
   path: P = "/get-config" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "GET";
+    metadata: {
+      openapi: {
+        operationId: string;
+      };
+    };
+  },
+  {
+    plans: PaystackPlan[];
+    products: PaystackProduct[];
+  }
+> => {
   return createAuthEndpoint(
     path,
     {
@@ -2009,7 +2551,103 @@ export { PAYSTACK_ERROR_CODES };
 export const chargeRecurringSubscription = <P extends string = "/charge-recurring-subscription">(
   options: AnyPaystackOptions,
   path: P = "/charge-recurring-subscription" as P,
-) => {
+): StrictEndpoint<
+  P,
+  {
+    method: "POST";
+    body: z.ZodObject<
+      {
+        subscriptionId: z.ZodString;
+        amount: z.ZodOptional<z.ZodNumber>;
+      },
+      z.core.$strip
+    >;
+  },
+  {
+    status: string;
+    data: {
+      id: number;
+      domain: string;
+      status: string;
+      reference: string;
+      receipt_number: string | null;
+      amount: number;
+      message: string | null;
+      gateway_response: string;
+      channel: string;
+      currency: string;
+      ip_address: string | null;
+      metadata: (string | Record<string, never> | number) | null;
+      log: {
+        start_time: number;
+        time_spent: number;
+        attempts: number;
+        errors: number;
+        success: boolean;
+        mobile: boolean;
+        input: unknown[];
+        history: {
+          type: string;
+          message: string;
+          time: number;
+        }[];
+      } | null;
+      fees: number | null;
+      fees_split: unknown;
+      authorization: {
+        authorization_code?: string;
+        bin?: string | null;
+        last4?: string;
+        exp_month?: string;
+        exp_year?: string;
+        channel?: string;
+        card_type?: string;
+        bank?: string;
+        country_code?: string;
+        brand?: string;
+        reusable?: boolean;
+        signature?: string;
+        account_name?: string | null;
+        receiver_bank_account_number?: string | null;
+        receiver_bank?: string | null;
+      };
+      customer: {
+        id: number;
+        first_name: string | null;
+        last_name: string | null;
+        email: string;
+        customer_code: string;
+        phone: string | null;
+        metadata: Record<string, never> | null;
+        risk_action: string;
+        international_format_phone?: string | null;
+      };
+      plan: (string | Record<string, never>) | null;
+      split: Record<string, never> | null;
+      order_id: unknown;
+      paidAt: string | null;
+      createdAt: string;
+      requested_amount: number;
+      pos_transaction_data: unknown;
+      source: unknown;
+      fees_breakdown: unknown;
+      connect: unknown;
+      transaction_date: string;
+      plan_object: {
+        id?: number;
+        name?: string;
+        plan_code?: string;
+        description?: unknown;
+        amount?: number;
+        interval?: string;
+        send_invoices?: boolean;
+        send_sms?: boolean;
+        currency?: string;
+      };
+      subaccount: Record<string, never> | null;
+    };
+  }
+> => {
   return createAuthEndpoint(
     path,
     {

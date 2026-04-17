@@ -7,23 +7,20 @@ import { authClient } from "@/lib/auth-client";
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
     paystack: {
-      subscription: {
-        listLocal: vi.fn(),
-      },
-      getConfig: vi.fn(),
+      config: vi.fn(),
       listProducts: vi.fn(),
-      syncProducts: vi.fn(),
       listPlans: vi.fn(),
-      syncPlans: vi.fn(),
-      transaction: {
-        initialize: vi.fn(),
-      },
-      manageLink: vi.fn(),
+      getSubscriptionManageLink: vi.fn(),
+      initializeTransaction: vi.fn(),
       restore: vi.fn(),
       disable: vi.fn(),
     },
     organization: {
       list: vi.fn(),
+    },
+    subscription: {
+      list: vi.fn(),
+      billingPortal: vi.fn(),
     },
   },
 }));
@@ -78,10 +75,10 @@ describe("PaymentManager component", () => {
     vi.clearAllMocks();
 
     // Default mock returns
-    vi.mocked((authClient as any).paystack.getConfig).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
       data: { plans: [], products: [] },
     } as any);
-    vi.mocked((authClient as any).paystack.subscription.listLocal).mockResolvedValue({
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
       data: { subscriptions: [] },
     } as any);
     vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
@@ -95,12 +92,28 @@ describe("PaymentManager component", () => {
     });
   });
 
+  it("uses the stable Paystack client methods during the initial subscriptions load", async () => {
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect((authClient as any).paystack.config).toHaveBeenCalledTimes(1);
+      expect((authClient as any).subscription.list).toHaveBeenCalledWith({
+        query: { referenceId: undefined },
+      });
+      expect((authClient as any).paystack.listPlans).toHaveBeenCalledTimes(1);
+    });
+
+    expect((authClient as any).paystack).not.toHaveProperty("getConfig");
+    expect((authClient as any).paystack).not.toHaveProperty("transaction");
+    expect((authClient as any).paystack).not.toHaveProperty("subscription");
+    expect((authClient as any).subscription).not.toHaveProperty("listLocal");
+  });
+
   it("should render the native products section", async () => {
     render(<PaymentManager activeTab="one-time" />);
 
     await waitFor(() => {
       expect(screen.getByText("Paystack->DB Synced Products")).toBeInTheDocument();
-      expect(screen.getByText("Sync Now")).toBeInTheDocument();
     });
   });
 
@@ -135,28 +148,6 @@ describe("PaymentManager component", () => {
     });
   });
 
-  it("should call syncProducts when Sync Now is clicked", async () => {
-    vi.mocked((authClient as any).paystack.syncProducts).mockResolvedValue({
-      data: { status: "success", count: 5 },
-    } as any);
-    vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
-      data: { products: [] },
-    } as any);
-    window.alert = vi.fn();
-
-    render(<PaymentManager activeTab="one-time" />);
-
-    await waitFor(() => {
-      const syncButton = screen.getByText("Sync Now");
-      fireEvent.click(syncButton);
-    });
-
-    await waitFor(() => {
-      expect((authClient as any).paystack.syncProducts).toHaveBeenCalled();
-      expect(window.alert).toHaveBeenCalledWith("Successfully synced 5 products from Paystack.");
-    });
-  });
-
   it("should handle product purchase", async () => {
     const mockProducts = [
       {
@@ -171,7 +162,7 @@ describe("PaymentManager component", () => {
     vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
       data: { products: mockProducts },
     } as any);
-    vi.mocked((authClient as any).paystack.transaction.initialize).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
       data: { url: "https://paystack.com/pay/mock" },
     } as any);
 
@@ -186,7 +177,7 @@ describe("PaymentManager component", () => {
     });
 
     await waitFor(() => {
-      expect((authClient as any).paystack.transaction.initialize).toHaveBeenCalledWith(
+      expect((authClient as any).paystack.initializeTransaction).toHaveBeenCalledWith(
         expect.objectContaining({
           product: "Product A",
           amount: 1000,
@@ -203,7 +194,6 @@ describe("PaymentManager component", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Paystack->DB Synced Plans")).toBeInTheDocument();
-      expect(screen.getByText("Sync Native Plans")).toBeInTheDocument();
     });
   });
 
@@ -227,35 +217,13 @@ describe("PaymentManager component", () => {
     });
   });
 
-  it("should call syncPlans when Sync Native Plans is clicked", async () => {
-    vi.mocked((authClient as any).paystack.syncPlans).mockResolvedValue({
-      data: { status: "success", count: 3 },
-    } as any);
-    vi.mocked((authClient as any).paystack.listPlans).mockResolvedValue({
-      data: { plans: [] },
-    } as any);
-    window.alert = vi.fn();
-
-    render(<PaymentManager activeTab="subscriptions" />);
-
-    await waitFor(() => {
-      const syncButton = screen.getByText("Sync Native Plans");
-      fireEvent.click(syncButton);
-    });
-
-    await waitFor(() => {
-      expect((authClient as any).paystack.syncPlans).toHaveBeenCalled();
-      expect(window.alert).toHaveBeenCalledWith("Successfully synced 3 plans from Paystack.");
-    });
-  });
-
   it("should pass quantity when subscribing for an organization", async () => {
     const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
     vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
-    vi.mocked((authClient as any).paystack.getConfig).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
       data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
     } as any);
-    vi.mocked((authClient as any).paystack.transaction.initialize).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
       data: { url: "https://paystack.com/pay/mock" },
     } as any);
 
@@ -282,11 +250,11 @@ describe("PaymentManager component", () => {
     }
 
     // Click subscribe
-    const subscribeButton = screen.getByText("Subscribe Now");
+    const subscribeButton = screen.getAllByText("Subscribe Now")[0];
     fireEvent.click(subscribeButton);
 
     await waitFor(() => {
-      expect((authClient as any).paystack.transaction.initialize).toHaveBeenCalledWith(
+      expect((authClient as any).paystack.initializeTransaction).toHaveBeenCalledWith(
         expect.objectContaining({
           plan: "Starter",
           referenceId: "org_123",
@@ -299,7 +267,7 @@ describe("PaymentManager component", () => {
   it("should update displayed price when quantity changes", async () => {
     const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
     vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
-    vi.mocked((authClient as any).paystack.getConfig).mockResolvedValue({
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
       data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
     } as any);
 
@@ -325,6 +293,30 @@ describe("PaymentManager component", () => {
     await waitFor(() => {
       expect(screen.getByText("₦100.00")).toBeInTheDocument();
       expect(screen.getByText(/for 10 seats/)).toBeInTheDocument();
+    });
+  });
+
+  it("reloads subscriptions with the selected organization reference", async () => {
+    const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Org")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByTestId("billing-target-select"), {
+      target: { value: "org_123" },
+    });
+
+    await waitFor(() => {
+      expect((authClient as any).subscription.list).toHaveBeenLastCalledWith({
+        query: { referenceId: "org_123" },
+      });
     });
   });
 });

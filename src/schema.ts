@@ -3,7 +3,7 @@ import { mergeSchema } from "better-auth/db";
 
 import type { PaystackOptions } from "./types";
 
-export const transactions = {
+export const transactions: BetterAuthPluginDBSchema = {
   paystackTransaction: {
     fields: {
       reference: {
@@ -61,7 +61,7 @@ export const transactions = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const subscriptions = {
+export const subscriptions: BetterAuthPluginDBSchema = {
   subscription: {
     fields: {
       plan: {
@@ -138,7 +138,7 @@ export const subscriptions = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const user = {
+export const user: BetterAuthPluginDBSchema = {
   user: {
     fields: {
       paystackCustomerCode: {
@@ -150,7 +150,7 @@ export const user = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const organization = {
+export const organization: BetterAuthPluginDBSchema = {
   organization: {
     fields: {
       paystackCustomerCode: {
@@ -166,7 +166,7 @@ export const organization = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const products = {
+export const products: BetterAuthPluginDBSchema = {
   paystackProduct: {
     fields: {
       name: {
@@ -221,7 +221,7 @@ export const products = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const plans = {
+export const plans: BetterAuthPluginDBSchema = {
   paystackPlan: {
     fields: {
       name: {
@@ -270,7 +270,7 @@ export const plans = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const getSchema = (options: PaystackOptions) => {
+export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema => {
   let baseSchema: BetterAuthPluginDBSchema;
 
   if (options.subscription?.enabled === true) {
@@ -303,14 +303,9 @@ export const getSchema = (options: PaystackOptions) => {
     options.subscription?.enabled !== true &&
     "subscription" in options.schema
   ) {
-    const { subscription: _subscription, ...restSchema } = options.schema as Record<
-      string,
-      unknown
-    >;
-    // oxlint-disable-next-line @typescript-eslint/no-explicit-any
-    return mergeSchema(baseSchema, restSchema as any);
+    const { subscription: _subscription, ...restSchema } = options.schema;
+    return mergeSchema(baseSchema, restSchema);
   }
 
-  // oxlint-disable-next-line @typescript-eslint/no-explicit-any
-  return mergeSchema(baseSchema, options.schema as any);
+  return mergeSchema(baseSchema, options.schema);
 };

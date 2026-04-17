@@ -6,6 +6,13 @@
 
 A TypeScript library providing **Paystack** integration for **Better Auth**. Supports native/local subscriptions, one-time payments, organization billing, and secure webhooks with automated limit enforcement.
 
+## Research Sources
+
+For best practices and reference implementations, research:
+
+- `better-auth better-auth main packages-stripe/`: Stripe integration reference.
+- `docs/better-auth/concepts`: Core Better Auth concepts and patterns.
+
 ## Tech Stack
 
 - **Core**: TypeScript, pnpm, tsdown, vitest, Oxlint
@@ -21,13 +28,6 @@ A TypeScript library providing **Paystack** integration for **Better Auth**. Sup
   - `middleware.ts`, `limits.ts`, `utils.ts`: Core helpers
 - `examples/`: Next.js and TanStack Start reference implementations
 - `test/`: Unit and integration test suite
-
-## Research Sources
-
-For best practices and reference implementations, research:
-
-- `better-auth better-auth main packages-stripe/`: Stripe integration reference.
-- `docs/better-auth/concepts`: Core Better Auth concepts and patterns.
 
 ## Key Commands (vp)
 
@@ -71,10 +71,24 @@ This project uses `vite-plus`.
 
 skills:
 
+- task: "Using Vite+ (vp) for development, building, testing, or CLI operations"
+  load: ".agents/skills/vite-plus/SKILL.md"
 - task: "Working on TanStack Start server functions, middleware, or deployment in the tanstack example"
-  load: "examples/tanstack/node_modules/@tanstack/react-start/skills/react-start/SKILL.md"
+  load: ".agents/skills/react-start/SKILL.md"
+- task: "Managing server function logic: validation, context (getRequest, setResponseHeader), and error handling"
+  load: ".agents/skills/server-functions/SKILL.md"
+- task: "Managing Start middleware: context passing, global vs per-function middleware"
+  load: ".agents/skills/middleware/SKILL.md"
 - task: "Managing TanStack Router routes, search params, and type-safety"
-  # To load this skill, run: vp dlx @tanstack/intent@latest list | grep react-router
+  load: ".agents/skills/router-core/SKILL.md"
+- task: "Configuring TanStack Router plugin and build-time generation"
+  load: ".agents/skills/router-plugin/SKILL.md"
+- task: "Using virtual file routes for programmatic route definition"
+  load: ".agents/skills/virtual-file-routes/SKILL.md"
+- task: "Configuring TanStack DevTools Vite plugin or source inspection"
+  load: ".agents/skills/devtools-vite-plugin/SKILL.md"
+- task: "Setting up TanStack DevTools dashboard or custom panels"
+  load: ".agents/skills/devtools-app-setup/SKILL.md"
 - task: "Building type-safe forms with TanStack Form"
   # To load this skill, run: vp dlx @tanstack/intent@latest list | grep react-form
 - task: "Data fetching and caching with TanStack Query" # To load this skill, run: vp dlx @tanstack/intent@latest list | grep react-query

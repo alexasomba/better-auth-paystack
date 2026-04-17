@@ -1,38 +1,37 @@
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { betterAuth } from "better-auth";
+import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { paystack } from "../src/index";
-import { paystackClient } from "../src/client";
-import type { PaystackOptions, PaystackClientLike } from "../src/types";
+import { setCookieToHeader } from "better-auth/cookies";
 
-// Mock database adapter
-const memory: any = {
-  create: vi.fn(),
-  findOne: vi.fn(),
-  findMany: vi.fn(),
-  update: vi.fn(),
-  delete: vi.fn(),
-};
+import { paystack } from "../src/index.ts";
+import { paystackClient } from "../src/client.ts";
+import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
-// Helper to extract cookies from a response and set them to a header object
-const setCookieToHeader = (headers: Headers) => (res: any) => {
-  const setCookie = res.response.headers.get("set-cookie");
-  if (setCookie !== null) {
-    headers.set("cookie", setCookie);
-  }
-};
+describe("paystack regressions", () => {
+  const data: Record<string, unknown[]> = {
+    user: [],
+    session: [],
+    verification: [],
+    account: [],
+    subscription: [],
+    paystackTransaction: [],
+  };
+  const memory = memoryAdapter(data);
 
-describe("paystack", () => {
   beforeEach(() => {
+    data.user = [];
+    data.session = [];
+    data.verification = [];
+    data.account = [];
+    data.subscription = [];
+    data.paystackTransaction = [];
     vi.clearAllMocks();
   });
 
-  // ... (keeping most of the file as is, but focusing on the fixes)
-
-  // FIXING FAILURE 1 (Line 373)
-  it("should list subscriptions for user", async () => {
+  it("lists subscriptions for the signed-in user", async () => {
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [],
@@ -52,9 +51,9 @@ describe("paystack", () => {
       baseURL: "http://localhost:3000",
       fetchOptions: {
         customFetchImpl: async (url, init) => {
-          const merged = new Headers(init?.headers ?? {});
-          if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-          return auth.handler(new Request(url, { ...init, headers: merged }));
+          const headers = new Headers(init?.headers ?? {});
+          if (!headers.has("origin")) headers.set("origin", "http://localhost:3000");
+          return auth.handler(new Request(url, { ...init, headers }));
         },
       },
       plugins: [paystackClient({ subscription: true })],
@@ -66,51 +65,58 @@ describe("paystack", () => {
       name: "List Sub User",
     };
 
-    const _signUpRes = await authClient.signUp.email(testUser, { throw: true });
-
+    const signUp = await authClient.signUp.email(testUser, { throw: true });
     const headers = new Headers();
     await authClient.signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
+    headers.set("origin", "http://localhost:3000");
 
-    // Manually create a subscription in DB
-    const _ctx = await auth.$context;
-    memory.findMany.mockResolvedValue([
-      {
-        plan: "starter",
-        paystackSubscriptionCode: "SUB_list_123",
-      },
-    ]);
-
-    const res = await (authClient as any).paystack.subscription.list(
-      {},
-      {
-        headers,
-      },
-    );
-
-    expect(res.data?.subscriptions).toHaveLength(1);
-    expect(res.data?.subscriptions[0].paystackSubscriptionCode).toBe("SUB_list_123");
-  });
-
-  // FIXING FAILURE 2 (Line 438)
-  it("should get billing portal link", async () => {
-    const paystackSdk = {
-      subscription: {
-        manageLink: vi.fn(),
-      },
-    };
-    (paystackSdk.subscription.manageLink as any).mockResolvedValue({
+    const ctx = await auth.$context;
+    await (ctx.adapter as any).create({
+      model: "subscription",
       data: {
-        link: "https://paystack.com/manage/SUB_123/token",
+        userId: signUp.user.id,
+        referenceId: signUp.user.id,
+        plan: "starter",
+        status: "active",
+        paystackSubscriptionCode: "SUB_list_123",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
-      status: true,
-      message: "Link generated",
     });
 
+    const response = await auth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/list-subscriptions", {
+        method: "GET",
+        headers,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.subscriptions).toHaveLength(1);
+    expect(payload.subscriptions[0].paystackSubscriptionCode).toBe("SUB_list_123");
+  });
+
+  it("gets the billing portal link for a subscription", async () => {
+    const paystackSdk = {
+      subscription: {
+        manageLink: vi.fn().mockResolvedValue({
+          data: {
+            status: true,
+            message: "Link generated",
+            data: {
+              link: "https://paystack.com/manage/SUB_123/token",
+            },
+          },
+        }),
+      },
+    } as unknown as PaystackClientLike;
+
     const options = {
-      paystackClient: paystackSdk as unknown as PaystackClientLike,
+      paystackClient: paystackSdk,
       subscription: {
         enabled: true,
         plans: [],
@@ -130,9 +136,9 @@ describe("paystack", () => {
       baseURL: "http://localhost:3000",
       fetchOptions: {
         customFetchImpl: async (url, init) => {
-          const merged = new Headers(init?.headers ?? {});
-          if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
-          return auth.handler(new Request(url, { ...init, headers: merged }));
+          const headers = new Headers(init?.headers ?? {});
+          if (!headers.has("origin")) headers.set("origin", "http://localhost:3000");
+          return auth.handler(new Request(url, { ...init, headers }));
         },
       },
       plugins: [paystackClient({ subscription: true })],
@@ -150,16 +156,20 @@ describe("paystack", () => {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
+    headers.set("origin", "http://localhost:3000");
 
-    const res = await (authClient as any).paystack.subscription.billingPortal(
-      {
-        subscriptionCode: "SUB_123",
-      },
-      {
-        headers,
-      },
+    const response = await auth.handler(
+      new Request(
+        "http://localhost:3000/api/auth/paystack/subscription-manage-link?subscriptionCode=SUB_123",
+        {
+          method: "GET",
+          headers,
+        },
+      ),
     );
 
-    expect(res.data?.link).toBe("https://paystack.com/manage/SUB_123/token");
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.link).toBe("https://paystack.com/manage/SUB_123/token");
   });
 });

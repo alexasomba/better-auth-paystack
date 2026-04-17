@@ -8,7 +8,8 @@ import { createAuthClient } from "better-auth/client";
 import { organizationClient } from "better-auth/client/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
 
-import { paystack } from "../src/index";
+import { paystack } from "../src/index.ts";
+import { paystackClient as createPaystackClient } from "../src/client.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Seat-Based Billing & Scheduled Changes", () => {
@@ -27,10 +28,10 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       update: vi.fn(),
     },
   };
-  const paystackClient = paystackSdk as any;
+  const sdkClient = paystackSdk as any;
 
   const options = {
-    paystackClient,
+    paystackClient: sdkClient,
     secretKey: "whsec_test",
     webhook: {
       secret: "whsec_test",
@@ -72,7 +73,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   const authClient = createAuthClient({
     baseURL: "http://localhost:3000",
-    plugins: [organizationClient(), paystackClient({ subscription: true })],
+    plugins: [organizationClient(), createPaystackClient({ subscription: true })],
     fetchOptions: {
       customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
     },
@@ -433,10 +434,8 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     );
 
     expect((paystackSdk as any).subscription.update).toHaveBeenCalledWith(
+      "SUB_abc123",
       expect.objectContaining({
-        params: expect.objectContaining({
-          path: { code: "SUB_abc123" },
-        }),
         body: expect.objectContaining({
           amount: 250000,
         }),

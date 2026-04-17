@@ -7,10 +7,12 @@ export const Route = createFileRoute("/billing/paystack/callback")({
   component: CallbackPage,
 });
 
-function CallbackPage() {
+export function CallbackPage() {
   const router = useRouter();
   const searchParams = Route.useSearch();
-  const reference = (searchParams as any).reference as string | undefined;
+  const reference =
+    ((searchParams as any).reference as string | undefined) ??
+    ((searchParams as any).trxref as string | undefined);
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [error, setError] = useState("");
   const processedRef = useRef(false);
@@ -21,7 +23,37 @@ function CallbackPage() {
 
     const verify = async () => {
       try {
-        await (authClient as any).paystack.transaction.verify({ reference });
+        let result:
+          | {
+              data?: { status?: string | null } | null;
+              error?: { message?: string | null } | null;
+            }
+          | undefined;
+
+        for (let attempt = 0; attempt < 4; attempt++) {
+          result = await (authClient as any).paystack.verifyTransaction({ reference });
+
+          const message = result?.error?.message ?? "";
+          const shouldRetry = message.includes("Transaction reference not found") && attempt < 3;
+
+          if (shouldRetry) {
+            await new Promise((resolve) => {
+              setTimeout(resolve, 750);
+            });
+            continue;
+          }
+
+          break;
+        }
+
+        if (result?.error !== null && result?.error !== undefined) {
+          throw new Error(result.error.message ?? "Verification failed");
+        }
+
+        if (result?.data?.status !== "success") {
+          throw new Error("Verification did not complete successfully");
+        }
+
         setStatus("success");
         setTimeout(() => {
           void router.navigate({ to: "/dashboard" });

@@ -88,8 +88,6 @@ export interface PaystackPlan {
   freeTrial?: {
     days?: number;
     onTrialStart?: (subscription: Subscription) => Promise<void>;
-    onTrialEnd?: (data: { subscription: Subscription }) => Promise<void>;
-    onTrialExpired?: (subscription: Subscription) => Promise<void>;
   };
   limits?: Record<string, unknown>;
   features?: string[];
@@ -177,10 +175,6 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
      * Webhook secret for signature verification
      */
     secret?: string;
-    /**
-     * Disable signature verification (not recommended for production)
-     */
-    disableVerification?: boolean;
   };
   /**
    * Subscription configuration
@@ -223,7 +217,13 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
   /**
    * Custom database schema / model names
    */
-  schema?: Record<string, string>;
+  schema?: Record<
+    string,
+    {
+      modelName?: string;
+      fields?: Record<string, string>;
+    }
+  >;
 }
 
 export interface Subscription {
@@ -251,6 +251,21 @@ export interface Subscription {
   updatedAt: Date;
 }
 
+export interface ChargeRecurringSubscriptionInput {
+  subscriptionId: string;
+  amount?: number;
+}
+
+export interface ChargeRecurringSubscriptionResult {
+  status: "success" | "failed";
+  data: PaystackTransactionResponse;
+}
+
+export interface PaystackSyncResult {
+  status: "success";
+  count: number;
+}
+
 export type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
 
 /**
@@ -261,9 +276,10 @@ export interface PaystackClientLike {
     initialize: (init: {
       body: Record<string, unknown>;
     }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    verify: (init: {
-      params: { path: { reference: string } };
-    }) => Promise<PaystackResponse<components["schemas"]["VerifyResponse"]["data"]>>;
+    verify: (
+      reference: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<components["schemas"]["VerifyResponse"]["data"]>>;
     chargeAuthorization: (init: {
       body: Record<string, unknown>;
     }) => Promise<PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]>>;
@@ -274,15 +290,16 @@ export interface PaystackClientLike {
     }) => Promise<
       PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
     >;
-    update: (init: {
-      params: { path: { email_or_code: string } };
-      body: Record<string, unknown>;
-    }) => Promise<
+    update: (
+      email_or_code: string,
+      init: { body: Record<string, unknown> },
+    ) => Promise<
       PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
     >;
-    fetch: (init: {
-      params: { path: { email_or_code: string } };
-    }) => Promise<
+    fetch: (
+      email_or_code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<
       PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
     >;
   };
@@ -290,30 +307,30 @@ export interface PaystackClientLike {
     create: (init: {
       body: Record<string, unknown>;
     }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    update: (init: {
-      params: { path: { code: string } };
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    fetch: (init: {
-      params: { path: { id_or_code: string } };
-    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
+    update: (
+      code: string,
+      init: { body: Record<string, unknown> },
+    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
+    fetch: (
+      id_or_code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
     disable: (init: {
       body: { code: string; token: string };
     }) => Promise<PaystackResponse<Record<string, unknown>>>;
     enable: (init: {
       body: { code: string; token: string };
     }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    manageLink: (init: {
-      params: { path: { code: string } };
-    }) => Promise<PaystackResponse<{ link: string }>>;
-    listLocal?: (init: {
-      query?: Record<string, unknown>;
-    }) => Promise<PaystackResponse<{ subscriptions: Record<string, unknown>[] }>>;
+    manageLink: (
+      code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<{ link: string }>>;
   };
   product?: {
-    fetch: (init: {
-      params: { path: { id_or_code: string } };
-    }) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"]>>;
+    fetch: (
+      id_or_code: string,
+      init?: Record<string, unknown>,
+    ) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"]>>;
     list: (init?: {
       query?: Record<string, unknown>;
     }) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"][]>>;

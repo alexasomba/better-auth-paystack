@@ -1,3 +1,4 @@
-declare const _default: import("vite-plus").ViteUserConfig;
-export default _default;
+import { type UserConfig } from "vite-plus";
+declare const config: UserConfig;
+export default config;
 //# sourceMappingURL=vite.config.d.ts.map

@@ -68,7 +68,7 @@ export const auth = betterAuth({
   plugins: [
     paystack({
       paystackClient,
-      paystackWebhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET!,
+      webhook: { secret: process.env.PAYSTACK_WEBHOOK_SECRET! },
       createCustomerOnSignUp: true,
       subscription: {
         enabled: true,
@@ -111,6 +111,60 @@ export const client = createAuthClient({
 ```bash
 npx better-auth migrate
 ```
+
+---
+
+## Migration Guide
+
+Version `2.0.0` contains a security-focused breaking change.
+
+- Removed public/client operator actions:
+  - `authClient.paystack.syncProducts()`
+  - `authClient.paystack.syncPlans()`
+  - `authClient.paystack.chargeRecurringSubscription(...)`
+- Removed public Better Auth endpoints for:
+  - `/paystack/sync-products`
+  - `/paystack/sync-plans`
+  - `/paystack/charge-recurring`
+- Added trusted server operations:
+  - `chargeSubscriptionRenewal`
+  - `syncPaystackProducts`
+  - `syncPaystackPlans`
+
+### Old
+
+```ts
+await authClient.paystack.syncProducts();
+await authClient.paystack.syncPlans();
+await authClient.paystack.chargeRecurringSubscription({
+  subscriptionId: "sub_123",
+});
+```
+
+### New
+
+```ts
+import {
+  chargeSubscriptionRenewal,
+  syncPaystackPlans,
+  syncPaystackProducts,
+} from "@alexasomba/better-auth-paystack";
+
+const ctx = { context: await auth.$context } as any;
+const paystackOptions = {
+  secretKey: process.env.PAYSTACK_SECRET_KEY!,
+  webhook: { secret: process.env.PAYSTACK_WEBHOOK_SECRET! },
+  paystackClient,
+};
+
+await syncPaystackProducts(ctx, paystackOptions);
+await syncPaystackPlans(ctx, paystackOptions);
+await chargeSubscriptionRenewal(ctx, paystackOptions, {
+  subscriptionId: "sub_123",
+});
+```
+
+These operations are intentionally server-only. Do not expose them through browser-triggered auth client calls.
 
 ---
 
@@ -251,9 +305,7 @@ React to billing events on the server by providing callbacks in your configurati
 
 - `onSubscriptionComplete`: Called after successful transaction verification (Native or Local).
 - `onSubscriptionCreated`: Called when a subscription record is first initialized in the DB.
-- `onSubscriptionUpdate`: Called whenever a subscription's status or period is updated.
 - `onSubscriptionCancel`: Called when a user or organization cancels their subscription.
-- `onSubscriptionDelete`: Called when a subscription record is deleted.
 
 #### Customer Hooks (`top-level` or `organization.*`)
 
@@ -263,11 +315,32 @@ React to billing events on the server by providing callbacks in your configurati
 #### Trial Hooks (`subscription.plans[].freeTrial.*`)
 
 - `onTrialStart`: Called when a new trial period begins.
-- `onTrialEnd`: Called when a trial period ends naturally or via manual upgrade.
 
 #### Global Hook
 
 - `onEvent`: Receives every webhook event payload sent from Paystack for custom processing.
+
+### Trusted Server Operations
+
+Recurring renewals and Paystack catalog sync are intentionally not exposed through the browser auth client.
+Invoke them from trusted backend code only:
+
+```ts
+import {
+  chargeSubscriptionRenewal,
+  syncPaystackPlans,
+  syncPaystackProducts,
+} from "@alexasomba/better-auth-paystack";
+
+const ctx = { context: await auth.$context } as any;
+
+await chargeSubscriptionRenewal(ctx, paystackOptions, {
+  subscriptionId: "sub_123",
+});
+
+await syncPaystackProducts(ctx, paystackOptions);
+await syncPaystackPlans(ctx, paystackOptions);
+```
 
 ### Authorization & Security
 
@@ -540,11 +613,11 @@ Future features planned for upcoming versions:
 ### v1.1.0 - Manual Recurring Subscriptions (Available Now)
 
 - [x] **Stored Authorization Codes**: Securely store Paystack authorization codes from verified transactions.
-- [x] **Charge Authorization Endpoint**: Server-side endpoint (`/charge-recurring`) to charge stored cards for renewals.
+- [x] **Trusted Renewal Operation**: Server-side helper to charge stored cards for renewals.
 - [ ] **Card Management UI**: Let users view/delete saved payment methods (masked card data only) - _Upcoming_
 - [ ] **Renewal Scheduler Integration**: Documentation for integrating with Cloudflare Workers Cron, Vercel Cron, etc. - _Upcoming_
 
-> **Note**: For local-managed subscriptions (no `planCode`), the plugin now automatically captures and stores the `authorization_code`. You can trigger renewals using `authClient.paystack.chargeRecurringSubscription({ subscriptionId })`.
+> **Note**: For local-managed subscriptions (no `planCode`), the plugin automatically captures and stores the `authorization_code`. Trigger renewals from trusted backend code with `chargeSubscriptionRenewal(...)`.
 
 ### Future Considerations
 

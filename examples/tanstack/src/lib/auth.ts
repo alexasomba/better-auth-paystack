@@ -113,16 +113,6 @@ export const auth = betterAuth({
                       await Promise.resolve();
                       console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
                     },
-                    onTrialEnd: async ({ subscription }: { subscription: Subscription }) => {
-                      await Promise.resolve();
-                      console.log(`✅ Trial ended, now active: ${subscription.referenceId}`);
-                    },
-                    onTrialExpired: async (subscription: Subscription) => {
-                      await Promise.resolve();
-                      console.log(
-                        `⚠️ Trial expired without conversion: ${subscription.referenceId}`,
-                      );
-                    },
                   },
                   description: "Perfect for testing the waters",
                   features: ["Basic analytics", "Up to 5 projects", "Community support"],
@@ -166,16 +156,6 @@ export const auth = betterAuth({
                     onTrialStart: async (subscription: Subscription) => {
                       await Promise.resolve();
                       console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
-                    },
-                    onTrialEnd: async ({ subscription }: { subscription: Subscription }) => {
-                      await Promise.resolve();
-                      console.log(`✅ Trial ended, now active: ${subscription.referenceId}`);
-                    },
-                    onTrialExpired: async (subscription: Subscription) => {
-                      await Promise.resolve();
-                      console.log(
-                        `⚠️ Trial expired without conversion: ${subscription.referenceId}`,
-                      );
                     },
                   },
                   description: "Best for established businesses (Seat-based)",

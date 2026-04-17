@@ -1,7 +1,0 @@
-VITE+ - The Unified Toolchain for the Web
-
-[1m[31merror:[39m[0m Formatting issues found
-src/components/dashboard/OrganizationManager.tsx (37ms)
-src/components/dashboard/TransactionsTable.tsx (8ms)
-
-Found formatting issues in 2 files (2074ms, 8 threads). Run `vp check --fix` to fix them.

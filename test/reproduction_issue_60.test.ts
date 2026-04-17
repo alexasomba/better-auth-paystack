@@ -4,7 +4,7 @@ import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src";
+import { paystack } from "../src/index.ts";
 import type { PaystackClientLike } from "../src/types";
 
 describe("Issue #60 Reproduction", () => {
