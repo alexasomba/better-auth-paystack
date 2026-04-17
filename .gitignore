@@ -18,8 +18,10 @@ tsdown.config.js
 tsdown.config.d.ts
 tsdown.config.d.ts.map
 vitest.config.js
-vitest.config.d.ts
 vitest.config.d.ts.map
+vite.config.js
+vite.config.d.ts
+vite.config.d.ts.map
 
 # Compiled test files
 test/**/*.js

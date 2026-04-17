@@ -73,8 +73,7 @@
     "lint": "vp lint src",
     "lint:package": "publint run --strict",
     "lint:types": "attw --profile esm-only --pack .",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepare": "husky"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@alexasomba/paystack-node": "catalog:",
@@ -86,6 +85,8 @@
     "@arethetypeswrong/cli": "catalog:",
     "@better-auth/core": "catalog:",
     "@better-fetch/fetch": "catalog:",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@eslint/compat": "catalog:",
     "@eslint/js": "catalog:",
     "@types/node": "catalog:",
@@ -97,8 +98,6 @@
     "eslint-plugin-promise": "catalog:",
     "eslint-plugin-react-hooks": "catalog:",
     "eslint-plugin-unicorn": "catalog:",
-    "husky": "catalog:",
-    "lint-staged": "catalog:",
     "publint": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
@@ -111,13 +110,8 @@
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "catalog:"
   },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "vp check"
-    ]
-  },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0"
   },
   "packageManager": "pnpm@10.33.0"
 }

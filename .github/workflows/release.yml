@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
 
       - uses: pnpm/action-setup@v4
         with: {}
@@ -63,7 +63,7 @@ jobs:
       - name: Configure npm registry (npmjs)
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish to npmjs
@@ -75,7 +75,7 @@ jobs:
       - name: Configure npm registry (GitHub Packages)
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           registry-url: "https://npm.pkg.github.com"
           scope: "@alexasomba"
 

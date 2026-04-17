@@ -1,6 +1,9 @@
 import { defineConfig, type UserConfig } from "vite-plus";
 
 const config: UserConfig = defineConfig({
+  staged: {
+    "*.{ts,tsx}": "vp check --fix",
+  },
   fmt: {},
   pack: {
     tsconfig: "./tsconfig.build.json",
