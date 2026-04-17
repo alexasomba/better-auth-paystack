@@ -175,6 +175,16 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
      * Webhook secret for signature verification
      */
     secret?: string;
+    /**
+     * Whether to verify the request origin IP address
+     * @default false
+     */
+    verifyIP?: boolean;
+    /**
+     * List of trusted IP addresses for webhooks.
+     * Defaults to official Paystack IPs if verifyIP is true and this is empty.
+     */
+    trustedIPs?: string[];
   };
   /**
    * Subscription configuration
