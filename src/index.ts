@@ -40,6 +40,14 @@ import type {
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 
+declare module "@better-auth/core" {
+  interface BetterAuthPluginRegistry<AuthOptions, Options> {
+    paystack: {
+      creator: typeof paystack;
+    };
+  }
+}
+
 const INTERNAL_ERROR_CODES = defineErrorCodes(
   Object.fromEntries(
     Object.entries(PAYSTACK_ERROR_CODES).map(([key, value]) => [
@@ -62,25 +70,40 @@ export const paystack = <
   return {
     id: "paystack",
     endpoints: {
-      initializeTransaction: initializeTransaction(routeOptions),
-      verifyTransaction: verifyTransaction(routeOptions),
-      listSubscriptions: listSubscriptions(routeOptions),
-      webhook: paystackWebhook(routeOptions),
-      listTransactions: listTransactions(routeOptions),
-      getConfig: getConfig(routeOptions),
-      disableSubscription: disablePaystackSubscription(routeOptions),
-      enableSubscription: enablePaystackSubscription(routeOptions),
-      getSubscriptionManageLink: getSubscriptionManageLink(routeOptions),
-      subscriptionManageLink: getSubscriptionManageLink(routeOptions, "/subscription/manage-link"), // Historical alias
-      createSubscription: createSubscription(routeOptions),
-      upgradeSubscription: upgradeSubscription(routeOptions),
-      cancelSubscription: cancelSubscription(routeOptions),
-      restoreSubscription: restoreSubscription(routeOptions),
-      chargeRecurringSubscription: chargeRecurringSubscription(routeOptions),
-      syncProducts: syncProducts(routeOptions),
-      listProducts: listProducts(routeOptions),
-      syncPlans: syncPlans(routeOptions),
-      listPlans: listPlans(routeOptions),
+      initializeTransaction: initializeTransaction(
+        routeOptions,
+        "/paystack/initialize-transaction",
+      ),
+      verifyTransaction: verifyTransaction(routeOptions, "/paystack/verify-transaction"),
+      listSubscriptions: listSubscriptions(routeOptions, "/paystack/list-subscriptions"),
+      paystackWebhook: paystackWebhook(routeOptions, "/paystack/webhook"),
+      listTransactions: listTransactions(routeOptions, "/paystack/list-transactions"),
+      getConfig: getConfig(routeOptions, "/paystack/config"),
+      disableSubscription: disablePaystackSubscription(
+        routeOptions,
+        "/paystack/disable-subscription",
+      ),
+      enableSubscription: enablePaystackSubscription(routeOptions, "/paystack/enable-subscription"),
+      getSubscriptionManageLink: getSubscriptionManageLink(
+        routeOptions,
+        "/paystack/subscription-manage-link",
+      ),
+      subscriptionManageLink: getSubscriptionManageLink(
+        routeOptions,
+        "/paystack/subscription/manage-link",
+      ),
+      createSubscription: createSubscription(routeOptions, "/paystack/create-subscription"),
+      upgradeSubscription: upgradeSubscription(routeOptions, "/paystack/upgrade-subscription"),
+      cancelSubscription: cancelSubscription(routeOptions, "/paystack/cancel-subscription"),
+      restoreSubscription: restoreSubscription(routeOptions, "/paystack/restore-subscription"),
+      chargeRecurringSubscription: chargeRecurringSubscription(
+        routeOptions,
+        "/paystack/charge-recurring",
+      ),
+      syncProducts: syncProducts(routeOptions, "/paystack/sync-products"),
+      listProducts: listProducts(routeOptions, "/paystack/list-products"),
+      syncPlans: syncPlans(routeOptions, "/paystack/sync-plans"),
+      listPlans: listPlans(routeOptions, "/paystack/list-plans"),
     },
     schema: getSchema(options),
     init: (ctx: AuthContext) => {
@@ -367,6 +390,7 @@ export const paystack = <
       };
     },
     $ERROR_CODES: INTERNAL_ERROR_CODES,
+    options: options as NoInfer<O>,
   } satisfies BetterAuthPlugin;
 };
 

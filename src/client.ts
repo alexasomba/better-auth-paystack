@@ -1,6 +1,13 @@
 import type { BetterAuthClientPlugin } from "better-auth";
 import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
-import type { PaystackPlan, PaystackProduct, PaystackTransaction, Subscription } from "./types";
+import type {
+  PaystackPlan,
+  PaystackProduct,
+  PaystackTransaction,
+  Subscription,
+  PaystackClientLike,
+  AnyPaystackOptions,
+} from "./types";
 
 import type { paystack } from "./index";
 
@@ -10,12 +17,13 @@ export const paystackClient = <
   },
 >(
   _options?: O,
-): BetterAuthClientPlugin => {
+) => {
   return {
     id: "paystack",
-    $InferServerPlugin: {} as ReturnType<typeof paystack>,
-    getActions: ($fetch: unknown, _$store: unknown, _options: unknown) => {
-      const fetch = $fetch as BetterFetch;
+    version: "1.0.0",
+    $InferServerPlugin: {} as ReturnType<typeof paystack<PaystackClientLike, AnyPaystackOptions>>,
+    getActions: ($fetch: BetterFetch, _$store: unknown, _options: unknown) => {
+      const fetch = $fetch;
 
       const initializeTransaction = async (
         data: Record<string, unknown> & {
@@ -38,7 +46,7 @@ export const paystackClient = <
           reference: string;
           accessCode: string;
           redirect: boolean;
-        }>("initialize-transaction", {
+        }>("paystack/initialize-transaction", {
           method: "POST",
           body: data,
           ...options,
@@ -59,7 +67,7 @@ export const paystackClient = <
           status: string;
           reference: string;
           data: unknown;
-        }>("verify-transaction", {
+        }>("paystack/verify-transaction", {
           method: "POST",
           body: data,
           ...options,
@@ -76,7 +84,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           transactions: PaystackTransaction[];
-        }>("list-transactions", {
+        }>("paystack/list-transactions", {
           method: "GET",
           query: data.query,
           ...options,
@@ -93,7 +101,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           subscriptions: Subscription[];
-        }>("list-subscriptions", {
+        }>("paystack/list-subscriptions", {
           method: "GET",
           query: data.query,
           ...options,
@@ -110,7 +118,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           link: string;
-        }>("subscription-manage-link", {
+        }>("paystack/subscription-manage-link", {
           method: "GET",
           query: data,
           ...options,
@@ -131,7 +139,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           status: string;
-        }>("disable-subscription", {
+        }>("paystack/disable-subscription", {
           method: "POST",
           body: data,
           ...options,
@@ -151,7 +159,7 @@ export const paystackClient = <
       > => {
         return fetch<{
           status: string;
-        }>("enable-subscription", {
+        }>("paystack/enable-subscription", {
           method: "POST",
           body: data,
           ...options,
@@ -203,17 +211,17 @@ export const paystackClient = <
         listSubscriptions,
         getSubscriptionManageLink,
         getConfig: async (): Promise<BetterFetchResponse<Record<string, unknown>>> => {
-          return fetch<Record<string, unknown>>("get-config", {
+          return fetch<Record<string, unknown>>("/paystack/config", {
             method: "GET",
           });
         },
         syncProducts: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
-          return fetch<{ status: string; count: number }>("sync-products", {
+          return fetch<{ status: string; count: number }>("/paystack/sync-products", {
             method: "POST",
           });
         },
         syncPlans: async (): Promise<BetterFetchResponse<{ status: string; count: number }>> => {
-          return fetch<{ status: string; count: number }>("sync-plans", {
+          return fetch<{ status: string; count: number }>("/paystack/sync-plans", {
             method: "POST",
           });
         },
@@ -226,7 +234,7 @@ export const paystackClient = <
         > => {
           return fetch<{
             products: PaystackProduct[];
-          }>("list-products", {
+          }>("paystack/list-products", {
             method: "GET",
             ...options,
           });
@@ -240,12 +248,12 @@ export const paystackClient = <
         > => {
           return fetch<{
             plans: PaystackPlan[];
-          }>("list-plans", {
+          }>("paystack/list-plans", {
             method: "GET",
             ...options,
           });
         },
       };
     },
-  };
+  } satisfies BetterAuthClientPlugin;
 };

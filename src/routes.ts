@@ -66,9 +66,12 @@ async function hmacSha512Hex(secret: string, message: string): Promise<string> {
   return createHmac("sha512", secret).update(message).digest("hex");
 }
 
-export const paystackWebhook = (options: AnyPaystackOptions) => {
+export const paystackWebhook = <P extends string = "/webhook">(
+  options: AnyPaystackOptions,
+  path: P = "/webhook" as P,
+) => {
   return createAuthEndpoint(
-    "/webhook",
+    path,
     {
       method: "POST",
       metadata: {

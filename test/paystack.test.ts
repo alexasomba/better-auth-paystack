@@ -17,6 +17,8 @@ import type {
   PaystackClientLike,
   PaystackUser,
   PaystackPlan,
+  PaystackResponse,
+  PaystackCustomerResponse,
 } from "../src/types";
 
 import { paystack } from "../src";
@@ -41,28 +43,26 @@ describe("paystack type", () => {
   });
 
   it("should api endpoint exist", () => {
-    expectTypeOf((auth.api as any).paystackWebhook).toExtend<(...args: any[]) => any>();
+    expectTypeOf(auth.api.paystackWebhook).toExtend<(...args: any[]) => any>();
   });
 
   it("should expose typed transaction routes on authClient", () => {
-    expectTypeOf((authClient as any).paystack.initializeTransaction).toExtend<
-      (...args: any[]) => any
-    >();
-    expectTypeOf((authClient as any).paystack.verifyTransaction).toExtend<
-      (...args: any[]) => any
-    >();
-    expectTypeOf((authClient as any).subscription.upgrade).toExtend<(...args: any[]) => any>();
-    expectTypeOf((authClient as any).subscription.cancel).toExtend<(...args: any[]) => any>();
-    expectTypeOf((authClient as any).subscription.list).toExtend<(...args: any[]) => any>();
+    expectTypeOf(authClient.paystack.initializeTransaction).toExtend<(...args: any[]) => any>();
+    expectTypeOf(authClient.paystack.verifyTransaction).toExtend<(...args: any[]) => any>();
+    expectTypeOf(authClient.subscription.restore).toExtend<(...args: any[]) => any>();
+    expectTypeOf(authClient.subscription.cancel).toExtend<(...args: any[]) => any>();
+    expectTypeOf(authClient.subscription.list).toExtend<(...args: any[]) => any>();
   });
 });
 
 describe("paystack", () => {
-  const data: Record<string, any[]> = {
+  const data: Record<string, unknown[]> = {
     user: [],
     session: [],
     verification: [],
     account: [],
+    member: [],
+    organization: [],
     subscription: [],
     paystackProduct: [],
     paystackTransaction: [],
@@ -143,22 +143,29 @@ describe("paystack", () => {
   });
 
   it("should create Paystack customer on sign up", async () => {
-    const paystackSdk = {
+    const paystackSdk: PaystackClientLike = {
       customer: {
-        create: vi.fn().mockResolvedValue({
-          data: {
+        create: vi
+          .fn<
+            (init: {
+              body: Record<string, unknown>;
+            }) => Promise<PaystackResponse<PaystackCustomerResponse>>
+          >()
+          .mockResolvedValue({
             status: true,
-            message: "ok",
             data: {
               customer_code: "CUS_test_123",
+              id: 123,
+              email: "test@email.com",
             },
-          },
-        }),
+          } as unknown as PaystackResponse<PaystackCustomerResponse>),
+        update: vi.fn(),
+        fetch: vi.fn(),
       },
     };
 
     const options = {
-      paystackClient: paystackSdk as unknown as PaystackClientLike,
+      paystackClient: paystackSdk,
       createCustomerOnSignUp: true,
       secretKey: "sk_test_123",
       webhook: { secret: "whsec_test" },
@@ -174,10 +181,10 @@ describe("paystack", () => {
     const ctx = await auth.$context;
     const authBase = (ctx.baseURL as string | undefined) ?? "http://localhost:3000/api/auth";
     const _authBaseUrl = authBase.endsWith("/") === true ? authBase : `${authBase}/`;
-    const customFetchImpl: (url: string, init?: RequestInit) => Promise<Response> = async (
-      url,
-      init,
-    ) => {
+    const customFetchImpl: (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response> = async (url, init) => {
       const headers = new Headers(init?.headers);
       if (!headers.has("origin")) {
         headers.set("origin", "http://localhost:3000");
@@ -189,7 +196,7 @@ describe("paystack", () => {
       baseURL: "http://localhost:3000",
       plugins: [bearer(), paystackClient({ subscription: false })],
       fetchOptions: {
-        customFetchImpl: customFetchImpl as any,
+        customFetchImpl,
       },
     });
 
@@ -201,7 +208,7 @@ describe("paystack", () => {
 
     const res = await authClient.signUp.email(testUser, { throw: true });
     expect(res.user.id).toBeDefined();
-    expect(paystackSdk.customer.create).toHaveBeenCalledTimes(1);
+    expect(paystackSdk.customer?.create).toHaveBeenCalledTimes(1);
 
     const dbUser = await (ctx.adapter as unknown as DBAdapter).findOne({
       model: "user",
@@ -211,6 +218,7 @@ describe("paystack", () => {
   });
 
   it("should disable subscription without emailToken by fetching it", async () => {
+    const headers = new Headers();
     const paystackSdk = {
       subscription: {
         fetch: vi.fn().mockResolvedValue({
@@ -270,13 +278,13 @@ describe("paystack", () => {
 
     await authClient.signUp.email(testUser, { throw: true });
 
-    const headers = new Headers();
+    // headers = new Headers();
     await authClient.signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
 
-    const res = await (authClient as any).paystack.subscription.disable(
+    const res = await authClient.subscription.disable(
       {
         subscriptionCode: "SUB_test_123",
         // emailToken intentionally omitted to test fetching
@@ -295,6 +303,7 @@ describe("paystack", () => {
   });
 
   it("should enable subscription without emailToken by fetching it", async () => {
+    const headers = new Headers();
     const paystackSdk = {
       subscription: {
         fetch: vi.fn().mockResolvedValue({
@@ -336,7 +345,13 @@ describe("paystack", () => {
       baseURL: "http://localhost:3000",
       plugins: [bearer(), paystackClient({ subscription: true })],
       fetchOptions: {
-        customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
+        customFetchImpl: async (url, init) => {
+          const merged = new Headers(init?.headers);
+          if (typeof headers !== "undefined") {
+            headers.forEach((v, k) => merged.set(k, v));
+          }
+          return auth.handler(new Request(url, { ...init, headers: merged }));
+        },
       },
     });
 
@@ -348,13 +363,13 @@ describe("paystack", () => {
 
     await authClient.signUp.email(testUser, { throw: true });
 
-    const headers = new Headers();
+    // headers = new Headers();
     await authClient.signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
 
-    const res = await (authClient as any).paystack.subscription.enable(
+    const res = await authClient.subscription.restore(
       {
         subscriptionCode: "SUB_test_123",
         // emailToken intentionally omitted to test fetching
@@ -390,10 +405,18 @@ describe("paystack", () => {
       plugins: [paystack<PaystackClientLike>(options)],
     });
 
+    const headers = new Headers();
     const authClient = createAuthClient({
-      baseURL: "http://localhost:3000",
+      baseURL: "http://localhost:3000/api/auth",
       fetchOptions: {
-        customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
+        customFetchImpl: async (url, init) => {
+          const mergedHeaders = new Headers(init?.headers);
+          if (headers) {
+            headers.forEach((v, k) => mergedHeaders.set(k, v));
+          }
+          // console.log("DEBUG FETCH:", { url, method: init?.method, headersCount: Array.from(mergedHeaders.keys()).length });
+          return auth.handler(new Request(url, { ...init, headers: mergedHeaders }));
+        },
       },
       plugins: [paystackClient({ subscription: true })],
     });
@@ -406,7 +429,7 @@ describe("paystack", () => {
 
     const signUpRes = await authClient.signUp.email(testUser, { throw: true });
 
-    const headers = new Headers();
+    // headers = new Headers();
     await authClient.signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
@@ -426,8 +449,9 @@ describe("paystack", () => {
       } as unknown as Subscription,
     });
 
-    const res = await (authClient as any).subscription.list({}, { throw: true });
+    const res = await authClient.subscription.list({}, { headers });
 
+    if (res.error) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
     expect(res.data?.subscriptions).toHaveLength(1);
     expect(res.data?.subscriptions[0].paystackSubscriptionCode).toBe("SUB_list_123");
   });
@@ -462,11 +486,16 @@ describe("paystack", () => {
       plugins: [paystack<PaystackClientLike>(options)],
     });
 
+    const headers = new Headers();
     const authClient = createAuthClient({
-      baseURL: "http://localhost:3000",
+      baseURL: "http://localhost:3000/api/auth",
       fetchOptions: {
         customFetchImpl: async (url, init) => {
-          return await auth.handler(new Request(url, init));
+          const merged = new Headers(init?.headers);
+          if (headers) {
+            headers.forEach((v, k) => merged.set(k, v));
+          }
+          return auth.handler(new Request(url, { ...init, headers: merged }));
         },
       },
       plugins: [paystackClient({ subscription: true })],
@@ -479,28 +508,29 @@ describe("paystack", () => {
     };
 
     await authClient.signUp.email(testUser, { throw: true });
-    const headers = new Headers();
+    // headers = new Headers();
     await authClient.signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
 
-    const res = await (authClient as any).subscription.billingPortal(
+    const res = await authClient.subscription.billingPortal(
       {
-        returnURL: "http://localhost:3000/billing",
+        subscriptionCode: "SUB_test_123",
       },
-      { throw: true },
+      { headers },
     );
 
-    // The endpoint returns { link: string }
+    if (res.error) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
     expect(res.data?.link).toBe("https://paystack.com/manage/SUB_123/token");
     expect(paystackSdk.subscription.manageLink).toHaveBeenCalledWith(
       expect.objectContaining({
-        params: { path: { code: "SUB_123" } },
+        params: { path: { code: "SUB_test_123" } },
       }),
     );
   });
   it("should reject untrusted callbackURL", async () => {
+    const headers = new Headers();
     const paystackSdk = {
       transaction: {
         initialize: vi.fn().mockResolvedValue({
@@ -545,7 +575,13 @@ describe("paystack", () => {
     const authClient = createAuthClient({
       baseURL: "http://localhost:3000",
       fetchOptions: {
-        customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
+        customFetchImpl: async (url, init) => {
+          const merged = new Headers(init?.headers);
+          if (typeof headers !== "undefined") {
+            headers.forEach((v, k) => merged.set(k, v));
+          }
+          return auth.handler(new Request(url, { ...init, headers: merged }));
+        },
       },
     });
 
@@ -557,7 +593,7 @@ describe("paystack", () => {
 
     await authClient.signUp.email(testUser, { throw: true });
 
-    const headers = new Headers();
+    // headers = new Headers();
     await authClient.signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
@@ -581,6 +617,7 @@ describe("paystack", () => {
   });
 
   it("should not verify another user's subscription by reference", async () => {
+    const headers = new Headers();
     const paystackSdk = {
       transaction: {
         initialize: vi.fn().mockResolvedValue({
@@ -642,7 +679,13 @@ describe("paystack", () => {
       baseURL: "http://localhost:3000",
       plugins: [bearer(), paystackClient({ subscription: true })],
       fetchOptions: {
-        customFetchImpl: async (url, init) => auth.handler(new Request(url, init)),
+        customFetchImpl: async (url, init) => {
+          const merged = new Headers(init?.headers);
+          if (typeof headers !== "undefined") {
+            headers.forEach((v, k) => merged.set(k, v));
+          }
+          return auth.handler(new Request(url, { ...init, headers: merged }));
+        },
       },
     });
 
@@ -659,7 +702,7 @@ describe("paystack", () => {
     };
 
     const signInWithCookies = async (user: typeof userA) => {
-      const headers = new Headers();
+      // headers = new Headers();
       await authClient.signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(headers),
@@ -689,7 +732,7 @@ describe("paystack", () => {
     });
 
     // User A initializes a transaction, creating an incomplete local subscription row.
-    const initReq = new Request(new URL("initialize-transaction", authBaseUrl), {
+    const initReq = new Request(new URL("paystack/initialize-transaction", authBaseUrl), {
       method: "POST",
       headers: aHeaders,
       body: JSON.stringify({
@@ -727,7 +770,7 @@ describe("paystack", () => {
 
     // User B tries to verify the same Paystack reference; should NOT update User A's row.
     const bHeaders = await signInWithCookies(userB);
-    const verifyReqB = new Request(new URL("verify-transaction", authBaseUrl), {
+    const verifyReqB = new Request(new URL("paystack/verify-transaction", authBaseUrl), {
       method: "POST",
       headers: bHeaders,
       body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
@@ -758,7 +801,7 @@ describe("paystack", () => {
     });
 
     // User A verifies; should update their own subscription.
-    const verifyReqA = new Request(new URL("verify-transaction", authBaseUrl), {
+    const verifyReqA = new Request(new URL("paystack/verify-transaction", authBaseUrl), {
       method: "POST",
       headers: aHeaders,
       body: JSON.stringify({ reference: "REF_unique_isolated_123" }),
@@ -856,7 +899,7 @@ describe("paystack", () => {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
-    const res = await (authClient as any).paystack.initializeTransaction(
+    const res = await authClient.paystack.initializeTransaction(
       {
         product: "credits",
         callbackURL: "http://localhost:3000/done",
@@ -864,7 +907,11 @@ describe("paystack", () => {
       { throw: true },
     );
 
-    expect(res.url).toBe("https://paystack.test/buy");
+    if (res && "url" in res) {
+      expect(res.url).toBe("https://paystack.test/buy");
+    } else {
+      throw new Error("Expected success response with url");
+    }
     expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
@@ -921,10 +968,7 @@ describe("paystack", () => {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
-    await (authClient as any).subscription.list(
-      { query: { referenceId: "org_1" } },
-      { throw: true },
-    );
+    await authClient.subscription.list({ query: { referenceId: "org_1" } }, { throw: true });
 
     expect(authorizeReference).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -968,7 +1012,7 @@ describe("paystack", () => {
         status: "disabled",
       },
     });
-    const signature = createHmac("sha512", "test_secret").update(payload).digest("hex");
+    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -1028,7 +1072,7 @@ describe("paystack", () => {
         metadata: { referenceId: "user_hook_123", plan: "pro" },
       },
     });
-    const signature = createHmac("sha512", "test_secret").update(payload).digest("hex");
+    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -1090,7 +1134,7 @@ describe("paystack", () => {
         status: "disabled",
       },
     });
-    const signature = createHmac("sha512", "test_secret").update(payload).digest("hex");
+    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -1578,22 +1622,24 @@ describe("paystack", () => {
 
   it("should sync products from Paystack", async () => {
     const paystackSdk = {
-      product_list: vi.fn().mockResolvedValue({
-        status: true,
-        data: [
-          {
-            id: 123,
-            name: "Sync Product",
-            description: "Synced from Paystack",
-            price: 2500,
-            currency: "NGN",
-            quantity: 50,
-            unlimited: false,
-            slug: "sync-product",
-            metadata: { foo: "bar" },
-          },
-        ],
-      }),
+      product: {
+        list: vi.fn().mockResolvedValue({
+          status: true,
+          data: [
+            {
+              id: 123,
+              name: "Sync Product",
+              description: "Synced from Paystack",
+              price: 2500,
+              currency: "NGN",
+              quantity: 50,
+              unlimited: false,
+              slug: "sync-product",
+              metadata: { foo: "bar" },
+            },
+          ],
+        }),
+      },
     };
 
     const options = {
@@ -1662,14 +1708,17 @@ describe("paystack", () => {
   it("should decrement product quantity on successful webhook charge", async () => {
     // Mock product_fetch to return quantity: 9 (simulating Paystack's updated stock)
     const paystackSdk = {
-      product_fetch: vi.fn().mockResolvedValue({
-        data: {
-          id: 12345,
-          name: "Inventory Product",
-          quantity: 9,
-          unlimited: false,
-        },
-      }),
+      product: {
+        fetch: vi.fn().mockResolvedValue({
+          status: true,
+          data: {
+            id: 12345,
+            name: "Inventory Product",
+            quantity: 9,
+            unlimited: false,
+          },
+        }),
+      },
     };
     const options = {
       paystackClient: paystackSdk as unknown as PaystackClientLike as any,
@@ -1727,12 +1776,12 @@ describe("paystack", () => {
       },
     });
 
-    const hmac = createHmac("sha512", "whsec_test").update(payload).digest("hex");
+    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
       headers: {
-        "x-paystack-signature": hmac,
+        "x-paystack-signature": signature,
       },
       body: payload,
     });

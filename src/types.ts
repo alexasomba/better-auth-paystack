@@ -13,7 +13,7 @@ import type {
  */
 export type PaystackCurrency = components["schemas"]["Currency"];
 
-export type { PaystackPaths, PaystackClient };
+export type { PaystackPaths, PaystackClient, PaystackResponse };
 
 /**
  * Standard Better Auth Models
