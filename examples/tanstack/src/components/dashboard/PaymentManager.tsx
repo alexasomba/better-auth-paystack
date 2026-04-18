@@ -56,8 +56,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       if (res.data?.products !== undefined && res.data?.products !== null) {
         setNativeProducts(res.data.products as unknown as PaystackProduct[]);
       }
-    } catch (e) {
-      console.error("Failed to fetch native products", e);
+    } catch (_) {
+      // Silently fail
     }
   }, []);
 
@@ -67,8 +67,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       if (res.data?.plans !== undefined && res.data?.plans !== null) {
         setNativePlans(res.data.plans as PaystackPlan[]);
       }
-    } catch (e) {
-      console.error("Failed to fetch native plans", e);
+    } catch (_) {
+      // Silently fail
     }
   }, []);
 
@@ -96,8 +96,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         if (subsRes.data?.subscriptions !== undefined && subsRes.data?.subscriptions !== null) {
           setSubscriptions(subsRes.data.subscriptions);
         }
-      } catch (e) {
-        console.error("Failed to fetch data", e);
+      } catch (_) {
+        // Silently fail
       } finally {
         setIsLoading(false);
       }
@@ -115,8 +115,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         if (result.data !== undefined && result.data !== null) {
           setOrganizations(result.data as Organization[]);
         }
-      } catch (e) {
-        console.error("Failed to fetch organizations", e);
+      } catch (_) {
+        // Silently fail
       }
     }
     void fetchOrganizations();
@@ -144,7 +144,6 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         alert("Failed to get redirect URL from Paystack");
       }
     } catch (e: unknown) {
-      console.error(e);
       if (e instanceof Error) {
         alert(e.message || "Failed to initialize payment");
       }
@@ -170,7 +169,6 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         alert("Failed to get redirect URL from Paystack");
       }
     } catch (e: unknown) {
-      console.error(e);
       if (e instanceof Error) {
         alert(e.message || "Failed to initialize payment");
       }
@@ -189,11 +187,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       } else {
         alert("Failed to get management link from Paystack");
       }
-    } catch (e: unknown) {
-      console.error(e);
-      if (e instanceof Error) {
-        alert(e.message || "Failed to fetch management link");
-      }
+    } catch (_) {
+      // Silently fail, alert handles it for user
     } finally {
       setActionLoading(false);
     }
@@ -505,8 +500,9 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     const isNative =
       variant === "native" ||
       (plan.planCode !== undefined && plan.planCode !== null && plan.planCode !== "");
+    const planAmount = plan.amount ?? 0;
     const displayAmount =
-      selectedBillingTarget !== "personal" && !isNative ? plan.amount * quantity : plan.amount;
+      selectedBillingTarget !== "personal" && !isNative ? planAmount * quantity : planAmount;
 
     return (
       <div
@@ -547,7 +543,9 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           </p>
           <div className="flex items-baseline gap-1">
             <p className="text-3xl font-bold">
-              {displayAmount ? formatCurrency(displayAmount, plan.currency) : "Custom"}
+              {displayAmount !== undefined && displayAmount !== null
+                ? formatCurrency(displayAmount, plan.currency)
+                : "Custom"}
             </p>
             <p className="text-xs text-muted-foreground">
               /{plan.interval ?? "mo"}

@@ -69,7 +69,7 @@ describe("TanStack Example - Paystack Integration", () => {
                 name: "Test Product",
                 price: 1000,
                 currency: "NGN",
-              },
+              } as any,
             ],
           },
         }),
@@ -121,7 +121,8 @@ describe("TanStack Example - Paystack Integration", () => {
       plugins: [paystackClient({ subscription: true })],
       fetchOptions: {
         customFetchImpl: async (url, init) => {
-          const nextUrl = typeof url === "string" ? url : url.toString();
+          const nextUrl =
+            typeof url === "string" ? url : "href" in url ? url.href : (url as any).url;
           requestLog.push(nextUrl);
 
           const mergedHeaders = new Headers(init?.headers ?? {});
@@ -183,7 +184,8 @@ describe("TanStack Example - Paystack Integration", () => {
       plugins: [paystackClient({ subscription: true })],
       fetchOptions: {
         customFetchImpl: async (url, init) => {
-          const nextUrl = typeof url === "string" ? url : url.toString();
+          const nextUrl =
+            typeof url === "string" ? url : "href" in url ? url.href : (url as any).url;
           requestLog.push(nextUrl);
 
           const mergedHeaders = new Headers(init?.headers ?? {});

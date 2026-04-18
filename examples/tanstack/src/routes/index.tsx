@@ -30,7 +30,7 @@ function Home() {
     if (sessionData?.user !== null && sessionData?.user !== undefined) {
       void router.navigate({ to: "/dashboard" });
     }
-  }, [sessionData]);
+  }, [sessionData, router]);
 
   const handleAnonymousLogin = async () => {
     setIsAuthActionInProgress(true);

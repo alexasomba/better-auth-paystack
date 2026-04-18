@@ -273,13 +273,13 @@ export default function TransactionsTable() {
                   }));
                   allTransactions = [...allTransactions, ...orgTransactions];
                 }
-              } catch (e) {
-                console.error(`Failed to fetch transactions for org ${org.id}:`, e);
+              } catch (_) {
+                // Silently fail for individual orgs
               }
             }
           }
-        } catch (e) {
-          console.error("Failed to fetch organizations:", e);
+        } catch (_) {
+          // Silently fail if org list fails
         }
 
         // Sort all transactions by date (newest first)
@@ -288,8 +288,8 @@ export default function TransactionsTable() {
         );
 
         setData(allTransactions);
-      } catch (error) {
-        console.error("Failed to fetch transactions:", error);
+      } catch (_) {
+        // Silently fail but keep loading false
       } finally {
         setLoading(false);
       }

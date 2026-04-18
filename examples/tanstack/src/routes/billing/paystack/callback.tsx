@@ -59,7 +59,7 @@ export function CallbackPage() {
           void router.navigate({ to: "/dashboard" });
         }, 2000);
       } catch (e: unknown) {
-        console.error(e);
+        // Verification failed
         setStatus("error");
         if (e instanceof Error) {
           setError(e.message || "Verification failed");
