@@ -286,7 +286,7 @@ if (data?.accessCode) {
 Defer changes to the end of the current billing cycle:
 
 - **Upgrades**: Pass `scheduleAtPeriodEnd: true` in `initializeTransaction()`.
-- **Cancellations**: Use `authClient.subscription.cancel({ atPeriodEnd: true })` to keep the subscription active until the period ends.
+- **Cancellations**: Use `authClient.subscription.cancel({ subscriptionCode, atPeriodEnd: true })` to keep the subscription active until the period ends.
 
 ### Mid-Cycle Proration (`prorateAndCharge`)
 
@@ -429,7 +429,7 @@ type upgradeSubscription = {
   /**
    * Additional metadata to store with the transaction.
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   /**
    * Reference ID for the subscription owner (User ID or Org ID).
    * Defaults to the current user's ID.
@@ -489,6 +489,10 @@ Cancel or restore a subscription.
 ```ts
 type cancelSubscription = {
   /**
+   * Optional reference owner (user ID or org ID) when managing another billing entity.
+   */
+  referenceId?: string;
+  /**
    * The Paystack subscription code (e.g. SUB_...)
    */
   subscriptionCode: string;
@@ -497,6 +501,10 @@ type cancelSubscription = {
    * Optional: The server will try to fetch it if omitted.
    */
   emailToken?: string;
+  /**
+   * When true, keep the subscription active until the current period ends.
+   */
+  atPeriodEnd?: boolean;
 };
 ```
 
@@ -591,19 +599,29 @@ The following fields are indexed:
 
 ### Syncing Products
 
-The plugin provides two ways to keep your product inventory in sync with Paystack:
+The plugin provides two ways to keep your product inventory aligned with Paystack:
 
-#### 1. Automated Inventory Sync (New)
+#### 1. Automated Inventory Sync
 
 Whenever a successful one-time payment is made (via webhook or manual verification), the plugin automatically calls **`syncProductQuantityFromPaystack`**. This fetches the real-time remaining quantity from the Paystack API and updates your local database record, ensuring your inventory is always accurate.
 
-#### 2. Manual Bulk Sync
+#### 2. Trusted Manual Bulk Sync
 
-You can synchronize all products with your local database using the `/paystack/sync-products` endpoint.
+The public `/paystack/sync-products` endpoint was removed in `2.0.0`.
+Run the trusted server operation from backend code instead:
 
-```bash
-POST /api/auth/paystack/sync-products
+```ts
+import { syncPaystackProducts } from "@alexasomba/better-auth-paystack";
+
+const ctx = { context: await auth.$context } as any;
+
+await syncPaystackProducts(ctx, paystackOptions);
 ```
+
+### SDK Compatibility Note
+
+Immediate proration and remote seat synchronization require a Paystack client that supports subscription updates.
+If you inject a custom client that does not expose subscription update operations, the plugin will fail explicitly instead of silently updating only local state.
 
 ---
 
