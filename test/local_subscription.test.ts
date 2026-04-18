@@ -140,10 +140,7 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    await (authClient as any).paystack.verifyTransaction(
-      { reference: "ref_local_123" },
-      { headers },
-    );
+    await authClient.paystack.verifyTransaction({ reference: "ref_local_123" }, { headers });
 
     const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
 
@@ -280,10 +277,7 @@ describe("Local Custom Subscriptions", () => {
       },
     });
 
-    await (authClient as any).paystack.verifyTransaction(
-      { reference: "ref_local_trial_123" },
-      { headers },
-    );
+    await authClient.paystack.verifyTransaction({ reference: "ref_local_trial_123" }, { headers });
 
     const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
 

@@ -104,13 +104,13 @@ describe("examples/nextjs integration - paystack flow", () => {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
-    const init = await (authClient as any).paystack.initializeTransaction({ plan: "starter" });
+    const init = await authClient.paystack.initializeTransaction({ plan: "starter" });
     if (init.error) throw new Error("Initialization failed");
     expect(init.data.url).toBe("https://paystack/checkout");
     const reference = init.data.reference;
     expect(reference).toBe("ref_123");
 
-    const verify = await (authClient as any).paystack.verifyTransaction({ reference });
+    const verify = await authClient.paystack.verifyTransaction({ reference });
     if (verify.error) throw new Error("Verification failed");
     expect(verify.data.status).toBe("success");
 

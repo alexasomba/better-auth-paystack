@@ -1325,7 +1325,7 @@ describe("paystack", () => {
     });
 
     // Now initialize a new subscription - should NOT get a trial
-    const res = await (authClient as any).paystack.initializeTransaction(
+    const res = await authClient.paystack.initializeTransaction(
       {
         plan: "starter",
         callbackURL: "http://localhost:3000/done",
@@ -1410,7 +1410,7 @@ describe("paystack", () => {
     });
 
     // Initialize subscription - should get trial (no previous subs)
-    await (authClient as any).paystack.initializeTransaction(
+    await authClient.paystack.initializeTransaction(
       {
         plan: "pro",
         callbackURL: "http://localhost:3000/done",
@@ -1582,7 +1582,7 @@ describe("paystack", () => {
     });
 
     // Initialize for Org
-    const { data } = await (client as any).subscription.create({
+    const { data } = await client.subscription.create({
       referenceId: actualOrgId,
       plan: "enterprise",
       callbackURL: "http://localhost:3000/callback",
@@ -1693,7 +1693,7 @@ describe("paystack", () => {
 
     // Initialize for Org
 
-    const { data } = await (client as any).subscription.create(
+    const { data } = await client.subscription.create(
       {
         referenceId: actualOrgId,
         plan: "enterprise",

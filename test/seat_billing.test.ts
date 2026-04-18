@@ -96,7 +96,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const headers = new Headers();
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-    const orgRes = await (authClient as any).organization.create(
+    const orgRes = await authClient.organization.create(
       {
         name: "Test Org",
         slug: "test-org",
@@ -128,7 +128,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     // 2 members total (owner should be auto-added + 1 added manually)
-    await (authClient as any).paystack.initializeTransaction(
+    await authClient.paystack.initializeTransaction(
       {
         plan: "team-plan",
         referenceId: orgId,
@@ -152,7 +152,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const headers = new Headers();
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-    const orgRes = await (authClient as any).organization.create(
+    const orgRes = await authClient.organization.create(
       {
         name: "Qty Org",
         slug: "qty-org",
@@ -172,7 +172,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     // Request with explicit quantity: 3. Base 1000 + (3 * 500) = 2500.
-    await (authClient as any).paystack.initializeTransaction(
+    await authClient.paystack.initializeTransaction(
       {
         plan: "team-plan",
         referenceId: orgId,
