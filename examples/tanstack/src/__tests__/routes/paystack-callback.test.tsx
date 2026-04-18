@@ -55,7 +55,7 @@ describe("Paystack callback route", () => {
   });
 
   it.skip("retries transient reference-not-found verification failures and accepts trxref", async () => {
-    vi.useRealTimers();
+    vi.useFakeTimers();
     mockUseSearch.mockReturnValue({ trxref: "trx_123" } as any);
 
     const { authClient } = await import("@/lib/auth-client");
@@ -81,12 +81,13 @@ describe("Paystack callback route", () => {
 
     render(<CallbackPage />);
 
-    await waitFor(
-      () => {
-        expect((authClient as any).paystack.verifyTransaction).toHaveBeenCalledTimes(2);
-        expect(screen.getByText("Payment Successful!")).toBeInTheDocument();
-      },
-      { timeout: 10000 },
-    );
-  }, 15000);
+    // Flush microtasks to trigger the first effect call and yielding to setTimeout
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Advance timers to trigger the retry (750ms in component)
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect((authClient as any).paystack.verifyTransaction).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Payment Successful!")).toBeInTheDocument();
+  }, 20000);
 });

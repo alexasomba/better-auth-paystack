@@ -102,7 +102,7 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.18"
   },
   "peerDependencies": {
     "better-auth": "^1.6.5"

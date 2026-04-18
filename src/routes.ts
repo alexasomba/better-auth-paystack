@@ -403,9 +403,9 @@ export const paystackWebhook = <P extends string = "/webhook">(
                 where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
               });
 
-              if (existing) {
+              if (existing !== null && existing !== undefined) {
                 await options.subscription.onSubscriptionCancel?.(
-                  { event, subscription: { ...existing, status: "canceled" } },
+                  { event, subscription: { ...existing, status: "canceled" } as Subscription },
                   ctx as GenericEndpointContext,
                 );
               }
@@ -559,7 +559,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       if (callbackURL !== undefined && callbackURL !== null && callbackURL !== "") {
         const checkTrusted = () => {
           try {
-            if (callbackURL.startsWith("/")) return true;
+            if ((callbackURL as string | undefined)?.startsWith("/") === true) return true;
             const baseUrl =
               ((ctx.context as Record<string, unknown>)?.baseURL as string | undefined) ??
               (ctx.request as unknown as { url?: string })?.url ??
@@ -1931,13 +1931,14 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
       const { subscriptionCode, atPeriodEnd } = ctx.body;
       const paystack = getPaystackOps(options.paystackClient);
       try {
-        if (subscriptionCode.startsWith("LOC_") || subscriptionCode.startsWith("sub_local_")) {
+        const subCode = subscriptionCode;
+        if (subCode.startsWith("LOC_") || subCode.startsWith("sub_local_")) {
           const sub = await ctx.context.adapter.findOne<Subscription>({
             model: "subscription",
             where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
           });
 
-          if (sub) {
+          if (sub !== null && sub !== undefined) {
             await ctx.context.adapter.update({
               model: "subscription",
               update: {

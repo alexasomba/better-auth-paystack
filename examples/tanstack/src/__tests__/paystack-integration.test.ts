@@ -7,6 +7,37 @@ import { paystack } from "@alexasomba/better-auth-paystack";
 import { paystackClient } from "@alexasomba/better-auth-paystack/client";
 import { createPaystack } from "@alexasomba/paystack-node";
 
+vi.mock("@alexasomba/paystack-node", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    createPaystack: vi.fn(() => ({
+      transaction: {
+        verify: vi.fn(async () => ({
+          status: true,
+          data: {
+            id: 123,
+            status: "success",
+            reference: "ref_123",
+            amount: 1000,
+            customer: { email: "test@example.com" },
+          },
+        })),
+        list: vi.fn(async () => ({
+          status: true,
+          data: [],
+        })),
+      },
+      subscription: {
+        manageLink: vi.fn(async () => ({
+          status: true,
+          data: { link: "https://paystack.com/manage/123" },
+        })),
+      },
+    })),
+  };
+});
+
 describe("TanStack Example - Paystack Integration", () => {
   let auth: any;
   let requestLog: string[];
