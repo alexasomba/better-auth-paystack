@@ -4,6 +4,7 @@ import type {
   PaystackPlan,
   PaystackProduct,
   PaystackTransaction,
+  PaystackTransactionResponse,
   Subscription,
   PaystackClientLike,
   AnyPaystackOptions,
@@ -55,7 +56,7 @@ export interface PaystackActions {
       {
         status: string;
         reference: string;
-        data: unknown;
+        data: PaystackTransactionResponse;
       },
       O
     >
@@ -169,7 +170,7 @@ export const paystackClient = <
     >,
     getActions: (
       $fetch: BetterFetch,
-      _$store: unknown,
+      _store: unknown,
       _options: unknown,
     ): PaystackClientActions => {
       const fetch = $fetch;
