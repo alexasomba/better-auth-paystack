@@ -163,7 +163,7 @@ export const paystackClient = <
 } => {
   return {
     id: "paystack",
-    version: "2.1.0",
+    version: "2.1.1",
     $InferServerPlugin: {} as ReturnType<
       typeof paystackServer<PaystackClientLike, AnyPaystackOptions>
     >,
