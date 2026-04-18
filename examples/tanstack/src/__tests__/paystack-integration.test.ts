@@ -13,26 +13,32 @@ vi.mock("@alexasomba/paystack-node", async (importOriginal) => {
     ...actual,
     createPaystack: vi.fn(() => ({
       transaction: {
-        verify: vi.fn(async () => ({
-          status: true,
-          data: {
-            id: 123,
-            status: "success",
-            reference: "ref_123",
-            amount: 1000,
-            customer: { email: "test@example.com" },
-          },
-        })),
-        list: vi.fn(async () => ({
-          status: true,
-          data: [],
-        })),
+        verify: vi.fn(() =>
+          Promise.resolve({
+            status: true,
+            data: {
+              id: 123,
+              status: "success",
+              reference: "ref_123",
+              amount: 1000,
+              customer: { email: "test@example.com" },
+            },
+          }),
+        ),
+        list: vi.fn(() =>
+          Promise.resolve({
+            status: true,
+            data: [],
+          }),
+        ),
       },
       subscription: {
-        manageLink: vi.fn(async () => ({
-          status: true,
-          data: { link: "https://paystack.com/manage/123" },
-        })),
+        manageLink: vi.fn(() =>
+          Promise.resolve({
+            status: true,
+            data: { link: "https://paystack.com/manage/123" },
+          }),
+        ),
       },
     })),
   };

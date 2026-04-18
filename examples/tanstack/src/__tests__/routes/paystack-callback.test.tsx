@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { CallbackPage } from "@/routes/billing/paystack/callback";
 
 const { mockNavigate, mockUseSearch } = vi.hoisted(() => ({
@@ -32,6 +32,8 @@ vi.mock("@tanstack/react-router", async () => {
 describe("Paystack callback route", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.clearAllMocks();
+    mockUseSearch.mockReturnValue({ reference: "ref_123" });
   });
 
   it("shows an error when verifyTransaction returns a Better Auth error payload", async () => {
@@ -54,38 +56,43 @@ describe("Paystack callback route", () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it.skip("retries transient reference-not-found verification failures and accepts trxref", async () => {
+  it("retries transient reference-not-found verification failures and accepts trxref", async () => {
     vi.useFakeTimers();
     mockUseSearch.mockReturnValue({ trxref: "trx_123" } as any);
 
     const { authClient } = await import("@/lib/auth-client");
 
     let verifyCount = 0;
-    vi.mocked((authClient as any).paystack.verifyTransaction).mockImplementation(async () => {
+    vi.mocked((authClient as any).paystack.verifyTransaction).mockImplementation(() => {
       verifyCount++;
       if (verifyCount === 1) {
-        return {
+        return Promise.resolve({
           data: null,
           error: {
             message: "Transaction reference not found.",
           },
-        } as any;
+        } as any);
       }
-      return {
+      return Promise.resolve({
         data: {
           status: "success",
         },
         error: null,
-      } as any;
+      } as any);
     });
 
     render(<CallbackPage />);
 
-    // Flush microtasks to trigger the first effect call and yielding to setTimeout
-    await vi.advanceTimersByTimeAsync(0);
+    // Flush the initial effect and first verification promise.
+    await act(async () => {
+      await Promise.resolve();
+    });
 
-    // Advance timers to trigger the retry (750ms in component)
-    await vi.advanceTimersByTimeAsync(1000);
+    // Trigger the retry delay and flush the second verification promise.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+      await Promise.resolve();
+    });
 
     expect((authClient as any).paystack.verifyTransaction).toHaveBeenCalledTimes(2);
     expect(screen.getByText("Payment Successful!")).toBeInTheDocument();
