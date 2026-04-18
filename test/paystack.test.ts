@@ -1491,40 +1491,54 @@ describe("paystack", () => {
       database: memory,
       baseURL: "http://localhost:3000",
       emailAndPassword: { enabled: true },
-      plugins: [paystack<any>(options)],
+      plugins: [paystack<any>(options), organization()],
     });
 
-    const _ctx = await auth.$context;
-    // Simulate organization creation by directly calling the hook
-    // (Organization plugin integration mock)
+    const ctx = await auth.$context;
+    const createdOrg = await ctx.adapter.create({
+      model: "organization",
+      data: {
+        name: "Test Org",
+        slug: "test-org",
+        email: "billing@test-org.com",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any,
+    });
     const orgData = {
-      id: "org_test_123",
+      id: createdOrg.id,
       name: "Test Org",
       slug: "test-org",
+      email: "billing@test-org.com",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
-    // Simulate the hook being called
-    const paystackPlugin = (auth as Record<string, any>).options?.plugins?.find(
-      (p: any) => p.id === "paystack",
-    );
-    const hooks = paystackPlugin?.hooks;
-    if (
-      hooks !== undefined &&
-      hooks !== null &&
-      typeof hooks === "object" &&
-      "organization.create" in hooks
-    ) {
-      const orgHook = (hooks as Record<string, any>)["organization.create"];
-      if (orgHook?.after !== undefined && orgHook?.after !== null) {
-        await orgHook.after({
-          returned: orgData,
-        });
-      }
+    const plugin = paystack<any>(options);
+    const initResult = plugin.init(ctx as any);
+    const orgHooks = initResult.options.databaseHooks.organization;
+    if (orgHooks === undefined) {
+      throw new Error("Expected organization database hooks to be registered");
     }
 
-    // Organization hooks may need to be invoked via adapter hooks
-    // For now, verify the SDK method exists
-    expect(paystackSdk.customer.create).toBeDefined();
+    await orgHooks.create.after(
+      {
+        id: orgData.id,
+        name: orgData.name,
+        email: orgData.email,
+      },
+      null,
+    );
+
+    const updatedOrg = await ctx.adapter.findOne({
+      model: "organization",
+      where: [{ field: "id", value: orgData.id }],
+    });
+
+    expect(paystackSdk.customer.create).toHaveBeenCalledTimes(1);
+    expect((updatedOrg as { paystackCustomerCode?: string } | null)?.paystackCustomerCode).toBe(
+      "CUS_org_123",
+    );
   });
 
   it("should use Organization email and attribution when initializing transaction for an Org", async () => {

@@ -833,15 +833,12 @@ export const paystack = <
                             sdkRes !== undefined &&
                             sdkRes !== null
                           ) {
-                            await (
-                              ctx.internalAdapter as unknown as {
-                                updateOrganization: (
-                                  id: string,
-                                  data: Record<string, unknown>,
-                                ) => Promise<void>;
-                              }
-                            ).updateOrganization(org.id, {
-                              paystackCustomerCode: customerCode,
+                            await ctx.adapter.update({
+                              model: "organization",
+                              where: [{ field: "id", value: org.id }],
+                              update: {
+                                paystackCustomerCode: customerCode,
+                              },
                             });
 
                             if (typeof options.organization?.onCustomerCreate === "function") {

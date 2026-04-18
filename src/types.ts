@@ -84,6 +84,11 @@ export interface PaystackPlan {
   planCode?: string;
   paystackId?: string;
   seatAmount?: number;
+  /**
+   * Deprecated legacy alias for `seatAmount`.
+   * If used, it must still be a numeric amount in the smallest currency unit.
+   */
+  seatPriceId?: number | string;
   seatPlanCode?: string;
   invoiceLimit?: number;
   freeTrial?: {

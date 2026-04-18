@@ -191,6 +191,85 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     );
   });
 
+  it("should reject invalid legacy seatPriceId values instead of charging NaN", async () => {
+    paystackSdk.transaction.initialize.mockReset();
+
+    const invalidOptions = {
+      ...options,
+      subscription: {
+        enabled: true,
+        plans: [
+          {
+            name: "broken-seat-plan",
+            amount: 100000,
+            interval: "monthly",
+            currency: "NGN",
+            seatPriceId: "not-a-number",
+          },
+        ],
+      },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const invalidAuth = betterAuth({
+      database: memoryAdapter({
+        user: [],
+        session: [],
+        subscription: [],
+        paystackTransaction: [],
+        organization: [],
+        member: [],
+        invitation: [],
+      }),
+      baseURL: "http://localhost:3000",
+      emailAndPassword: { enabled: true },
+      plugins: [organization(), paystack<PaystackClientLike>(invalidOptions)],
+    });
+
+    const invalidClient = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [organizationClient(), createPaystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => invalidAuth.handler(new Request(url, init)),
+      },
+    });
+
+    const testUser = { email: "broken@test.com", password: "password", name: "Broken" };
+    await invalidClient.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await invalidClient.signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
+
+    const orgRes = await invalidClient.organization.create(
+      {
+        name: "Broken Org",
+        slug: "broken-org",
+      },
+      { headers },
+    );
+
+    const res = await invalidAuth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          plan: "broken-seat-plan",
+          referenceId: orgRes.data?.id,
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.message).toContain("Invalid seatPriceId");
+    expect(paystackSdk.transaction.initialize).not.toHaveBeenCalled();
+  });
+
   it("should store pendingPlan when scheduleAtPeriodEnd is true", async () => {
     const testUser = { email: "schedule@test.com", password: "password", name: "User" };
     const signUp = await authClient.signUp.email(testUser, { throw: true });
@@ -447,5 +526,107 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       where: [{ field: "referenceId", value: signUp.user.id }],
     });
     expect(subs[0].seats).toBe(3);
+  });
+
+  it("should fail proration when the client cannot update the remote subscription", async () => {
+    const paystackSdkWithoutUpdate = {
+      transaction: {
+        initialize: vi.fn(),
+        chargeAuthorization: vi.fn().mockResolvedValue({
+          status: true,
+          data: { status: "success", reference: "prorate_missing_update" },
+        }),
+        verify: vi.fn(),
+      },
+      subscription: {
+        fetch: vi.fn(),
+        disable: vi.fn(),
+      },
+      customer: {
+        update: vi.fn(),
+      },
+    };
+
+    const authWithoutUpdate = betterAuth({
+      database: memoryAdapter({
+        user: [],
+        session: [],
+        subscription: [],
+        paystackTransaction: [],
+        organization: [],
+        member: [],
+        invitation: [],
+      }),
+      baseURL: "http://localhost:3000",
+      emailAndPassword: { enabled: true },
+      plugins: [
+        organization(),
+        paystack<PaystackClientLike>({
+          ...options,
+          paystackClient: paystackSdkWithoutUpdate as any,
+        }),
+      ],
+    });
+
+    const clientWithoutUpdate = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [organizationClient(), createPaystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => authWithoutUpdate.handler(new Request(url, init)),
+      },
+    });
+
+    const testUser = { email: "noupdate@test.com", password: "password", name: "No Update" };
+    const signUp = await clientWithoutUpdate.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await clientWithoutUpdate.signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
+
+    const ctx = await authWithoutUpdate.$context;
+    const now = new Date();
+    await (ctx.adapter as any).create({
+      model: "subscription",
+      data: {
+        plan: "team-plan",
+        referenceId: signUp.user.id,
+        status: "active",
+        seats: 1,
+        periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        paystackAuthorizationCode: "AUTH_missing_update",
+        paystackSubscriptionCode: "SUB_missing_update",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const res = await authWithoutUpdate.handler(
+      new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          plan: "team-plan",
+          referenceId: signUp.user.id,
+          quantity: 3,
+          prorateAndCharge: true,
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.message).toContain("does not support subscription updates");
+
+    const unchanged = await (ctx.adapter as any).findOne({
+      model: "subscription",
+      where: [{ field: "paystackSubscriptionCode", value: "SUB_missing_update" }],
+    });
+    expect(unchanged.seats).toBe(1);
   });
 });

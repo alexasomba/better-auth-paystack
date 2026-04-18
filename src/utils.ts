@@ -10,6 +10,48 @@ import type {
 } from "./types";
 import { unwrapSdkResult } from "./paystack-sdk";
 
+export function getPlanSeatAmount(plan: PaystackPlan): number | undefined {
+  if (plan.seatAmount !== undefined) {
+    if (typeof plan.seatAmount === "number" && Number.isFinite(plan.seatAmount)) {
+      return plan.seatAmount;
+    }
+    throw new Error(`Invalid seatAmount for plan '${plan.name}'. Expected a finite number.`);
+  }
+
+  if (plan.seatPriceId === undefined || plan.seatPriceId === null || plan.seatPriceId === "") {
+    return undefined;
+  }
+
+  const parsed = typeof plan.seatPriceId === "string" ? Number(plan.seatPriceId) : plan.seatPriceId;
+  if (typeof parsed === "number" && Number.isFinite(parsed)) {
+    return parsed;
+  }
+
+  throw new Error(
+    `Invalid seatPriceId for plan '${plan.name}'. Expected a numeric amount in the smallest currency unit.`,
+  );
+}
+
+export function calculatePlanAmount(plan: PaystackPlan, quantity: number): number {
+  return (plan.amount ?? 0) + quantity * (getPlanSeatAmount(plan) ?? 0);
+}
+
+export function requireSubscriptionUpdate(
+  client: PaystackClientLike | undefined,
+): NonNullable<NonNullable<PaystackClientLike["subscription"]>["update"]> {
+  const subscription = client?.subscription;
+  if (
+    subscription === undefined ||
+    subscription === null ||
+    typeof subscription.update !== "function"
+  ) {
+    throw new Error(
+      "The configured Paystack client does not support subscription updates required for seat or proration changes.",
+    );
+  }
+  return (...args) => subscription.update!(...args);
+}
+
 export async function getPlans(
   subscriptionOptions: AnyPaystackOptions["subscription"],
 ): Promise<PaystackPlan[]> {
@@ -251,7 +293,8 @@ export async function syncSubscriptionSeats(
   if (subscription === null || subscription === undefined) return;
   const plan = await getPlanByName(options, subscription.plan);
   if (plan === null || plan === undefined) return;
-  if (plan.seatAmount === undefined) return;
+  const seatAmount = getPlanSeatAmount(plan);
+  if (seatAmount === undefined) return;
 
   const members = await adapter.findMany({
     model: "member",
@@ -261,13 +304,7 @@ export async function syncSubscriptionSeats(
   const quantity = members.length;
   let totalAmount = plan.amount ?? 0;
 
-  if (
-    plan.seatAmount !== undefined &&
-    plan.seatAmount !== null &&
-    typeof plan.seatAmount === "number"
-  ) {
-    totalAmount += quantity * plan.seatAmount;
-  }
+  totalAmount += quantity * seatAmount;
 
   try {
     const client = options.paystackClient;
@@ -275,7 +312,8 @@ export async function syncSubscriptionSeats(
 
     // Paystack subscription update doesn't natively support quantity in the same way as Stripe
     // but we can update the amount or the plan.
-    const raw = await client.subscription?.update?.(subscription.paystackSubscriptionCode, {
+    const updateSubscription = requireSubscriptionUpdate(client);
+    const raw = await updateSubscription(subscription.paystackSubscriptionCode, {
       body: { amount: totalAmount },
     });
     unwrapSdkResult(raw);

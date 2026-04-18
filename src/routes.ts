@@ -35,6 +35,9 @@ import {
   getProducts,
   validateMinAmount,
   getNextPeriodEnd,
+  getPlanSeatAmount,
+  calculatePlanAmount,
+  requireSubscriptionUpdate,
 } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
@@ -715,24 +718,23 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       }
 
       // Calculate final amount considering seats if applicable
-      if (
-        plan !== undefined &&
-        (plan.seatAmount !== undefined ||
-          (plan as unknown as Record<string, unknown>).seatPriceId !== undefined)
-      ) {
-        const members = await ctx.context.adapter.findMany<Member>({
-          model: "member",
-          where: [{ field: "organizationId", value: referenceId }],
-        });
-        const seatCount = members.length > 0 ? members.length : 1;
-        const quantityToUse = quantity ?? seatCount;
-
-        amount =
-          (plan.amount ?? 0) +
-          quantityToUse *
-            (plan.seatAmount ??
-              ((plan as unknown as Record<string, unknown>).seatPriceId as number) ??
-              0);
+      if (plan !== undefined) {
+        try {
+          if (getPlanSeatAmount(plan) !== undefined) {
+            const members = await ctx.context.adapter.findMany<Member>({
+              model: "member",
+              where: [{ field: "organizationId", value: referenceId }],
+            });
+            const seatCount = members.length > 0 ? members.length : 1;
+            const quantityToUse = quantity ?? seatCount;
+            amount = calculatePlanAmount(plan, quantityToUse);
+          }
+        } catch (error: unknown) {
+          throw new APIError("BAD_REQUEST", {
+            message:
+              error instanceof Error ? error.message : "Invalid seat configuration for plan.",
+          });
+        }
       }
 
       let url: string | undefined;
@@ -917,34 +919,30 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
                   undefined;
                 if (oldPlan !== undefined && oldPlan !== null) {
                   const oldSeatCount = existingSub.seats;
-                  oldAmount =
-                    (oldPlan.amount ?? 0) +
-                    oldSeatCount *
-                      (oldPlan.seatAmount ??
-                        ((oldPlan as unknown as Record<string, unknown>).seatPriceId as number) ??
-                        0);
+                  oldAmount = calculatePlanAmount(oldPlan, oldSeatCount);
                 }
               }
 
               // 3. Calculate new total amount
               let membersCount = 1;
-              if (
-                plan.seatAmount !== undefined ||
-                (plan as unknown as Record<string, unknown>).seatPriceId !== undefined
-              ) {
-                const members = await ctx.context.adapter.findMany<Member>({
-                  model: "member",
-                  where: [{ field: "organizationId", value: referenceId }],
+              let newSeatCount = quantity ?? existingSub.seats ?? membersCount;
+              let newAmount: number;
+              try {
+                if (getPlanSeatAmount(plan) !== undefined) {
+                  const members = await ctx.context.adapter.findMany<Member>({
+                    model: "member",
+                    where: [{ field: "organizationId", value: referenceId }],
+                  });
+                  membersCount = members.length > 0 ? members.length : 1;
+                }
+                newSeatCount = quantity ?? existingSub.seats ?? membersCount;
+                newAmount = calculatePlanAmount(plan, newSeatCount);
+              } catch (error: unknown) {
+                throw new APIError("BAD_REQUEST", {
+                  message:
+                    error instanceof Error ? error.message : "Invalid seat configuration for plan.",
                 });
-                membersCount = members.length > 0 ? members.length : 1;
               }
-              const newSeatCount = quantity ?? existingSub.seats ?? membersCount;
-              const newAmount =
-                (plan.amount ?? 0) +
-                newSeatCount *
-                  (plan.seatAmount ??
-                    ((plan as unknown as Record<string, unknown>).seatPriceId as number) ??
-                    0);
 
               // 4. Calculate Difference & Charge
               const costDifference = newAmount - oldAmount;
@@ -985,7 +983,8 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
               // 5. Update Subscription Future Cycle in Paystack
               const ops = getPaystackOps(options.paystackClient);
               if (ops !== undefined && ops !== null) {
-                await ops.subscription?.update?.(existingSub.paystackSubscriptionCode, {
+                const updateSubscription = requireSubscriptionUpdate(ops);
+                await updateSubscription(existingSub.paystackSubscriptionCode, {
                   body: {
                     amount: newAmount,
                     plan: plan.planCode,
