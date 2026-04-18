@@ -100,6 +100,9 @@ export const auth = betterAuth({
 });
 ```
 
+`webhook.secret` is the preferred webhook-signing config.
+If you still have older code using top-level `paystackWebhookSecret`, it is treated as a deprecated alias and falls back to the same signature check.
+
 ### 4. Configure Client Plugin
 
 ```ts title="client.ts"
@@ -311,6 +314,9 @@ paystack({
   },
 });
 ```
+
+Resolution order for webhook signature verification is:
+`webhook.secret` -> `paystackWebhookSecret` (deprecated) -> `secretKey`.
 
 ### Trial Abuse Prevention
 

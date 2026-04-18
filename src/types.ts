@@ -1,6 +1,7 @@
 import type { GenericEndpointContext, Session, User } from "better-auth";
 import type { Organization, Member } from "better-auth/plugins/organization";
 import type {
+  Paystack,
   PaystackPaths,
   PaystackResponse,
   PaystackWebhookEvent,
@@ -163,6 +164,11 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    */
   secretKey: string;
   /**
+   * Deprecated alias for `webhook.secret`.
+   * Use `webhook.secret` for new code.
+   */
+  paystackWebhookSecret?: string;
+  /**
    * Paystack Client Instance
    * If provided, will be used instead of creating a new one with secretKey
    */
@@ -279,78 +285,36 @@ export interface PaystackSyncResult {
 export type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
 
 /**
- * A stricter PaystackClient interface based on the grouped SDK structure
+ * The grouped subset of the SDK surface used by this plugin.
+ * Request payloads stay intentionally loose for plugin internals and mocks,
+ * while return types are sourced from the official SDK so injected clients
+ * retain concrete response payload types.
  */
 export interface PaystackClientLike {
   transaction?: {
-    initialize: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    verify: (
-      reference: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<components["schemas"]["VerifyResponse"]["data"]>>;
-    chargeAuthorization: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]>>;
+    initialize(...args: any[]): ReturnType<Paystack["transaction"]["initialize"]>;
+    verify(...args: any[]): ReturnType<Paystack["transaction"]["verify"]>;
+    chargeAuthorization(...args: any[]): ReturnType<Paystack["transaction"]["chargeAuthorization"]>;
   };
   customer?: {
-    create: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<
-      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
-    >;
-    update: (
-      email_or_code: string,
-      init: { body: Record<string, unknown> },
-    ) => Promise<
-      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
-    >;
-    fetch: (
-      email_or_code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<
-      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
-    >;
+    create(...args: any[]): ReturnType<Paystack["customer"]["create"]>;
+    update(...args: any[]): ReturnType<Paystack["customer"]["update"]>;
+    fetch(...args: any[]): ReturnType<Paystack["customer"]["fetch"]>;
   };
   subscription?: {
-    create: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    update: (
-      code: string,
-      init: { body: Record<string, unknown> },
-    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    fetch: (
-      id_or_code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    disable: (init: {
-      body: { code: string; token: string };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    enable: (init: {
-      body: { code: string; token: string };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    manageLink: (
-      code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<{ link: string }>>;
+    create(...args: any[]): ReturnType<Paystack["subscription"]["create"]>;
+    fetch(...args: any[]): ReturnType<Paystack["subscription"]["fetch"]>;
+    disable(...args: any[]): ReturnType<Paystack["subscription"]["disable"]>;
+    enable(...args: any[]): ReturnType<Paystack["subscription"]["enable"]>;
+    manageLink(...args: any[]): ReturnType<Paystack["subscription"]["manageLink"]>;
+    update?(...args: any[]): Promise<PaystackResponse<Record<string, unknown>>>;
   };
   product?: {
-    fetch: (
-      id_or_code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"]>>;
-    list: (init?: {
-      query?: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"][]>>;
+    fetch(...args: any[]): ReturnType<Paystack["product"]["fetch"]>;
+    list(...args: any[]): ReturnType<Paystack["product"]["list"]>;
   };
   plan?: {
-    list: (init?: {
-      query?: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"][]>>;
-    create: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"]>>;
+    list(...args: any[]): ReturnType<Paystack["plan"]["list"]>;
+    create(...args: any[]): ReturnType<Paystack["plan"]["create"]>;
   };
 }

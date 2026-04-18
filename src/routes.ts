@@ -159,7 +159,8 @@ export const paystackWebhook = <P extends string = "/webhook">(
         });
       }
 
-      const webhookSecret = options.webhook?.secret ?? options.secretKey;
+      const webhookSecret =
+        options.webhook?.secret ?? options.paystackWebhookSecret ?? options.secretKey;
       const expected = await hmacSha512Hex(webhookSecret, payload);
       if (expected !== signature) {
         throw new APIError("UNAUTHORIZED", {
@@ -984,7 +985,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
               // 5. Update Subscription Future Cycle in Paystack
               const ops = getPaystackOps(options.paystackClient);
               if (ops !== undefined && ops !== null) {
-                await ops.subscription?.update(existingSub.paystackSubscriptionCode, {
+                await ops.subscription?.update?.(existingSub.paystackSubscriptionCode, {
                   body: {
                     amount: newAmount,
                     plan: plan.planCode,

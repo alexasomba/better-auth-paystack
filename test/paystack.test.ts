@@ -150,23 +150,55 @@ describe("paystack", () => {
     expect(res.status).toBe(200);
   });
 
+  it("should accept the deprecated paystackWebhookSecret alias for webhook signatures", async () => {
+    const options = {
+      paystackClient: {},
+      secretKey: "sk_test_123",
+      paystackWebhookSecret: "whsec_legacy",
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const auth = betterAuth({
+      baseURL: "http://localhost:3000",
+      database: memory,
+      emailAndPassword: { enabled: true },
+      plugins: [paystack<PaystackClientLike>(options)],
+    });
+
+    const payload = JSON.stringify({ event: "charge.success", data: {} });
+    const signature = createHmac("sha512", options.paystackWebhookSecret)
+      .update(payload)
+      .digest("hex");
+
+    const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
+      method: "POST",
+      headers: {
+        "x-paystack-signature": signature,
+      },
+      body: payload,
+    });
+    const res = await auth.handler(req);
+    expect(res.status).toBe(200);
+  });
+
   it("should create Paystack customer on sign up", async () => {
+    const createCustomer = vi
+      .fn<
+        (init: {
+          body: Record<string, unknown>;
+        }) => Promise<PaystackResponse<PaystackCustomerResponse>>
+      >()
+      .mockResolvedValue({
+        status: true,
+        data: {
+          customer_code: "CUS_test_123",
+          id: 123,
+          email: "test@email.com",
+        },
+      } as unknown as PaystackResponse<PaystackCustomerResponse>);
+
     const paystackSdk: PaystackClientLike = {
       customer: {
-        create: vi
-          .fn<
-            (init: {
-              body: Record<string, unknown>;
-            }) => Promise<PaystackResponse<PaystackCustomerResponse>>
-          >()
-          .mockResolvedValue({
-            status: true,
-            data: {
-              customer_code: "CUS_test_123",
-              id: 123,
-              email: "test@email.com",
-            },
-          } as unknown as PaystackResponse<PaystackCustomerResponse>),
+        create: createCustomer,
         update: vi.fn(),
         fetch: vi.fn(),
       },
@@ -216,7 +248,7 @@ describe("paystack", () => {
 
     const res = await authClient.signUp.email(testUser, { throw: true });
     expect(res.user.id).toBeDefined();
-    expect(paystackSdk.customer?.create).toHaveBeenCalledTimes(1);
+    expect(createCustomer).toHaveBeenCalledTimes(1);
 
     const dbUser = await (ctx.adapter as unknown as DBAdapter).findOne({
       model: "user",

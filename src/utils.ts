@@ -275,7 +275,7 @@ export async function syncSubscriptionSeats(
 
     // Paystack subscription update doesn't natively support quantity in the same way as Stripe
     // but we can update the amount or the plan.
-    const raw = await client.subscription?.update(subscription.paystackSubscriptionCode, {
+    const raw = await client.subscription?.update?.(subscription.paystackSubscriptionCode, {
       body: { amount: totalAmount },
     });
     unwrapSdkResult(raw);

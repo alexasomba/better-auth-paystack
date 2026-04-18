@@ -3,6 +3,7 @@
 import { describe, expectTypeOf, it } from "vite-plus/test";
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
+import { createPaystack } from "@alexasomba/paystack-node";
 
 import { paystack } from "../src/index.ts";
 import type { PaystackClientLike, PaystackOptions, PaystackCustomerResponse } from "../src/types";
@@ -59,5 +60,24 @@ describe("Paystack Deep Typesafety", () => {
       id: 123,
     } as unknown as PaystackCustomerResponse;
     expectTypeOf((customer as any).customer_code).toExtend<string>();
+  });
+
+  it("should accept createPaystack clients and preserve concrete response data types", () => {
+    const sdkClient = createPaystack({
+      secretKey: "sk_test_123",
+    });
+
+    const options = {
+      paystackClient: sdkClient,
+      secretKey: "sk_test_123",
+      webhook: {
+        secret: "whsec_test",
+      },
+    } satisfies PaystackOptions<typeof sdkClient>;
+
+    expectTypeOf(options.paystackClient).toEqualTypeOf<typeof sdkClient>();
+    expectTypeOf(options.paystackClient?.transaction?.initialize).toEqualTypeOf(
+      sdkClient.transaction.initialize,
+    );
   });
 });

@@ -655,7 +655,13 @@ export const paystack = <
   $ERROR_CODES: Record<string, RawError<string>>;
   options: NoInfer<O>;
 } => {
-  const routeOptions = options as unknown as AnyPaystackOptions;
+  const routeOptions = {
+    ...(options as unknown as AnyPaystackOptions),
+    webhook: {
+      ...options.webhook,
+      secret: options.webhook?.secret ?? options.paystackWebhookSecret,
+    },
+  } satisfies AnyPaystackOptions;
   return {
     id: "paystack",
     endpoints: {
