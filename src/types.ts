@@ -297,29 +297,31 @@ export type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
  */
 export interface PaystackClientLike {
   transaction?: {
-    initialize(...args: any[]): ReturnType<Paystack["transaction"]["initialize"]>;
-    verify(...args: any[]): ReturnType<Paystack["transaction"]["verify"]>;
-    chargeAuthorization(...args: any[]): ReturnType<Paystack["transaction"]["chargeAuthorization"]>;
+    initialize(...args: unknown[]): ReturnType<Paystack["transaction"]["initialize"]>;
+    verify(...args: unknown[]): ReturnType<Paystack["transaction"]["verify"]>;
+    chargeAuthorization(
+      ...args: unknown[]
+    ): ReturnType<Paystack["transaction"]["chargeAuthorization"]>;
   };
   customer?: {
-    create(...args: any[]): ReturnType<Paystack["customer"]["create"]>;
-    update(...args: any[]): ReturnType<Paystack["customer"]["update"]>;
-    fetch(...args: any[]): ReturnType<Paystack["customer"]["fetch"]>;
+    create(...args: unknown[]): ReturnType<Paystack["customer"]["create"]>;
+    update(...args: unknown[]): ReturnType<Paystack["customer"]["update"]>;
+    fetch(...args: unknown[]): ReturnType<Paystack["customer"]["fetch"]>;
   };
   subscription?: {
-    create(...args: any[]): ReturnType<Paystack["subscription"]["create"]>;
-    fetch(...args: any[]): ReturnType<Paystack["subscription"]["fetch"]>;
-    disable(...args: any[]): ReturnType<Paystack["subscription"]["disable"]>;
-    enable(...args: any[]): ReturnType<Paystack["subscription"]["enable"]>;
-    manageLink(...args: any[]): ReturnType<Paystack["subscription"]["manageLink"]>;
-    update?(...args: any[]): Promise<PaystackResponse<Record<string, unknown>>>;
+    create(...args: unknown[]): ReturnType<Paystack["subscription"]["create"]>;
+    fetch(...args: unknown[]): ReturnType<Paystack["subscription"]["fetch"]>;
+    disable(...args: unknown[]): ReturnType<Paystack["subscription"]["disable"]>;
+    enable(...args: unknown[]): ReturnType<Paystack["subscription"]["enable"]>;
+    manageLink(...args: unknown[]): ReturnType<Paystack["subscription"]["manageLink"]>;
+    update?(...args: unknown[]): Promise<PaystackResponse<Record<string, unknown>>>;
   };
   product?: {
-    fetch(...args: any[]): ReturnType<Paystack["product"]["fetch"]>;
-    list(...args: any[]): ReturnType<Paystack["product"]["list"]>;
+    fetch(...args: unknown[]): ReturnType<Paystack["product"]["fetch"]>;
+    list(...args: unknown[]): ReturnType<Paystack["product"]["list"]>;
   };
   plan?: {
-    list(...args: any[]): ReturnType<Paystack["plan"]["list"]>;
-    create(...args: any[]): ReturnType<Paystack["plan"]["create"]>;
+    list(...args: unknown[]): ReturnType<Paystack["plan"]["list"]>;
+    create(...args: unknown[]): ReturnType<Paystack["plan"]["create"]>;
   };
 }
