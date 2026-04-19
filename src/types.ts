@@ -5,6 +5,11 @@ import type {
   PaystackResponse,
   PaystackWebhookEvent,
   PaystackClient,
+  PaystackCustomerClient,
+  PaystackPlanClient,
+  PaystackProductClient,
+  PaystackSubscriptionClient,
+  PaystackTransactionClient,
   components,
 } from "@alexasomba/paystack-node";
 
@@ -12,8 +17,24 @@ import type {
  * Valid Paystack currencies
  */
 export type PaystackCurrency = components["schemas"]["Currency"];
+export type PaystackCheckoutChannel =
+  | "card"
+  | "bank"
+  | "ussd"
+  | "qr"
+  | "mobile_money"
+  | "bank_transfer"
+  | "eft"
+  | "apple_pay";
 
 export type { PaystackPaths, PaystackClient, PaystackResponse };
+export type {
+  PaystackTransactionClient,
+  PaystackCustomerClient,
+  PaystackSubscriptionClient,
+  PaystackPlanClient,
+  PaystackProductClient,
+};
 
 /**
  * Standard Better Auth Models
@@ -83,6 +104,11 @@ export interface PaystackPlan {
   planCode?: string;
   paystackId?: string;
   seatAmount?: number;
+  /**
+   * Deprecated legacy alias for `seatAmount`.
+   * If used, it must still be a numeric amount in the smallest currency unit.
+   */
+  seatPriceId?: number | string;
   seatPlanCode?: string;
   invoiceLimit?: number;
   freeTrial?: {
@@ -155,6 +181,11 @@ export interface SubscriptionOptions {
    * Require email verification before subscription
    */
   requireEmailVerification?: boolean;
+  /**
+   * Restrict checkout to specific Paystack channels for subscription flows.
+   * Use `["card"]` to enforce card-only subscriptions.
+   */
+  allowedPaymentChannels?: PaystackCheckoutChannel[];
 }
 
 export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackClientLike> {
@@ -162,6 +193,11 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    * Paystack Secret Key
    */
   secretKey: string;
+  /**
+   * Deprecated alias for `webhook.secret`.
+   * Use `webhook.secret` for new code.
+   */
+  paystackWebhookSecret?: string;
   /**
    * Paystack Client Instance
    * If provided, will be used instead of creating a new one with secretKey
@@ -279,78 +315,16 @@ export interface PaystackSyncResult {
 export type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
 
 /**
- * A stricter PaystackClient interface based on the grouped SDK structure
+ * Exact grouped SDK slices used by this plugin.
+ * This deliberately matches the official SDK surface instead of a handwritten approximation.
  */
 export interface PaystackClientLike {
-  transaction?: {
-    initialize: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    verify: (
-      reference: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<components["schemas"]["VerifyResponse"]["data"]>>;
-    chargeAuthorization: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]>>;
-  };
-  customer?: {
-    create: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<
-      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
-    >;
-    update: (
-      email_or_code: string,
-      init: { body: Record<string, unknown> },
-    ) => Promise<
-      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
-    >;
-    fetch: (
-      email_or_code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<
-      PaystackResponse<components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"]>
-    >;
-  };
-  subscription?: {
-    create: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    update: (
-      code: string,
-      init: { body: Record<string, unknown> },
-    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    fetch: (
-      id_or_code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<components["schemas"]["SubscriptionListResponseArray"]>>;
-    disable: (init: {
-      body: { code: string; token: string };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    enable: (init: {
-      body: { code: string; token: string };
-    }) => Promise<PaystackResponse<Record<string, unknown>>>;
-    manageLink: (
-      code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<{ link: string }>>;
-  };
-  product?: {
-    fetch: (
-      id_or_code: string,
-      init?: Record<string, unknown>,
-    ) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"]>>;
-    list: (init?: {
-      query?: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["ProductListsResponseArray"][]>>;
-  };
-  plan?: {
-    list: (init?: {
-      query?: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"][]>>;
-    create: (init: {
-      body: Record<string, unknown>;
-    }) => Promise<PaystackResponse<components["schemas"]["PlanListResponseArray"]>>;
-  };
+  transaction: Pick<PaystackTransactionClient, "initialize" | "verify" | "chargeAuthorization">;
+  customer: Pick<PaystackCustomerClient, "create" | "update" | "fetch">;
+  subscription: Pick<
+    PaystackSubscriptionClient,
+    "create" | "fetch" | "disable" | "enable" | "manageLink"
+  >;
+  product: Pick<PaystackProductClient, "fetch" | "list">;
+  plan: Pick<PaystackPlanClient, "list" | "create">;
 }

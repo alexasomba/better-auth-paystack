@@ -7,6 +7,43 @@ import { paystack } from "@alexasomba/better-auth-paystack";
 import { paystackClient } from "@alexasomba/better-auth-paystack/client";
 import { createPaystack } from "@alexasomba/paystack-node";
 
+vi.mock("@alexasomba/paystack-node", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    createPaystack: vi.fn(() => ({
+      transaction: {
+        verify: vi.fn(() =>
+          Promise.resolve({
+            status: true,
+            data: {
+              id: 123,
+              status: "success",
+              reference: "ref_123",
+              amount: 1000,
+              customer: { email: "test@example.com" },
+            },
+          }),
+        ),
+        list: vi.fn(() =>
+          Promise.resolve({
+            status: true,
+            data: [],
+          }),
+        ),
+      },
+      subscription: {
+        manageLink: vi.fn(() =>
+          Promise.resolve({
+            status: true,
+            data: { link: "https://paystack.com/manage/123" },
+          }),
+        ),
+      },
+    })),
+  };
+});
+
 describe("TanStack Example - Paystack Integration", () => {
   let auth: any;
   let requestLog: string[];
@@ -56,7 +93,7 @@ describe("TanStack Example - Paystack Integration", () => {
         anonymous(),
         organization(),
         paystack({
-          paystackClient: paystackClient as any,
+          paystackClient,
           secretKey: "sk_test_mock",
           webhook: { secret: "whsec_test_mock" },
           subscription: {
@@ -69,7 +106,7 @@ describe("TanStack Example - Paystack Integration", () => {
                 name: "Test Product",
                 price: 1000,
                 currency: "NGN",
-              },
+              } as any,
             ],
           },
         }),
@@ -121,7 +158,8 @@ describe("TanStack Example - Paystack Integration", () => {
       plugins: [paystackClient({ subscription: true })],
       fetchOptions: {
         customFetchImpl: async (url, init) => {
-          const nextUrl = typeof url === "string" ? url : url.toString();
+          const nextUrl =
+            typeof url === "string" ? url : "href" in url ? url.href : (url as any).url;
           requestLog.push(nextUrl);
 
           const mergedHeaders = new Headers(init?.headers ?? {});
@@ -183,7 +221,8 @@ describe("TanStack Example - Paystack Integration", () => {
       plugins: [paystackClient({ subscription: true })],
       fetchOptions: {
         customFetchImpl: async (url, init) => {
-          const nextUrl = typeof url === "string" ? url : url.toString();
+          const nextUrl =
+            typeof url === "string" ? url : "href" in url ? url.href : (url as any).url;
           requestLog.push(nextUrl);
 
           const mergedHeaders = new Headers(init?.headers ?? {});

@@ -1,5 +1,5 @@
 "use client";
-
+import * as React from "react";
 import { useEffect, useState } from "react";
 import {
   Buildings,
@@ -54,18 +54,7 @@ export default function OrganizationManager() {
   const [orgSlug, setOrgSlug] = useState("");
 
   // Load organizations
-  useEffect(() => {
-    void loadOrganizations();
-  }, []);
-
-  // Load members when active org changes
-  useEffect(() => {
-    if (activeOrg !== null) {
-      void loadMembers(activeOrg.id);
-    }
-  }, [activeOrg]);
-
-  async function loadOrganizations() {
+  const loadOrganizations = React.useCallback(async () => {
     setLoading(true);
     try {
       const result = await authClient.organization.list();
@@ -75,14 +64,14 @@ export default function OrganizationManager() {
           setActiveOrg(result.data[0] as Organization);
         }
       }
-    } catch (error) {
-      console.error("Failed to load organizations:", error);
+    } catch (_) {
+      // Silently fail
     } finally {
       setLoading(false);
     }
-  }
+  }, [activeOrg]);
 
-  async function loadMembers(orgId: string) {
+  const loadMembers = React.useCallback(async (orgId: string) => {
     try {
       // Set active org first
       await authClient.organization.setActive({ organizationId: orgId });
@@ -90,10 +79,21 @@ export default function OrganizationManager() {
       if (result.data?.members !== null && result.data?.members !== undefined) {
         setMembers(result.data.members as Member[]);
       }
-    } catch (error) {
-      console.error("Failed to load members:", error);
+    } catch (_) {
+      // Silently fail
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadOrganizations();
+  }, [loadOrganizations]);
+
+  // Load members when active org changes
+  useEffect(() => {
+    if (activeOrg !== null) {
+      void loadMembers(activeOrg.id);
+    }
+  }, [activeOrg, loadMembers]);
 
   async function createOrganization(e: React.FormEvent) {
     e.preventDefault();
@@ -120,9 +120,9 @@ export default function OrganizationManager() {
         setOrgSlug("");
         setShowCreateForm(false);
       }
-    } catch (error: any) {
-      console.error("Failed to create organization:", error);
-      alert((error as { message?: string })?.message ?? "Failed to create organization");
+    } catch (error: unknown) {
+      const message = (error as { message?: string })?.message ?? "Failed to create organization";
+      alert(message);
     } finally {
       setCreating(false);
     }
@@ -137,9 +137,9 @@ export default function OrganizationManager() {
         setActiveOrg(null);
       }
       await loadOrganizations();
-    } catch (error: any) {
-      console.error("Failed to delete organization:", error);
-      alert((error as { message?: string })?.message ?? "Failed to delete organization");
+    } catch (error: unknown) {
+      const message = (error as { message?: string })?.message ?? "Failed to delete organization";
+      alert(message);
     }
   }
 

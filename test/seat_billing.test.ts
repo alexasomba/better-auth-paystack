@@ -20,7 +20,6 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       verify: vi.fn(),
     },
     subscription: {
-      update: vi.fn(),
       fetch: vi.fn(),
       disable: vi.fn(),
     },
@@ -45,6 +44,13 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
           interval: "monthly",
           currency: "NGN",
           seatAmount: 50000,
+        },
+        {
+          name: "business-plan",
+          amount: 300000,
+          interval: "monthly",
+          currency: "NGN",
+          seatAmount: 100000,
         },
       ],
     },
@@ -96,7 +102,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const headers = new Headers();
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-    const orgRes = await (authClient as any).organization.create(
+    const orgRes = await authClient.organization.create(
       {
         name: "Test Org",
         slug: "test-org",
@@ -128,7 +134,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     // 2 members total (owner should be auto-added + 1 added manually)
-    await (authClient as any).paystack.initializeTransaction(
+    await authClient.paystack.initializeTransaction(
       {
         plan: "team-plan",
         referenceId: orgId,
@@ -152,7 +158,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const headers = new Headers();
     await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
 
-    const orgRes = await (authClient as any).organization.create(
+    const orgRes = await authClient.organization.create(
       {
         name: "Qty Org",
         slug: "qty-org",
@@ -172,7 +178,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     // Request with explicit quantity: 3. Base 1000 + (3 * 500) = 2500.
-    await (authClient as any).paystack.initializeTransaction(
+    await authClient.paystack.initializeTransaction(
       {
         plan: "team-plan",
         referenceId: orgId,
@@ -189,6 +195,85 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         }),
       }),
     );
+  });
+
+  it("should reject invalid legacy seatPriceId values instead of charging NaN", async () => {
+    paystackSdk.transaction.initialize.mockReset();
+
+    const invalidOptions = {
+      ...options,
+      subscription: {
+        enabled: true,
+        plans: [
+          {
+            name: "broken-seat-plan",
+            amount: 100000,
+            interval: "monthly",
+            currency: "NGN",
+            seatPriceId: "not-a-number",
+          },
+        ],
+      },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const invalidAuth = betterAuth({
+      database: memoryAdapter({
+        user: [],
+        session: [],
+        subscription: [],
+        paystackTransaction: [],
+        organization: [],
+        member: [],
+        invitation: [],
+      }),
+      baseURL: "http://localhost:3000",
+      emailAndPassword: { enabled: true },
+      plugins: [organization(), paystack<PaystackClientLike>(invalidOptions)],
+    });
+
+    const invalidClient = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [organizationClient(), createPaystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => invalidAuth.handler(new Request(url, init)),
+      },
+    });
+
+    const testUser = { email: "broken@test.com", password: "password", name: "Broken" };
+    await invalidClient.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await invalidClient.signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
+
+    const orgRes = await invalidClient.organization.create(
+      {
+        name: "Broken Org",
+        slug: "broken-org",
+      },
+      { headers },
+    );
+
+    const res = await invalidAuth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          plan: "broken-seat-plan",
+          referenceId: orgRes.data?.id,
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.message).toContain("Invalid seatPriceId");
+    expect(paystackSdk.transaction.initialize).not.toHaveBeenCalled();
   });
 
   it("should store pendingPlan when scheduleAtPeriodEnd is true", async () => {
@@ -381,7 +466,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         periodStart,
         periodEnd,
         paystackAuthorizationCode: "AUTH_abc123",
-        paystackSubscriptionCode: "SUB_abc123",
+        paystackSubscriptionCode: "LOC_sub_abc123",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -390,11 +475,6 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     (paystackSdk.transaction.chargeAuthorization as any).mockResolvedValue({
       status: true,
       data: { status: "success", reference: "prorate_mocked" },
-    });
-
-    (paystackSdk.subscription.update as any).mockResolvedValue({
-      status: true,
-      data: { status: "success" },
     });
 
     const res = await auth.handler(
@@ -433,19 +513,307 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       }),
     );
 
-    expect((paystackSdk as any).subscription.update).toHaveBeenCalledWith(
-      "SUB_abc123",
-      expect.objectContaining({
-        body: expect.objectContaining({
-          amount: 250000,
-        }),
-      }),
-    );
-
     const subs = await (ctx.adapter as any).findMany({
       model: "subscription",
       where: [{ field: "referenceId", value: signUp.user.id }],
     });
     expect(subs[0].seats).toBe(3);
+
+    const transactions = await (ctx.adapter as any).findMany({
+      model: "paystackTransaction",
+      where: [{ field: "referenceId", value: signUp.user.id }],
+    });
+    expect(transactions.some((tx: any) => tx.reference === "prorate_mocked")).toBe(true);
+  });
+
+  it("should create a checkout transaction for proration when no reusable authorization exists", async () => {
+    const testUser = { email: "transfer@test.com", password: "password", name: "Transfer User" };
+    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+
+    const ctx = await auth.$context;
+    const now = new Date();
+    await (ctx.adapter as any).create({
+      model: "subscription",
+      data: {
+        plan: "team-plan",
+        referenceId: signUp.user.id,
+        status: "active",
+        seats: 1,
+        periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        paystackAuthorizationCode: "",
+        paystackSubscriptionCode: "LOC_sub_transfer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    (paystackSdk.transaction.initialize as any).mockResolvedValue({
+      status: true,
+      data: {
+        authorization_url: "https://paystack.com/pay/proration-transfer",
+        access_code: "acs_proration_transfer",
+        reference: "ref_proration_transfer",
+      },
+    });
+
+    const res = await auth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          plan: "business-plan",
+          referenceId: signUp.user.id,
+          prorateAndCharge: true,
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.redirect).toBe(true);
+    expect(json.url).toBe("https://paystack.com/pay/proration-transfer");
+
+    expect((paystackSdk as any).transaction.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          amount: 125000,
+        }),
+      }),
+    );
+
+    const unchanged = await (ctx.adapter as any).findOne({
+      model: "subscription",
+      where: [{ field: "paystackSubscriptionCode", value: "LOC_sub_transfer" }],
+    });
+    expect(unchanged.plan).toBe("team-plan");
+    expect(unchanged.seats).toBe(1);
+
+    const pendingTransaction = await (ctx.adapter as any).findOne({
+      model: "paystackTransaction",
+      where: [{ field: "reference", value: "ref_proration_transfer" }],
+    });
+    expect(pendingTransaction?.status).toBe("pending");
+    expect(pendingTransaction?.amount).toBe(125000);
+  });
+
+  it("should apply a checkout-based proration upgrade after transaction verification", async () => {
+    const testUser = {
+      email: "verify-transfer@test.com",
+      password: "password",
+      name: "Verify User",
+    };
+    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+
+    const ctx = await auth.$context;
+    const now = new Date();
+    const createdSubscription = await (ctx.adapter as any).create({
+      model: "subscription",
+      data: {
+        plan: "team-plan",
+        referenceId: signUp.user.id,
+        userId: signUp.user.id,
+        status: "active",
+        seats: 1,
+        periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        paystackAuthorizationCode: "",
+        paystackSubscriptionCode: "LOC_sub_verify_transfer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await (ctx.adapter as any).create({
+      model: "paystackTransaction",
+      data: {
+        reference: "ref_verify_proration",
+        referenceId: signUp.user.id,
+        userId: signUp.user.id,
+        amount: 125000,
+        currency: "NGN",
+        status: "pending",
+        plan: "business-plan",
+        metadata: JSON.stringify({
+          type: "proration",
+          subscriptionId: createdSubscription.id,
+          referenceId: signUp.user.id,
+          newPlan: "business-plan",
+          oldPlan: "team-plan",
+          newSeatCount: 1,
+          remainingDays: 15,
+        }),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    (paystackSdk.transaction.verify as any).mockResolvedValue({
+      status: true,
+      data: {
+        id: 123,
+        status: "success",
+        reference: "ref_verify_proration",
+        amount: 125000,
+        currency: "NGN",
+        customer: {
+          customer_code: "CUS_verify_transfer",
+          email: testUser.email,
+        },
+        metadata: JSON.stringify({
+          type: "proration",
+          subscriptionId: createdSubscription.id,
+          referenceId: signUp.user.id,
+          newPlan: "business-plan",
+          oldPlan: "team-plan",
+          newSeatCount: 1,
+          remainingDays: 15,
+        }),
+        authorization: null,
+        plan: null,
+      },
+    });
+
+    const res = await auth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/verify-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          reference: "ref_verify_proration",
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.status).toBe("success");
+
+    const updatedSubscription = await (ctx.adapter as any).findOne({
+      model: "subscription",
+      where: [{ field: "id", value: createdSubscription.id }],
+    });
+    expect(updatedSubscription.plan).toBe("business-plan");
+    expect(updatedSubscription.paystackTransactionReference).toBe("ref_verify_proration");
+
+    const updatedTransaction = await (ctx.adapter as any).findOne({
+      model: "paystackTransaction",
+      where: [{ field: "reference", value: "ref_verify_proration" }],
+    });
+    expect(updatedTransaction.status).toBe("success");
+  });
+
+  it("should fail proration for Paystack-managed subscriptions", async () => {
+    const remotePaystackSdk = {
+      transaction: {
+        initialize: vi.fn(),
+        chargeAuthorization: vi.fn().mockResolvedValue({
+          status: true,
+          data: { status: "success", reference: "prorate_missing_update" },
+        }),
+        verify: vi.fn(),
+      },
+      subscription: {
+        fetch: vi.fn(),
+        disable: vi.fn(),
+      },
+      customer: {
+        update: vi.fn(),
+      },
+    };
+
+    const authWithoutUpdate = betterAuth({
+      database: memoryAdapter({
+        user: [],
+        session: [],
+        subscription: [],
+        paystackTransaction: [],
+        organization: [],
+        member: [],
+        invitation: [],
+      }),
+      baseURL: "http://localhost:3000",
+      emailAndPassword: { enabled: true },
+      plugins: [
+        organization(),
+        paystack<PaystackClientLike>({
+          ...options,
+          paystackClient: remotePaystackSdk as any,
+        }),
+      ],
+    });
+
+    const clientWithoutUpdate = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [organizationClient(), createPaystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => authWithoutUpdate.handler(new Request(url, init)),
+      },
+    });
+
+    const testUser = { email: "noupdate@test.com", password: "password", name: "No Update" };
+    const signUp = await clientWithoutUpdate.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await clientWithoutUpdate.signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
+
+    const ctx = await authWithoutUpdate.$context;
+    const now = new Date();
+    await (ctx.adapter as any).create({
+      model: "subscription",
+      data: {
+        plan: "team-plan",
+        referenceId: signUp.user.id,
+        status: "active",
+        seats: 1,
+        periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        paystackAuthorizationCode: "AUTH_missing_update",
+        paystackSubscriptionCode: "SUB_missing_update",
+        paystackPlanCode: "PLN_remote_team",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const res = await authWithoutUpdate.handler(
+      new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          plan: "team-plan",
+          referenceId: signUp.user.id,
+          quantity: 3,
+          prorateAndCharge: true,
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.message).toContain("Paystack-managed subscriptions do not support");
+
+    const unchanged = await (ctx.adapter as any).findOne({
+      model: "subscription",
+      where: [{ field: "paystackSubscriptionCode", value: "SUB_missing_update" }],
+    });
+    expect(unchanged.seats).toBe(1);
   });
 });

@@ -9,9 +9,11 @@ A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin w
 - [x] Anonymous sign-in (demo purposes)
 - [x] Paystack subscription checkout (redirect flow)
 - [x] Transaction verification and status tracking
-- [x] Subscription management (list, cancel)
+- [x] Subscription management (list, cancel, restore, billing portal)
+- [x] Scheduled plan changes and immediate upgrades for local plans
 - [x] **Organization billing** - Bill subscriptions to organizations instead of personal accounts
 - [x] **Plan Code subscriptions** - Use Paystack-managed plans (`planCode`)
+- [x] **Admin Plugin** - Native Better Auth administrative capabilities
 - [x] Dynamic plan configuration via `/paystack/config`
 
 ## Tech Stack
@@ -90,16 +92,18 @@ src/
 
 ```ts
 import { paystack } from "@alexasomba/better-auth-paystack";
-import { organization } from "better-auth/plugins";
+import { organization, admin } from "better-auth/plugins";
 
 export const auth = betterAuth({
   plugins: [
     organization(),
+    admin(),
     paystack({
       paystackClient,
-      paystackWebhookSecret: env.PAYSTACK_SECRET_KEY,
+      webhook: { secret: env.PAYSTACK_WEBHOOK_SECRET },
       subscription: {
         enabled: true,
+        allowedPaymentChannels: ["card"],
         plans: [
           // Paystack-managed plans (uses planCode)
           { name: "starter", planCode: "PLN_xxxxx" },
@@ -130,11 +134,15 @@ export const auth = betterAuth({
 ```ts
 import { createAuthClient } from "better-auth/react";
 import { paystackClient } from "@alexasomba/better-auth-paystack/client";
-import { organizationClient } from "better-auth/client/plugins";
+import { organizationClient, adminClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_BETTER_AUTH_URL,
-  plugins: [paystackClient({ subscription: true }), organizationClient()],
+  plugins: [
+    paystackClient({ subscription: true }),
+    organizationClient(),
+    adminClient(),
+  ],
 });
 ```
 
@@ -152,6 +160,45 @@ if (result.data?.url) {
   window.location.href = result.data.url;
 }
 ```
+
+### Advanced Server Flows
+
+Some plugin capabilities are intentionally server-side and are not triggered from the dashboard UI. In the TanStack example, these are the right primitives to use from server functions, jobs, or admin routes:
+
+```ts
+import {
+  chargeSubscriptionRenewal,
+  syncPaystackPlans,
+  syncPaystackProducts,
+} from "@alexasomba/better-auth-paystack";
+
+// Example: sync your Paystack catalog into Better Auth's local tables
+await syncPaystackProducts(ctx, options);
+await syncPaystackPlans(ctx, options);
+
+// Example: charge a saved authorization for a recurring renewal
+await chargeSubscriptionRenewal(ctx, options, {
+  subscriptionId: "sub_123",
+});
+```
+
+What the dashboard demonstrates:
+
+- checkout redirects for subscriptions and one-time payments
+- trial-aware subscription cards and callback messaging
+- trial-used messaging before checkout starts
+- cancel / restore flows
+- billing portal / manage-link flow
+- scheduled plan changes
+- immediate upgrades for local plans using `prorateAndCharge`
+- authenticated admin controls for trusted plan/product sync and manual local renewals
+
+What stays server-owned:
+
+- catalog sync jobs
+- recurring renewal charging
+- webhook processing and subscription lifecycle hooks
+- trial eligibility enforcement and trial start automation
 
 ## Environment Variables
 

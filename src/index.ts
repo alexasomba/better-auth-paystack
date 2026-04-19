@@ -1,4 +1,5 @@
 import { defineErrorCodes } from "@better-auth/core/utils/error-codes";
+import type { CustomerCreatePayload } from "@alexasomba/paystack-node";
 import type {
   AuthContext,
   BetterAuthPlugin,
@@ -655,7 +656,13 @@ export const paystack = <
   $ERROR_CODES: Record<string, RawError<string>>;
   options: NoInfer<O>;
 } => {
-  const routeOptions = options as unknown as AnyPaystackOptions;
+  const routeOptions = {
+    ...(options as unknown as AnyPaystackOptions),
+    webhook: {
+      ...options.webhook,
+      secret: options.webhook?.secret ?? options.paystackWebhookSecret,
+    },
+  } satisfies AnyPaystackOptions;
   return {
     id: "paystack",
     endpoints: {
@@ -718,9 +725,9 @@ export const paystack = <
                         body: {
                           email: user.email,
                           first_name: user.name ?? undefined,
-                          metadata: {
+                          metadata: JSON.stringify({
                             userId: user.id,
-                          },
+                          }),
                         },
                       })) ??
                       (await Promise.reject(new Error("Paystack client missing customer ops")));
@@ -802,7 +809,7 @@ export const paystack = <
                             {
                               email: targetEmail,
                               first_name: org.name,
-                              metadata: { organizationId: org.id },
+                              metadata: JSON.stringify({ organizationId: org.id }),
                             },
                             extraCreateParams,
                           );
@@ -812,7 +819,7 @@ export const paystack = <
                           if (!paystackOps) return;
                           const raw =
                             (await paystackOps.customer?.create({
-                              body: params as Record<string, unknown>,
+                              body: params as CustomerCreatePayload,
                             })) ??
                             (await Promise.reject(
                               new Error("Paystack client missing customer ops"),
@@ -827,15 +834,12 @@ export const paystack = <
                             sdkRes !== undefined &&
                             sdkRes !== null
                           ) {
-                            await (
-                              ctx.internalAdapter as unknown as {
-                                updateOrganization: (
-                                  id: string,
-                                  data: Record<string, unknown>,
-                                ) => Promise<void>;
-                              }
-                            ).updateOrganization(org.id, {
-                              paystackCustomerCode: customerCode,
+                            await ctx.adapter.update({
+                              model: "organization",
+                              where: [{ field: "id", value: org.id }],
+                              update: {
+                                paystackCustomerCode: customerCode,
+                              },
                             });
 
                             if (typeof options.organization?.onCustomerCreate === "function") {
@@ -983,4 +987,13 @@ export type PaystackPlugin<
 > = ReturnType<typeof paystack<TPaystackClient, O>>;
 
 export { chargeSubscriptionRenewal, syncPaystackPlans, syncPaystackProducts } from "./operations";
-export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };
+export type {
+  Subscription,
+  SubscriptionOptions,
+  PaystackPlan,
+  PaystackOptions,
+  PaystackProduct,
+  PaystackClientLike,
+  ChargeRecurringSubscriptionResult,
+  PaystackSyncResult,
+} from "./types";

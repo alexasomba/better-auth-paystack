@@ -10,6 +10,71 @@ import type {
 } from "./types";
 import { unwrapSdkResult } from "./paystack-sdk";
 
+export function getPlanSeatAmount(plan: PaystackPlan): number | undefined {
+  if (plan.seatAmount !== undefined) {
+    if (typeof plan.seatAmount === "number" && Number.isFinite(plan.seatAmount)) {
+      return plan.seatAmount;
+    }
+    throw new Error(`Invalid seatAmount for plan '${plan.name}'. Expected a finite number.`);
+  }
+
+  if (plan.seatPriceId === undefined || plan.seatPriceId === null || plan.seatPriceId === "") {
+    return undefined;
+  }
+
+  const parsed = typeof plan.seatPriceId === "string" ? Number(plan.seatPriceId) : plan.seatPriceId;
+  if (typeof parsed === "number" && Number.isFinite(parsed)) {
+    return parsed;
+  }
+
+  throw new Error(
+    `Invalid seatPriceId for plan '${plan.name}'. Expected a numeric amount in the smallest currency unit.`,
+  );
+}
+
+export function calculatePlanAmount(plan: PaystackPlan, quantity: number): number {
+  return (plan.amount ?? 0) + quantity * (getPlanSeatAmount(plan) ?? 0);
+}
+
+export function isLocalSubscriptionCode(subscriptionCode: string | undefined | null): boolean {
+  return (
+    typeof subscriptionCode === "string" &&
+    (subscriptionCode.startsWith("LOC_") || subscriptionCode.startsWith("sub_local_"))
+  );
+}
+
+export function isLocallyManagedSubscription(
+  subscription: Pick<Subscription, "paystackSubscriptionCode" | "paystackPlanCode">,
+): boolean {
+  if (isLocalSubscriptionCode(subscription.paystackSubscriptionCode)) {
+    return true;
+  }
+
+  if (
+    typeof subscription.paystackSubscriptionCode === "string" &&
+    subscription.paystackSubscriptionCode !== ""
+  ) {
+    return false;
+  }
+
+  return (
+    subscription.paystackPlanCode === undefined ||
+    subscription.paystackPlanCode === null ||
+    subscription.paystackPlanCode === ""
+  );
+}
+
+export function assertLocallyManagedSubscription(
+  subscription: Pick<Subscription, "paystackSubscriptionCode" | "paystackPlanCode">,
+  action: string,
+): void {
+  if (!isLocallyManagedSubscription(subscription)) {
+    throw new Error(
+      `Paystack-managed subscriptions do not support ${action}. Use local billing for seat-based or prorated subscription changes.`,
+    );
+  }
+}
+
 export async function getPlans(
   subscriptionOptions: AnyPaystackOptions["subscription"],
 ): Promise<PaystackPlan[]> {
@@ -168,7 +233,11 @@ export async function syncProductQuantityFromPaystack(
 
   // Fetch the latest quantity from Paystack
   try {
-    const raw = await paystackClient.product?.fetch(localProduct.paystackId);
+    const paystackProductId = Number(localProduct.paystackId);
+    if (!Number.isFinite(paystackProductId)) {
+      return;
+    }
+    const raw = await paystackClient.product?.fetch(paystackProductId);
     const sdkRes = unwrapSdkResult<PaystackProductResponse>(raw);
     const remoteQuantity = sdkRes?.quantity;
 
@@ -251,7 +320,8 @@ export async function syncSubscriptionSeats(
   if (subscription === null || subscription === undefined) return;
   const plan = await getPlanByName(options, subscription.plan);
   if (plan === null || plan === undefined) return;
-  if (plan.seatAmount === undefined) return;
+  const seatAmount = getPlanSeatAmount(plan);
+  if (seatAmount === undefined) return;
 
   const members = await adapter.findMany({
     model: "member",
@@ -259,28 +329,11 @@ export async function syncSubscriptionSeats(
   });
 
   const quantity = members.length;
-  let totalAmount = plan.amount ?? 0;
-
-  if (
-    plan.seatAmount !== undefined &&
-    plan.seatAmount !== null &&
-    typeof plan.seatAmount === "number"
-  ) {
-    totalAmount += quantity * plan.seatAmount;
-  }
 
   try {
-    const client = options.paystackClient;
-    if (client === undefined || client === null) return;
+    assertLocallyManagedSubscription(subscription, "automatic seat sync");
 
-    // Paystack subscription update doesn't natively support quantity in the same way as Stripe
-    // but we can update the amount or the plan.
-    const raw = await client.subscription?.update(subscription.paystackSubscriptionCode, {
-      body: { amount: totalAmount },
-    });
-    unwrapSdkResult(raw);
-
-    // Update local DB to reflect current seat count
+    // Locally managed subscriptions renew via saved authorizations, so seat count lives in our DB.
     await adapter.update({
       model: "subscription",
       where: [{ field: "id", value: subscription.id }],
@@ -292,7 +345,7 @@ export async function syncSubscriptionSeats(
   } catch (e: unknown) {
     const log = ctx.context.logger;
     if (log !== undefined && log !== null) {
-      log.error("Failed to sync subscription seats with Paystack", e);
+      log.error("Failed to sync subscription seats", e);
     }
   }
 }

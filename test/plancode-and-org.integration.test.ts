@@ -122,7 +122,7 @@ describe("planCode and organization referenceId tests", () => {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const init = await (authClient as any).paystack.initializeTransaction({ plan: "starter" });
+      const init = await authClient.paystack.initializeTransaction({ plan: "starter" });
       if (init.error) throw new Error("Initialization failed");
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_plancode_123");
@@ -216,7 +216,7 @@ describe("planCode and organization referenceId tests", () => {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const init = await (authClient as any).paystack.initializeTransaction({ plan: "team" });
+      const init = await authClient.paystack.initializeTransaction({ plan: "team" });
 
       if (init.error) throw new Error("Initialization failed");
       expect(init.data.url).toBe("https://paystack/checkout");
@@ -334,14 +334,14 @@ describe("planCode and organization referenceId tests", () => {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const org = await (authClient as any).organization.create({
+      const org = await authClient.organization.create({
         name: "Test Org",
         slug: "test-org",
       });
       const orgId = org.data?.id;
       expect(orgId).toBeDefined();
 
-      const init = await (authClient as any).paystack.initializeTransaction({
+      const init = await authClient.paystack.initializeTransaction({
         plan: "team",
         referenceId: orgId,
       });
@@ -447,7 +447,7 @@ describe("planCode and organization referenceId tests", () => {
       const fakeOrgId = "org_fake_123";
 
       try {
-        await (authClient as any).paystack.initializeTransaction(
+        await authClient.paystack.initializeTransaction(
           { plan: "team", referenceId: fakeOrgId },
           { throw: true },
         );
