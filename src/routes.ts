@@ -851,9 +851,6 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           const existingSub = await getOrganizationSubscription(ctx, referenceId);
           if (
             existingSub?.status === "active" &&
-            existingSub.paystackAuthorizationCode !== undefined &&
-            existingSub.paystackAuthorizationCode !== null &&
-            existingSub.paystackAuthorizationCode !== "" &&
             existingSub.paystackSubscriptionCode !== undefined &&
             existingSub.paystackSubscriptionCode !== null &&
             existingSub.paystackSubscriptionCode !== ""
@@ -920,28 +917,45 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
 
               // 4. Calculate Difference & Charge
               const costDifference = newAmount - oldAmount;
+              const prorationMetadata = {
+                type: "proration",
+                subscriptionId: existingSub.id,
+                referenceId,
+                newPlan: plan.name.toLowerCase(),
+                oldPlan: existingSub.plan,
+                newSeatCount,
+                remainingDays,
+              };
+              let completedProrationReference: string | undefined;
+
               if (costDifference > 0 && remainingDays > 0) {
                 const proratedAmount = Math.round((costDifference / totalDays) * remainingDays);
-                // Ensure minimum Paystack charge limit is met (50 NGN -> 5000)
-                if (proratedAmount >= 5000) {
-                  const ops = getPaystackOps(options.paystackClient);
-                  if (ops === undefined || ops === null) {
-                    ctx.context.logger.error("Paystack client not configured for proration charge");
-                    return;
-                  }
+                if (proratedAmount < 5000) {
+                  throw new APIError("BAD_REQUEST", {
+                    message:
+                      "Prorated upgrade amount is below Paystack's minimum charge. Schedule the change for period end instead.",
+                    status: 400,
+                  });
+                }
+
+                const ops = getPaystackOps(options.paystackClient);
+                if (ops === undefined || ops === null) {
+                  ctx.context.logger.error("Paystack client not configured for proration charge");
+                  return;
+                }
+
+                if (
+                  existingSub.paystackAuthorizationCode !== undefined &&
+                  existingSub.paystackAuthorizationCode !== null &&
+                  existingSub.paystackAuthorizationCode !== ""
+                ) {
                   const chargeResRaw = await ops.transaction?.chargeAuthorization({
                     body: {
                       email: targetEmail,
                       amount: proratedAmount,
                       authorization_code: existingSub.paystackAuthorizationCode,
                       reference: `upg_${existingSub.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-                      metadata: JSON.stringify({
-                        type: "proration",
-                        referenceId,
-                        newPlan: plan.name,
-                        oldPlan: existingSub.plan,
-                        remainingDays,
-                      }),
+                      metadata: JSON.stringify(prorationMetadata),
                     },
                   });
                   const sdkRes = unwrapSdkResult<PaystackTransactionResponse>(chargeResRaw);
@@ -951,6 +965,64 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
                       message: "Failed to process prorated charge via saved authorization.",
                     });
                   }
+
+                  await ctx.context.adapter.create({
+                    model: "paystackTransaction",
+                    data: {
+                      reference: sdkRes.reference ?? "",
+                      paystackId:
+                        sdkRes.id !== undefined && sdkRes.id !== null
+                          ? String(sdkRes.id)
+                          : undefined,
+                      referenceId,
+                      userId: user.id,
+                      amount: sdkRes.amount ?? proratedAmount,
+                      currency: sdkRes.currency ?? finalCurrency,
+                      status: "success",
+                      plan: plan.name.toLowerCase(),
+                      metadata: JSON.stringify(prorationMetadata),
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                  });
+                  completedProrationReference = sdkRes.reference ?? undefined;
+                } else {
+                  const initRaw = await ops.transaction?.initialize({
+                    body: {
+                      email: targetEmail,
+                      amount: proratedAmount,
+                      currency: finalCurrency,
+                      callback_url: callbackURL ?? undefined,
+                      metadata: JSON.stringify(prorationMetadata),
+                    } as components["schemas"]["TransactionInitialize"],
+                  });
+                  const initRes =
+                    unwrapSdkResult<components["schemas"]["TransactionInitializeResponse"]["data"]>(
+                      initRaw,
+                    );
+
+                  await ctx.context.adapter.create({
+                    model: "paystackTransaction",
+                    data: {
+                      reference: initRes?.reference ?? "",
+                      referenceId,
+                      userId: user.id,
+                      amount: proratedAmount,
+                      currency: finalCurrency,
+                      status: "pending",
+                      plan: plan.name.toLowerCase(),
+                      metadata: JSON.stringify(prorationMetadata),
+                      createdAt: new Date(),
+                      updatedAt: new Date(),
+                    },
+                  });
+
+                  return ctx.json({
+                    url: initRes?.authorization_url,
+                    reference: initRes?.reference,
+                    accessCode: initRes?.access_code,
+                    redirect: true,
+                  });
                 }
               }
 
@@ -961,6 +1033,9 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
                 update: {
                   plan: plan.name,
                   seats: newSeatCount,
+                  ...(completedProrationReference !== undefined
+                    ? { paystackTransactionReference: completedProrationReference }
+                    : {}),
                   updatedAt: new Date(),
                 },
               });
@@ -1554,14 +1629,44 @@ export const verifyTransaction = <P extends string = "/verify-transaction">(
           let isTrial = false;
           let trialEnd: string | undefined;
           let targetPlan: string | undefined;
+          let metadataObj: Record<string, unknown> = {};
 
           if (data.metadata !== undefined && data.metadata !== null && data.metadata !== "") {
-            const meta = (
+            metadataObj = (
               typeof data.metadata === "string" ? JSON.parse(data.metadata) : data.metadata
             ) as Record<string, unknown>;
-            isTrial = meta.isTrial === true || meta.isTrial === "true";
-            trialEnd = meta.trialEnd as string | undefined;
-            targetPlan = meta.plan as string | undefined;
+            isTrial = metadataObj.isTrial === true || metadataObj.isTrial === "true";
+            trialEnd = metadataObj.trialEnd as string | undefined;
+            targetPlan = metadataObj.plan as string | undefined;
+          }
+
+          if (metadataObj.type === "proration") {
+            const subscriptionId = metadataObj.subscriptionId as string | undefined;
+            const newPlan = metadataObj.newPlan as string | undefined;
+            const newSeatCount = metadataObj.newSeatCount as number | undefined;
+
+            if (
+              subscriptionId !== undefined &&
+              subscriptionId !== "" &&
+              newPlan !== undefined &&
+              newPlan !== ""
+            ) {
+              await ctx.context.adapter.update<Subscription>({
+                model: "subscription",
+                update: {
+                  plan: newPlan,
+                  ...(typeof newSeatCount === "number" ? { seats: newSeatCount } : {}),
+                  paystackTransactionReference: reference,
+                  ...(authorizationCode !== undefined && authorizationCode !== null
+                    ? { paystackAuthorizationCode: authorizationCode }
+                    : {}),
+                  updatedAt: new Date(),
+                },
+                where: [{ field: "id", value: subscriptionId }],
+              });
+            }
+
+            return ctx.json({ status, reference, data });
           }
 
           let paystackSubscriptionCode: string | undefined;

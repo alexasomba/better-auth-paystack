@@ -45,6 +45,13 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
           currency: "NGN",
           seatAmount: 50000,
         },
+        {
+          name: "business-plan",
+          amount: 300000,
+          interval: "monthly",
+          currency: "NGN",
+          seatAmount: 100000,
+        },
       ],
     },
     organization: {
@@ -511,6 +518,200 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       where: [{ field: "referenceId", value: signUp.user.id }],
     });
     expect(subs[0].seats).toBe(3);
+
+    const transactions = await (ctx.adapter as any).findMany({
+      model: "paystackTransaction",
+      where: [{ field: "referenceId", value: signUp.user.id }],
+    });
+    expect(transactions.some((tx: any) => tx.reference === "prorate_mocked")).toBe(true);
+  });
+
+  it("should create a checkout transaction for proration when no reusable authorization exists", async () => {
+    const testUser = { email: "transfer@test.com", password: "password", name: "Transfer User" };
+    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+
+    const ctx = await auth.$context;
+    const now = new Date();
+    await (ctx.adapter as any).create({
+      model: "subscription",
+      data: {
+        plan: "team-plan",
+        referenceId: signUp.user.id,
+        status: "active",
+        seats: 1,
+        periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        paystackAuthorizationCode: "",
+        paystackSubscriptionCode: "LOC_sub_transfer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    (paystackSdk.transaction.initialize as any).mockResolvedValue({
+      status: true,
+      data: {
+        authorization_url: "https://paystack.com/pay/proration-transfer",
+        access_code: "acs_proration_transfer",
+        reference: "ref_proration_transfer",
+      },
+    });
+
+    const res = await auth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/initialize-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          plan: "business-plan",
+          referenceId: signUp.user.id,
+          prorateAndCharge: true,
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.redirect).toBe(true);
+    expect(json.url).toBe("https://paystack.com/pay/proration-transfer");
+
+    expect((paystackSdk as any).transaction.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          amount: 125000,
+        }),
+      }),
+    );
+
+    const unchanged = await (ctx.adapter as any).findOne({
+      model: "subscription",
+      where: [{ field: "paystackSubscriptionCode", value: "LOC_sub_transfer" }],
+    });
+    expect(unchanged.plan).toBe("team-plan");
+    expect(unchanged.seats).toBe(1);
+
+    const pendingTransaction = await (ctx.adapter as any).findOne({
+      model: "paystackTransaction",
+      where: [{ field: "reference", value: "ref_proration_transfer" }],
+    });
+    expect(pendingTransaction?.status).toBe("pending");
+    expect(pendingTransaction?.amount).toBe(125000);
+  });
+
+  it("should apply a checkout-based proration upgrade after transaction verification", async () => {
+    const testUser = {
+      email: "verify-transfer@test.com",
+      password: "password",
+      name: "Verify User",
+    };
+    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const headers = new Headers();
+    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+
+    const ctx = await auth.$context;
+    const now = new Date();
+    const createdSubscription = await (ctx.adapter as any).create({
+      model: "subscription",
+      data: {
+        plan: "team-plan",
+        referenceId: signUp.user.id,
+        userId: signUp.user.id,
+        status: "active",
+        seats: 1,
+        periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
+        periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        paystackAuthorizationCode: "",
+        paystackSubscriptionCode: "LOC_sub_verify_transfer",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    await (ctx.adapter as any).create({
+      model: "paystackTransaction",
+      data: {
+        reference: "ref_verify_proration",
+        referenceId: signUp.user.id,
+        userId: signUp.user.id,
+        amount: 125000,
+        currency: "NGN",
+        status: "pending",
+        plan: "business-plan",
+        metadata: JSON.stringify({
+          type: "proration",
+          subscriptionId: createdSubscription.id,
+          referenceId: signUp.user.id,
+          newPlan: "business-plan",
+          oldPlan: "team-plan",
+          newSeatCount: 1,
+          remainingDays: 15,
+        }),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    (paystackSdk.transaction.verify as any).mockResolvedValue({
+      status: true,
+      data: {
+        id: 123,
+        status: "success",
+        reference: "ref_verify_proration",
+        amount: 125000,
+        currency: "NGN",
+        customer: {
+          customer_code: "CUS_verify_transfer",
+          email: testUser.email,
+        },
+        metadata: JSON.stringify({
+          type: "proration",
+          subscriptionId: createdSubscription.id,
+          referenceId: signUp.user.id,
+          newPlan: "business-plan",
+          oldPlan: "team-plan",
+          newSeatCount: 1,
+          remainingDays: 15,
+        }),
+        authorization: null,
+        plan: null,
+      },
+    });
+
+    const res = await auth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/verify-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: headers.get("Authorization") ?? "",
+          Cookie: headers.get("Cookie") ?? "",
+        },
+        body: JSON.stringify({
+          reference: "ref_verify_proration",
+        }),
+      }),
+    );
+
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.status).toBe("success");
+
+    const updatedSubscription = await (ctx.adapter as any).findOne({
+      model: "subscription",
+      where: [{ field: "id", value: createdSubscription.id }],
+    });
+    expect(updatedSubscription.plan).toBe("business-plan");
+    expect(updatedSubscription.paystackTransactionReference).toBe("ref_verify_proration");
+
+    const updatedTransaction = await (ctx.adapter as any).findOne({
+      model: "paystackTransaction",
+      where: [{ field: "reference", value: "ref_verify_proration" }],
+    });
+    expect(updatedTransaction.status).toBe("success");
   });
 
   it("should fail proration for Paystack-managed subscriptions", async () => {

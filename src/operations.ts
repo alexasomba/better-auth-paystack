@@ -184,6 +184,7 @@ export async function chargeSubscriptionRenewal(
   }
 
   let email: string | undefined;
+  let billingUserId = subscription.userId;
   const referenceId = subscription.referenceId;
   if (referenceId !== undefined && referenceId !== null && referenceId !== "") {
     const user = await ctx.context.adapter.findOne<User>({
@@ -192,6 +193,7 @@ export async function chargeSubscriptionRenewal(
     });
     if (user !== undefined && user !== null) {
       email = user.email;
+      billingUserId = user.id;
     } else if (options.organization?.enabled === true) {
       const ownerMember = await ctx.context.adapter.findOne<Member>({
         model: "member",
@@ -206,6 +208,7 @@ export async function chargeSubscriptionRenewal(
           where: [{ field: "id", value: ownerMember.userId }],
         });
         email = ownerUser?.email;
+        billingUserId = ownerUser?.id ?? ownerMember.userId;
       }
     }
   }
@@ -240,6 +243,28 @@ export async function chargeSubscriptionRenewal(
   if (chargeData?.status === "success" && chargeData.reference !== undefined) {
     const now = new Date();
     const nextPeriodEnd = getNextPeriodEnd(now, plan.interval ?? "monthly");
+
+    await ctx.context.adapter.create({
+      model: "paystackTransaction",
+      data: {
+        reference: chargeData.reference,
+        paystackId:
+          chargeData.id !== undefined && chargeData.id !== null ? String(chargeData.id) : undefined,
+        referenceId,
+        userId: billingUserId,
+        amount: chargeData.amount,
+        currency: chargeData.currency,
+        status: "success",
+        plan: plan.name.toLowerCase(),
+        metadata: JSON.stringify({
+          type: "renewal",
+          subscriptionId,
+          referenceId,
+        }),
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
 
     await ctx.context.adapter.update({
       model: "subscription",
