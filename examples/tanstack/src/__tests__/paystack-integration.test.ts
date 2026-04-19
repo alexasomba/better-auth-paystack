@@ -93,7 +93,7 @@ describe("TanStack Example - Paystack Integration", () => {
         anonymous(),
         organization(),
         paystack({
-          paystackClient: paystackClient as any,
+          paystackClient,
           secretKey: "sk_test_mock",
           webhook: { secret: "whsec_test_mock" },
           subscription: {

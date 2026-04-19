@@ -61,7 +61,7 @@ export const auth = betterAuth({
     webhookSecret !== ""
       ? [
           paystack({
-            paystackClient: paystackClient as any, // Cast to any because of SDK structure mismatch
+            paystackClient,
             secretKey: secretKey!,
             webhook: { secret: webhookSecret },
 

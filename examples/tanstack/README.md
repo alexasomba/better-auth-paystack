@@ -97,7 +97,7 @@ export const auth = betterAuth({
     organization(),
     paystack({
       paystackClient,
-      paystackWebhookSecret: env.PAYSTACK_SECRET_KEY,
+      webhook: { secret: env.PAYSTACK_WEBHOOK_SECRET },
       subscription: {
         enabled: true,
         plans: [
