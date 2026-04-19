@@ -1,102 +1,118 @@
 //#region src/client.ts
+/**
+* Better Auth Paystack Client Plugin
+*/
 const paystackClient = (_options) => {
 	return {
 		id: "paystack",
-		version: "1.0.0",
+		version: "2.1.1",
 		$InferServerPlugin: {},
-		getActions: ($fetch, _$store, _options) => {
+		getActions: ($fetch, _store, _options) => {
 			const fetch = $fetch;
-			const initializeTransaction = async (data, options) => {
-				return fetch("paystack/initialize-transaction", {
+			const actions = {
+				transaction: {
+					initialize: (data, options) => fetch("paystack/initialize-transaction", {
+						method: "POST",
+						body: data,
+						...options
+					}),
+					verify: (data, options) => fetch("paystack/verify-transaction", {
+						method: "POST",
+						body: data,
+						...options
+					}),
+					list: (data, options) => fetch("paystack/list-transactions", {
+						method: "GET",
+						query: data?.query,
+						...options
+					})
+				},
+				subscription: {
+					upgrade: (data, options) => fetch("paystack/initialize-transaction", {
+						method: "POST",
+						body: data,
+						...options
+					}),
+					create: (data, options) => fetch("paystack/initialize-transaction", {
+						method: "POST",
+						body: data,
+						...options
+					}),
+					cancel: (data, options) => fetch("paystack/disable-subscription", {
+						method: "POST",
+						body: data,
+						...options
+					}),
+					restore: (data, options) => fetch("paystack/enable-subscription", {
+						method: "POST",
+						body: data,
+						...options
+					}),
+					list: (data, options) => fetch("paystack/list-subscriptions", {
+						method: "GET",
+						query: data?.query,
+						...options
+					}),
+					billingPortal: (data, options) => fetch("paystack/subscription-manage-link", {
+						method: "GET",
+						query: data,
+						...options
+					}),
+					manageLink: (data, options) => fetch("paystack/subscription-manage-link", {
+						method: "GET",
+						query: data,
+						...options
+					}),
+					disable: function(data, options) {
+						return this.cancel(data, options);
+					},
+					enable: function(data, options) {
+						return this.restore(data, options);
+					}
+				},
+				initializeTransaction: (data, options) => fetch("paystack/initialize-transaction", {
 					method: "POST",
 					body: data,
 					...options
-				});
-			};
-			const verifyTransaction = async (data, options) => {
-				return fetch("paystack/verify-transaction", {
+				}),
+				verifyTransaction: (data, options) => fetch("paystack/verify-transaction", {
 					method: "POST",
 					body: data,
 					...options
-				});
-			};
-			const listTransactions = async (data = {}, options) => {
-				return fetch("paystack/list-transactions", {
+				}),
+				listTransactions: (data, options) => fetch("paystack/list-transactions", {
 					method: "GET",
-					query: data.query,
+					query: data?.query,
 					...options
-				});
-			};
-			const listSubscriptions = async (data = {}, options) => {
-				return fetch("paystack/list-subscriptions", {
+				}),
+				listSubscriptions: (data, options) => fetch("paystack/list-subscriptions", {
 					method: "GET",
-					query: data.query,
+					query: data?.query,
 					...options
-				});
-			};
-			const getSubscriptionManageLink = async (data, options) => {
-				return fetch("paystack/subscription-manage-link", {
+				}),
+				getSubscriptionManageLink: (data, options) => fetch("paystack/subscription-manage-link", {
 					method: "GET",
 					query: data,
 					...options
-				});
-			};
-			const cancelSubscription = async (data, options) => {
-				return fetch("paystack/disable-subscription", {
-					method: "POST",
-					body: data,
+				}),
+				config: () => fetch("/paystack/config", { method: "GET" }),
+				listProducts: (options) => fetch("paystack/list-products", {
+					method: "GET",
 					...options
-				});
-			};
-			const restoreSubscription = async (data, options) => {
-				return fetch("paystack/enable-subscription", {
-					method: "POST",
-					body: data,
+				}),
+				listPlans: (options) => fetch("paystack/list-plans", {
+					method: "GET",
 					...options
-				});
+				}),
+				paystack: {}
 			};
-			return {
-				transaction: {
-					initialize: initializeTransaction,
-					verify: verifyTransaction,
-					list: listTransactions
-				},
-				subscription: {
-					upgrade: initializeTransaction,
-					create: initializeTransaction,
-					cancel: cancelSubscription,
-					restore: restoreSubscription,
-					list: listSubscriptions,
-					billingPortal: getSubscriptionManageLink,
-					manageLink: getSubscriptionManageLink,
-					disable: cancelSubscription,
-					enable: restoreSubscription
-				},
-				initializeTransaction,
-				verifyTransaction,
-				listTransactions,
-				listSubscriptions,
-				getSubscriptionManageLink,
-				config: async () => {
-					return fetch("/paystack/config", { method: "GET" });
-				},
-				listProducts: async (options) => {
-					return fetch("paystack/list-products", {
-						method: "GET",
-						...options
-					});
-				},
-				listPlans: async (options) => {
-					return fetch("paystack/list-plans", {
-						method: "GET",
-						...options
-					});
-				}
-			};
+			actions.paystack = actions;
+			return actions;
 		}
 	};
 };
+const paystack = paystackClient;
 //#endregion
-export { paystackClient };
+export { paystack, paystackClient };
 
 //# sourceMappingURL=client.mjs.map
