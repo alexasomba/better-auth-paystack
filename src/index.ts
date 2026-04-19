@@ -52,8 +52,6 @@ import type {
   AnyPaystackOptions,
   User,
   PaystackTransaction,
-  ChargeRecurringSubscriptionResult,
-  PaystackSyncResult,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 import type { $strip } from "zod/v4/core";
@@ -998,4 +996,4 @@ export type {
   PaystackClientLike,
   ChargeRecurringSubscriptionResult,
   PaystackSyncResult,
-};
+} from "./types";
