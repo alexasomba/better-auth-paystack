@@ -1,11 +1,15 @@
 import type { GenericEndpointContext, Session, User } from "better-auth";
 import type { Organization, Member } from "better-auth/plugins/organization";
 import type {
-  Paystack,
   PaystackPaths,
   PaystackResponse,
   PaystackWebhookEvent,
   PaystackClient,
+  PaystackCustomerClient,
+  PaystackPlanClient,
+  PaystackProductClient,
+  PaystackSubscriptionClient,
+  PaystackTransactionClient,
   components,
 } from "@alexasomba/paystack-node";
 
@@ -15,6 +19,13 @@ import type {
 export type PaystackCurrency = components["schemas"]["Currency"];
 
 export type { PaystackPaths, PaystackClient, PaystackResponse };
+export type {
+  PaystackTransactionClient,
+  PaystackCustomerClient,
+  PaystackSubscriptionClient,
+  PaystackPlanClient,
+  PaystackProductClient,
+};
 
 /**
  * Standard Better Auth Models
@@ -290,38 +301,16 @@ export interface PaystackSyncResult {
 export type AnyPaystackOptions = PaystackOptions<PaystackClientLike>;
 
 /**
- * The grouped subset of the SDK surface used by this plugin.
- * Request payloads stay intentionally loose for plugin internals and mocks,
- * while return types are sourced from the official SDK so injected clients
- * retain concrete response payload types.
+ * Exact grouped SDK slices used by this plugin.
+ * This deliberately matches the official SDK surface instead of a handwritten approximation.
  */
 export interface PaystackClientLike {
-  transaction?: {
-    initialize(...args: unknown[]): ReturnType<Paystack["transaction"]["initialize"]>;
-    verify(...args: unknown[]): ReturnType<Paystack["transaction"]["verify"]>;
-    chargeAuthorization(
-      ...args: unknown[]
-    ): ReturnType<Paystack["transaction"]["chargeAuthorization"]>;
-  };
-  customer?: {
-    create(...args: unknown[]): ReturnType<Paystack["customer"]["create"]>;
-    update(...args: unknown[]): ReturnType<Paystack["customer"]["update"]>;
-    fetch(...args: unknown[]): ReturnType<Paystack["customer"]["fetch"]>;
-  };
-  subscription?: {
-    create(...args: unknown[]): ReturnType<Paystack["subscription"]["create"]>;
-    fetch(...args: unknown[]): ReturnType<Paystack["subscription"]["fetch"]>;
-    disable(...args: unknown[]): ReturnType<Paystack["subscription"]["disable"]>;
-    enable(...args: unknown[]): ReturnType<Paystack["subscription"]["enable"]>;
-    manageLink(...args: unknown[]): ReturnType<Paystack["subscription"]["manageLink"]>;
-    update?(...args: unknown[]): Promise<PaystackResponse<Record<string, unknown>>>;
-  };
-  product?: {
-    fetch(...args: unknown[]): ReturnType<Paystack["product"]["fetch"]>;
-    list(...args: unknown[]): ReturnType<Paystack["product"]["list"]>;
-  };
-  plan?: {
-    list(...args: unknown[]): ReturnType<Paystack["plan"]["list"]>;
-    create(...args: unknown[]): ReturnType<Paystack["plan"]["create"]>;
-  };
+  transaction: Pick<PaystackTransactionClient, "initialize" | "verify" | "chargeAuthorization">;
+  customer: Pick<PaystackCustomerClient, "create" | "update" | "fetch">;
+  subscription: Pick<
+    PaystackSubscriptionClient,
+    "create" | "fetch" | "disable" | "enable" | "manageLink"
+  >;
+  product: Pick<PaystackProductClient, "fetch" | "list">;
+  plan: Pick<PaystackPlanClient, "list" | "create">;
 }

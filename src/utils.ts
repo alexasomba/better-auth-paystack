@@ -36,20 +36,43 @@ export function calculatePlanAmount(plan: PaystackPlan, quantity: number): numbe
   return (plan.amount ?? 0) + quantity * (getPlanSeatAmount(plan) ?? 0);
 }
 
-export function requireSubscriptionUpdate(
-  client: PaystackClientLike | undefined,
-): NonNullable<NonNullable<PaystackClientLike["subscription"]>["update"]> {
-  const subscription = client?.subscription;
+export function isLocalSubscriptionCode(subscriptionCode: string | undefined | null): boolean {
+  return (
+    typeof subscriptionCode === "string" &&
+    (subscriptionCode.startsWith("LOC_") || subscriptionCode.startsWith("sub_local_"))
+  );
+}
+
+export function isLocallyManagedSubscription(
+  subscription: Pick<Subscription, "paystackSubscriptionCode" | "paystackPlanCode">,
+): boolean {
+  if (isLocalSubscriptionCode(subscription.paystackSubscriptionCode)) {
+    return true;
+  }
+
   if (
-    subscription === undefined ||
-    subscription === null ||
-    typeof subscription.update !== "function"
+    typeof subscription.paystackSubscriptionCode === "string" &&
+    subscription.paystackSubscriptionCode !== ""
   ) {
+    return false;
+  }
+
+  return (
+    subscription.paystackPlanCode === undefined ||
+    subscription.paystackPlanCode === null ||
+    subscription.paystackPlanCode === ""
+  );
+}
+
+export function assertLocallyManagedSubscription(
+  subscription: Pick<Subscription, "paystackSubscriptionCode" | "paystackPlanCode">,
+  action: string,
+): void {
+  if (!isLocallyManagedSubscription(subscription)) {
     throw new Error(
-      "The configured Paystack client does not support subscription updates required for seat or proration changes.",
+      `Paystack-managed subscriptions do not support ${action}. Use local billing for seat-based or prorated subscription changes.`,
     );
   }
-  return (...args) => subscription.update!(...args);
 }
 
 export async function getPlans(
@@ -210,7 +233,11 @@ export async function syncProductQuantityFromPaystack(
 
   // Fetch the latest quantity from Paystack
   try {
-    const raw = await paystackClient.product?.fetch(localProduct.paystackId);
+    const paystackProductId = Number(localProduct.paystackId);
+    if (!Number.isFinite(paystackProductId)) {
+      return;
+    }
+    const raw = await paystackClient.product?.fetch(paystackProductId);
     const sdkRes = unwrapSdkResult<PaystackProductResponse>(raw);
     const remoteQuantity = sdkRes?.quantity;
 
@@ -302,23 +329,11 @@ export async function syncSubscriptionSeats(
   });
 
   const quantity = members.length;
-  let totalAmount = plan.amount ?? 0;
-
-  totalAmount += quantity * seatAmount;
 
   try {
-    const client = options.paystackClient;
-    if (client === undefined || client === null) return;
+    assertLocallyManagedSubscription(subscription, "automatic seat sync");
 
-    // Paystack subscription update doesn't natively support quantity in the same way as Stripe
-    // but we can update the amount or the plan.
-    const updateSubscription = requireSubscriptionUpdate(client);
-    const raw = await updateSubscription(subscription.paystackSubscriptionCode, {
-      body: { amount: totalAmount },
-    });
-    unwrapSdkResult(raw);
-
-    // Update local DB to reflect current seat count
+    // Locally managed subscriptions renew via saved authorizations, so seat count lives in our DB.
     await adapter.update({
       model: "subscription",
       where: [{ field: "id", value: subscription.id }],
@@ -330,7 +345,7 @@ export async function syncSubscriptionSeats(
   } catch (e: unknown) {
     const log = ctx.context.logger;
     if (log !== undefined && log !== null) {
-      log.error("Failed to sync subscription seats with Paystack", e);
+      log.error("Failed to sync subscription seats", e);
     }
   }
 }

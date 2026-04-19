@@ -20,7 +20,6 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       verify: vi.fn(),
     },
     subscription: {
-      update: vi.fn(),
       fetch: vi.fn(),
       disable: vi.fn(),
     },
@@ -460,7 +459,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         periodStart,
         periodEnd,
         paystackAuthorizationCode: "AUTH_abc123",
-        paystackSubscriptionCode: "SUB_abc123",
+        paystackSubscriptionCode: "LOC_sub_abc123",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -469,11 +468,6 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     (paystackSdk.transaction.chargeAuthorization as any).mockResolvedValue({
       status: true,
       data: { status: "success", reference: "prorate_mocked" },
-    });
-
-    (paystackSdk.subscription.update as any).mockResolvedValue({
-      status: true,
-      data: { status: "success" },
     });
 
     const res = await auth.handler(
@@ -512,15 +506,6 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       }),
     );
 
-    expect((paystackSdk as any).subscription.update).toHaveBeenCalledWith(
-      "SUB_abc123",
-      expect.objectContaining({
-        body: expect.objectContaining({
-          amount: 250000,
-        }),
-      }),
-    );
-
     const subs = await (ctx.adapter as any).findMany({
       model: "subscription",
       where: [{ field: "referenceId", value: signUp.user.id }],
@@ -528,8 +513,8 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     expect(subs[0].seats).toBe(3);
   });
 
-  it("should fail proration when the client cannot update the remote subscription", async () => {
-    const paystackSdkWithoutUpdate = {
+  it("should fail proration for Paystack-managed subscriptions", async () => {
+    const remotePaystackSdk = {
       transaction: {
         initialize: vi.fn(),
         chargeAuthorization: vi.fn().mockResolvedValue({
@@ -563,7 +548,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         organization(),
         paystack<PaystackClientLike>({
           ...options,
-          paystackClient: paystackSdkWithoutUpdate as any,
+          paystackClient: remotePaystackSdk as any,
         }),
       ],
     });
@@ -597,6 +582,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
         paystackAuthorizationCode: "AUTH_missing_update",
         paystackSubscriptionCode: "SUB_missing_update",
+        paystackPlanCode: "PLN_remote_team",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -621,7 +607,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
     const json = await res.json();
     expect(res.status).toBe(400);
-    expect(json.message).toContain("does not support subscription updates");
+    expect(json.message).toContain("Paystack-managed subscriptions do not support");
 
     const unchanged = await (ctx.adapter as any).findOne({
       model: "subscription",

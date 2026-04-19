@@ -1,4 +1,5 @@
 import { defineErrorCodes } from "@better-auth/core/utils/error-codes";
+import type { CustomerCreatePayload } from "@alexasomba/paystack-node";
 import type {
   AuthContext,
   BetterAuthPlugin,
@@ -724,9 +725,9 @@ export const paystack = <
                         body: {
                           email: user.email,
                           first_name: user.name ?? undefined,
-                          metadata: {
+                          metadata: JSON.stringify({
                             userId: user.id,
-                          },
+                          }),
                         },
                       })) ??
                       (await Promise.reject(new Error("Paystack client missing customer ops")));
@@ -808,7 +809,7 @@ export const paystack = <
                             {
                               email: targetEmail,
                               first_name: org.name,
-                              metadata: { organizationId: org.id },
+                              metadata: JSON.stringify({ organizationId: org.id }),
                             },
                             extraCreateParams,
                           );
@@ -818,7 +819,7 @@ export const paystack = <
                           if (!paystackOps) return;
                           const raw =
                             (await paystackOps.customer?.create({
-                              body: params as Record<string, unknown>,
+                              body: params as CustomerCreatePayload,
                             })) ??
                             (await Promise.reject(
                               new Error("Paystack client missing customer ops"),

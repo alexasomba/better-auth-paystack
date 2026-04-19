@@ -96,7 +96,7 @@ describe("paystack", () => {
 
   it("should reject invalid webhook signature", async () => {
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       secretKey: "sk_test_123",
       webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
@@ -122,7 +122,7 @@ describe("paystack", () => {
 
   it("should accept valid webhook signature", async () => {
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       secretKey: "sk_test_123",
       webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
@@ -152,7 +152,7 @@ describe("paystack", () => {
 
   it("should accept the deprecated paystackWebhookSecret alias for webhook signatures", async () => {
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       secretKey: "sk_test_123",
       paystackWebhookSecret: "whsec_legacy",
     } satisfies PaystackOptions<PaystackClientLike>;
@@ -197,10 +197,30 @@ describe("paystack", () => {
       } as unknown as PaystackResponse<PaystackCustomerResponse>);
 
     const paystackSdk: PaystackClientLike = {
+      transaction: {
+        initialize: vi.fn(),
+        verify: vi.fn(),
+        chargeAuthorization: vi.fn(),
+      },
       customer: {
-        create: createCustomer,
+        create: createCustomer as PaystackClientLike["customer"]["create"],
         update: vi.fn(),
         fetch: vi.fn(),
+      },
+      subscription: {
+        create: vi.fn(),
+        fetch: vi.fn(),
+        disable: vi.fn(),
+        enable: vi.fn(),
+        manageLink: vi.fn(),
+      },
+      product: {
+        fetch: vi.fn(),
+        list: vi.fn(),
+      },
+      plan: {
+        list: vi.fn(),
+        create: vi.fn(),
       },
     };
 
@@ -519,7 +539,7 @@ describe("paystack", () => {
 
   it("should list subscriptions for user", async () => {
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [],
@@ -1051,7 +1071,7 @@ describe("paystack", () => {
   it("should authorize reference access via authorizeReference for listLocal", async () => {
     const authorizeReference = vi.fn().mockResolvedValue(true);
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [],
@@ -1107,7 +1127,7 @@ describe("paystack", () => {
 
   it("should update subscription status to canceled via webhook events", async () => {
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       subscription: { enabled: true, plans: [] },
       secretKey: "sk_test_123",
       webhook: { secret: "whsec_test" },
@@ -1158,7 +1178,7 @@ describe("paystack", () => {
   it("should call onSubscriptionCreated hook when subscription.create webhook fires", async () => {
     const onSubscriptionCreated = vi.fn();
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [{ name: "pro", amount: 5000, currency: "NGN", planCode: "PLN_pro" }],
@@ -1225,7 +1245,7 @@ describe("paystack", () => {
   it("should call onSubscriptionCancel hook when subscription.disable webhook fires", async () => {
     const onSubscriptionCancel = vi.fn();
     const options = {
-      paystackClient: {},
+      paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [{ name: "pro", amount: 5000, currency: "NGN" }],

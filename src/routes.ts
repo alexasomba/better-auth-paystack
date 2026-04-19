@@ -37,7 +37,8 @@ import {
   getNextPeriodEnd,
   getPlanSeatAmount,
   calculatePlanAmount,
-  requireSubscriptionUpdate,
+  assertLocallyManagedSubscription,
+  isLocalSubscriptionCode,
 } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
@@ -767,7 +768,6 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       try {
         // Determine Customer Email & Code (Organization support)
         let targetEmail = email ?? user.email;
-        let paystackCustomerCode = (user as PaystackUser).paystackCustomerCode;
 
         if (
           options.organization?.enabled === true &&
@@ -780,14 +780,6 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             where: [{ field: "id", value: referenceId }],
           });
           if (org !== undefined && org !== null) {
-            const paystackOrg = org as PaystackOrganization;
-            if (
-              paystackOrg.paystackCustomerCode !== undefined &&
-              paystackOrg.paystackCustomerCode !== null &&
-              paystackOrg.paystackCustomerCode !== ""
-            ) {
-              paystackCustomerCode = paystackOrg.paystackCustomerCode;
-            }
             const orgWithEmail = org as { email?: string | null };
             if (
               orgWithEmail.email !== undefined &&
@@ -854,25 +846,6 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           quantity,
         };
 
-        // Sync/Update Customer: ensure email matches if code exists
-        if (
-          paystackCustomerCode !== undefined &&
-          paystackCustomerCode !== null &&
-          paystackCustomerCode !== ""
-        ) {
-          try {
-            const ops = getPaystackOps(options.paystackClient);
-            // Only update if email is present
-            if (ops !== undefined && ops !== null && initBody.email !== "") {
-              await ops.customer?.update(paystackCustomerCode, {
-                body: { email: initBody.email },
-              });
-            }
-          } catch (_e: unknown) {
-            // Ignore sync errors
-          }
-        }
-
         // Handle prorateAndCharge for existing active subscriptions
         if (plan !== undefined && prorateAndCharge === true) {
           const existingSub = await getOrganizationSubscription(ctx, referenceId);
@@ -928,6 +901,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
               let newSeatCount = quantity ?? existingSub.seats ?? membersCount;
               let newAmount: number;
               try {
+                assertLocallyManagedSubscription(existingSub, "plan or seat changes");
                 if (getPlanSeatAmount(plan) !== undefined) {
                   const members = await ctx.context.adapter.findMany<Member>({
                     model: "member",
@@ -961,13 +935,13 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
                       amount: proratedAmount,
                       authorization_code: existingSub.paystackAuthorizationCode,
                       reference: `upg_${existingSub.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-                      metadata: {
+                      metadata: JSON.stringify({
                         type: "proration",
                         referenceId,
                         newPlan: plan.name,
                         oldPlan: existingSub.plan,
                         remainingDays,
-                      },
+                      }),
                     },
                   });
                   const sdkRes = unwrapSdkResult<PaystackTransactionResponse>(chargeResRaw);
@@ -980,19 +954,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
                 }
               }
 
-              // 5. Update Subscription Future Cycle in Paystack
-              const ops = getPaystackOps(options.paystackClient);
-              if (ops !== undefined && ops !== null) {
-                const updateSubscription = requireSubscriptionUpdate(ops);
-                await updateSubscription(existingSub.paystackSubscriptionCode, {
-                  body: {
-                    amount: newAmount,
-                    plan: plan.planCode,
-                  },
-                });
-              }
-
-              // 6. Update Local DB
+              // 5. Update Local DB for locally managed subscriptions.
               await ctx.context.adapter.update({
                 model: "subscription",
                 where: [{ field: "id", value: existingSub.id }],
@@ -1042,7 +1004,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         }
 
         const initRaw = await paystack?.transaction?.initialize({
-          body: initBody,
+          body: initBody as components["schemas"]["TransactionInitialize"],
         });
         const sdkRes =
           unwrapSdkResult<components["schemas"]["TransactionInitializeResponse"]["data"]>(initRaw);
@@ -1932,7 +1894,7 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
       const paystack = getPaystackOps(options.paystackClient);
       try {
         const subCode = subscriptionCode;
-        if (subCode.startsWith("LOC_") || subCode.startsWith("sub_local_")) {
+        if (isLocalSubscriptionCode(subCode)) {
           const sub = await ctx.context.adapter.findOne<Subscription>({
             model: "subscription",
             where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
@@ -2176,10 +2138,7 @@ export const getSubscriptionManageLink = <P extends string = "/subscription-mana
   const handler = async (ctx: GenericEndpointContext) => {
     const { subscriptionCode } = ctx.query;
 
-    if (
-      (subscriptionCode as string).startsWith("LOC_") ||
-      (subscriptionCode as string).startsWith("sub_local_")
-    ) {
+    if (isLocalSubscriptionCode(subscriptionCode as string)) {
       return ctx.json({ link: null, message: "Local subscriptions cannot be managed on Paystack" });
     }
 
@@ -2760,10 +2719,10 @@ export const chargeRecurringSubscription = <P extends string = "/charge-recurrin
           amount,
           authorization_code: subscription.paystackAuthorizationCode,
           reference: `rec_${subscription.id}_${Date.now()}`,
-          metadata: {
+          metadata: JSON.stringify({
             subscriptionId,
             referenceId,
-          },
+          }),
         },
       });
 

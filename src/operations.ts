@@ -229,10 +229,10 @@ export async function chargeSubscriptionRenewal(
       amount,
       authorization_code: subscription.paystackAuthorizationCode,
       reference: `rec_${subscription.id}_${Date.now()}`,
-      metadata: {
+      metadata: JSON.stringify({
         subscriptionId,
         referenceId,
-      },
+      }),
     },
   });
 
