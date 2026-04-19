@@ -17,6 +17,15 @@ import type {
  * Valid Paystack currencies
  */
 export type PaystackCurrency = components["schemas"]["Currency"];
+export type PaystackCheckoutChannel =
+  | "card"
+  | "bank"
+  | "ussd"
+  | "qr"
+  | "mobile_money"
+  | "bank_transfer"
+  | "eft"
+  | "apple_pay";
 
 export type { PaystackPaths, PaystackClient, PaystackResponse };
 export type {
@@ -172,6 +181,11 @@ export interface SubscriptionOptions {
    * Require email verification before subscription
    */
   requireEmailVerification?: boolean;
+  /**
+   * Restrict checkout to specific Paystack channels for subscription flows.
+   * Use `["card"]` to enforce card-only subscriptions.
+   */
+  allowedPaymentChannels?: PaystackCheckoutChannel[];
 }
 
 export interface PaystackOptions<TPaystackClient extends PaystackClientLike = PaystackClientLike> {

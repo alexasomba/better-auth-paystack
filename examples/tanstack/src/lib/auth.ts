@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
-import { anonymous, organization } from "better-auth/plugins";
+import { anonymous, organization, admin } from "better-auth/plugins";
 import { dash } from "@better-auth/infra";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import {
@@ -9,6 +9,7 @@ import {
   type Subscription,
   type PaystackPlan,
   type PaystackProduct,
+  type PaystackOptions,
 } from "@alexasomba/better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
 
@@ -41,11 +42,110 @@ if (webhookSecret === undefined || webhookSecret === null || webhookSecret === "
   console.warn("Missing PAYSTACK_WEBHOOK_SECRET in environment variables");
 }
 
-const paystackClient =
+export const paystackClient =
   secretKey !== undefined && secretKey !== null && secretKey !== ""
     ? createPaystack({
         secretKey,
       })
+    : null;
+
+const subscriptionPlans: PaystackPlan[] = [
+  {
+    name: "starter",
+    amount: 500000,
+    currency: "NGN",
+    interval: "monthly",
+    planCode: "PLN_jm9wgvkqykajlp7",
+    paystackId: "starter",
+    freeTrial: {
+      days: 7,
+      onTrialStart: async (subscription: Subscription) => {
+        await Promise.resolve();
+        console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
+      },
+    },
+    description: "Perfect for testing the waters",
+    features: ["Basic analytics", "Up to 5 projects", "Community support"],
+  },
+  {
+    name: "pro",
+    amount: 1000000,
+    currency: "NGN",
+    interval: "monthly",
+    planCode: "PLN_6ikzoaxnunttb5e",
+    paystackId: "pro",
+    description: "For serious professionals. Supports scheduled changes.",
+    features: ["Advanced analytics", "Unlimited projects", "Priority support", "Custom domain"],
+  },
+  {
+    name: "team",
+    amount: 2500000,
+    currency: "NGN",
+    interval: "monthly",
+    seatAmount: 500000,
+    description: "Best for growing teams (Seat-based)",
+    features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
+  },
+  {
+    name: "business",
+    amount: 5000000,
+    currency: "NGN",
+    interval: "monthly",
+    seatAmount: 1000000,
+    freeTrial: {
+      days: 7,
+      onTrialStart: async (subscription: Subscription) => {
+        await Promise.resolve();
+        console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
+      },
+    },
+    description: "Best for established businesses (Seat-based)",
+    features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
+  },
+  {
+    name: "enterprise",
+    amount: 10000000,
+    currency: "NGN",
+    interval: "annually",
+    description: "For large scale organizations",
+    features: ["Everything in Team", "Dedicated account manager", "SLA", "On-premise deployment"],
+  },
+];
+
+const productCatalog = [
+  {
+    name: "50 Credits Pack",
+    price: 250000,
+    currency: "NGN",
+    metadata: JSON.stringify({ type: "credits", quantity: 50 }),
+  },
+  {
+    name: "150 Credits Pack",
+    price: 600000,
+    currency: "NGN",
+    metadata: JSON.stringify({ type: "credits", quantity: 150 }),
+  },
+];
+
+export const paystackOptions =
+  paystackClient !== null &&
+  webhookSecret !== undefined &&
+  webhookSecret !== null &&
+  webhookSecret !== ""
+    ? ({
+        paystackClient,
+        secretKey: secretKey!,
+        webhook: { secret: webhookSecret },
+        organization: {
+          enabled: true,
+        },
+        subscription: {
+          enabled: true,
+          allowedPaymentChannels: ["card"],
+          plans: subscriptionPlans,
+        },
+        products: { products: productCatalog as PaystackProduct[] },
+      } satisfies PaystackOptions)
     : null;
 
 export const auth = betterAuth({
@@ -55,6 +155,7 @@ export const auth = betterAuth({
   plugins: [
     anonymous(),
     organization(),
+    admin(),
     ...(paystackClient !== null &&
     webhookSecret !== undefined &&
     webhookSecret !== null &&
@@ -77,6 +178,7 @@ export const auth = betterAuth({
 
             subscription: {
               enabled: true,
+              allowedPaymentChannels: ["card"],
 
               // v0.3.0: Subscription lifecycle hooks
               onSubscriptionCreated: async ({ subscription, plan }) => {
@@ -95,86 +197,7 @@ export const auth = betterAuth({
                 console.log(`❌ Subscription cancelled: ${subscription.plan}`);
               },
 
-              plans: [
-                // ========================================
-                // Plans WITH planCode (Paystack-managed)
-                // ========================================
-                {
-                  name: "starter",
-                  amount: 500000,
-                  currency: "NGN",
-                  interval: "monthly",
-                  planCode: "PLN_jm9wgvkqykajlp7",
-                  paystackId: "starter",
-                  // v0.3.0: Trial period with abuse prevention (user can only get trial once)
-                  freeTrial: {
-                    days: 7,
-                    onTrialStart: async (subscription: Subscription) => {
-                      await Promise.resolve();
-                      console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
-                    },
-                  },
-                  description: "Perfect for testing the waters",
-                  features: ["Basic analytics", "Up to 5 projects", "Community support"],
-                },
-                {
-                  name: "pro",
-                  amount: 1000000,
-                  currency: "NGN",
-                  interval: "monthly",
-                  planCode: "PLN_6ikzoaxnunttb5e",
-                  paystackId: "pro",
-                  description: "For serious professionals. Supports scheduled changes.",
-                  features: [
-                    "Advanced analytics",
-                    "Unlimited projects",
-                    "Priority support",
-                    "Custom domain",
-                  ],
-                },
-
-                // ========================================
-                // Plans WITHOUT planCode (Local/Custom)
-                // ========================================
-                {
-                  name: "team",
-                  amount: 2500000,
-                  currency: "NGN",
-                  interval: "monthly",
-                  seatAmount: 500000,
-                  description: "Best for growing teams (Seat-based)",
-                  features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
-                },
-                {
-                  name: "business",
-                  amount: 5000000,
-                  currency: "NGN",
-                  interval: "monthly",
-                  seatAmount: 1000000,
-                  freeTrial: {
-                    days: 7,
-                    onTrialStart: async (subscription: Subscription) => {
-                      await Promise.resolve();
-                      console.log(`⏰ 7-day trial started for ${subscription.referenceId}`);
-                    },
-                  },
-                  description: "Best for established businesses (Seat-based)",
-                  features: ["Everything in Pro", "Team collaboration", "Audit logs", "SSO"],
-                },
-                {
-                  name: "enterprise",
-                  amount: 10000000,
-                  currency: "NGN",
-                  interval: "annually",
-                  description: "For large scale organizations",
-                  features: [
-                    "Everything in Team",
-                    "Dedicated account manager",
-                    "SLA",
-                    "On-premise deployment",
-                  ],
-                },
-              ] as PaystackPlan[],
+              plans: subscriptionPlans,
 
               // Authorize referenceId for organization billing
               authorizeReference: async (
@@ -215,20 +238,7 @@ export const auth = betterAuth({
               },
             },
             products: {
-              products: [
-                {
-                  name: "50 Credits Pack",
-                  price: 250000, // 2,500 NGN
-                  currency: "NGN",
-                  metadata: JSON.stringify({ type: "credits", quantity: 50 }),
-                },
-                {
-                  name: "150 Credits Pack",
-                  price: 600000, // 6,000 NGN
-                  currency: "NGN",
-                  metadata: JSON.stringify({ type: "credits", quantity: 150 }),
-                },
-              ] as PaystackProduct[],
+              products: productCatalog as PaystackProduct[],
             },
           }),
         ]

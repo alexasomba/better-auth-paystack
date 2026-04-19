@@ -52,6 +52,8 @@ import type {
   AnyPaystackOptions,
   User,
   PaystackTransaction,
+  ChargeRecurringSubscriptionResult,
+  PaystackSyncResult,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 import type { $strip } from "zod/v4/core";
@@ -987,4 +989,13 @@ export type PaystackPlugin<
 > = ReturnType<typeof paystack<TPaystackClient, O>>;
 
 export { chargeSubscriptionRenewal, syncPaystackPlans, syncPaystackProducts } from "./operations";
-export type { Subscription, SubscriptionOptions, PaystackPlan, PaystackOptions, PaystackProduct };
+export type {
+  Subscription,
+  SubscriptionOptions,
+  PaystackPlan,
+  PaystackOptions,
+  PaystackProduct,
+  PaystackClientLike,
+  ChargeRecurringSubscriptionResult,
+  PaystackSyncResult,
+};

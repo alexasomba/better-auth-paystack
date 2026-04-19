@@ -101,6 +101,7 @@ export const auth = betterAuth({
       webhook: { secret: env.PAYSTACK_WEBHOOK_SECRET },
       subscription: {
         enabled: true,
+        allowedPaymentChannels: ["card"],
         plans: [
           // Paystack-managed plans (uses planCode)
           { name: "starter", planCode: "PLN_xxxxx" },
@@ -178,17 +179,20 @@ await chargeSubscriptionRenewal(ctx, options, {
 What the dashboard demonstrates:
 
 - checkout redirects for subscriptions and one-time payments
+- trial-aware subscription cards and callback messaging
+- trial-used messaging before checkout starts
 - cancel / restore flows
 - billing portal / manage-link flow
 - scheduled plan changes
 - immediate upgrades for local plans using `prorateAndCharge`
+- authenticated admin controls for trusted plan/product sync and manual local renewals
 
 What stays server-owned:
 
 - catalog sync jobs
 - recurring renewal charging
 - webhook processing and subscription lifecycle hooks
-- trial start logic and other automation around subscriptions
+- trial eligibility enforcement and trial start automation
 
 ## Environment Variables
 

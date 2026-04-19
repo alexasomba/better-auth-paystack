@@ -97,4 +97,104 @@ describe("Paystack callback route", () => {
     expect((authClient as any).paystack.verifyTransaction).toHaveBeenCalledTimes(2);
     expect(screen.getByText("Payment Successful!")).toBeInTheDocument();
   }, 20000);
+
+  it("shows a trial-specific success state when the verified transaction metadata indicates a trial", async () => {
+    const { authClient } = await import("@/lib/auth-client");
+
+    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+      data: {
+        status: "success",
+        metadata: JSON.stringify({
+          isTrial: true,
+          plan: "business",
+        }),
+      },
+      error: null,
+    } as any);
+
+    render(<CallbackPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Trial Started!")).toBeInTheDocument();
+      expect(
+        screen.getByText("business is now in trial mode. Redirecting you to dashboard..."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows a one-time purchase success state when product metadata is present", async () => {
+    const { authClient } = await import("@/lib/auth-client");
+
+    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+      data: {
+        status: "success",
+        metadata: JSON.stringify({
+          product: "50 credits pack",
+        }),
+      },
+      error: null,
+    } as any);
+
+    render(<CallbackPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Purchase Successful!")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "50 credits pack has been paid for successfully. Redirecting you to dashboard...",
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows an upgrade-specific success state for proration payments", async () => {
+    const { authClient } = await import("@/lib/auth-client");
+
+    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+      data: {
+        status: "success",
+        metadata: JSON.stringify({
+          type: "proration",
+        }),
+      },
+      error: null,
+    } as any);
+
+    render(<CallbackPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Upgrade Successful!")).toBeInTheDocument();
+      expect(
+        screen.getByText("Your prorated upgrade payment has been confirmed."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows a friendly paid-activation message when a requested trial was already used", async () => {
+    const { authClient } = await import("@/lib/auth-client");
+
+    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+      data: {
+        status: "success",
+        metadata: JSON.stringify({
+          plan: "starter",
+          trialRequested: true,
+          trialGranted: false,
+          trialDeniedReason: "already_used",
+        }),
+      },
+      error: null,
+    } as any);
+
+    render(<CallbackPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Subscription Activated")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Your starter trial was already used, so this checkout started paid billing immediately.",
+        ),
+      ).toBeInTheDocument();
+    });
+  });
 });

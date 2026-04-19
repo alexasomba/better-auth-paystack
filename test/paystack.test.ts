@@ -1399,6 +1399,178 @@ describe("paystack", () => {
     expect(newSub?.trialEnd).toBeUndefined();
   }, 30000);
 
+  it("passes allowed subscription payment channels to Paystack checkout initialization", async () => {
+    const headers = new Headers();
+    const paystackSdk = {
+      transaction: {
+        initialize: vi.fn().mockResolvedValue({
+          data: {
+            status: true,
+            data: {
+              authorization_url: "https://paystack.test/card-only",
+              reference: "REF_CARD_ONLY_INIT",
+              access_code: "ACCESS_card_only",
+            },
+          },
+        }),
+      },
+    };
+
+    const options = {
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
+      subscription: {
+        enabled: true,
+        allowedPaymentChannels: ["card"],
+        plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
+      },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const auth = betterAuth({
+      database: memory,
+      baseURL: "http://localhost:3000",
+      trustedOrigins: ["http://localhost:3000"],
+      emailAndPassword: { enabled: true },
+      plugins: [paystack<any>(options)],
+    });
+
+    const authClient = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [bearer(), paystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => {
+          const merged = new Headers(init?.headers);
+          headers.forEach((v, k) => merged.set(k, v));
+          if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+          return auth.handler(new Request(url, { ...init, headers: merged }));
+        },
+      },
+    });
+
+    const user = { email: "card-only@test.com", password: "password", name: "Card Only" };
+    await authClient.signUp.email(user, { throw: true });
+    await authClient.signIn.email(user, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
+
+    await authClient.paystack.initializeTransaction(
+      { plan: "starter", callbackURL: "http://localhost:3000/callback" },
+      { throw: true },
+    );
+
+    expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          channels: ["card"],
+        }),
+      }),
+    );
+  });
+
+  it("rejects subscription verification when the completed payment channel is not allowed", async () => {
+    const headers = new Headers();
+    const paystackSdk = {
+      transaction: {
+        verify: vi.fn().mockResolvedValue({
+          data: {
+            status: true,
+            message: "ok",
+            data: {
+              status: "success",
+              reference: "REF_DISALLOWED_CHANNEL",
+              amount: 1000,
+              currency: "NGN",
+              channel: "bank_transfer",
+              customer: { email: "card-enforced@test.com", customer_code: "CUS_123" },
+            },
+          },
+        }),
+      },
+    };
+
+    const options = {
+      paystackClient: paystackSdk as unknown as PaystackClientLike,
+      subscription: {
+        enabled: true,
+        allowedPaymentChannels: ["card"],
+        plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
+      },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const auth = betterAuth({
+      database: memory,
+      baseURL: "http://localhost:3000",
+      trustedOrigins: ["http://localhost:3000"],
+      emailAndPassword: { enabled: true },
+      plugins: [paystack<any>(options)],
+    });
+
+    const ctx = await auth.$context;
+    const authClient = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [bearer(), paystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => {
+          const merged = new Headers(init?.headers);
+          headers.forEach((v, k) => merged.set(k, v));
+          if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+          return auth.handler(new Request(url, { ...init, headers: merged }));
+        },
+      },
+    });
+
+    const user = {
+      email: "card-enforced@test.com",
+      password: "password",
+      name: "Card Enforced",
+    };
+    const signUpRes = await authClient.signUp.email(user, { throw: true });
+    await authClient.signIn.email(user, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
+
+    await ctx.adapter.create({
+      model: "paystackTransaction",
+      data: {
+        reference: "REF_DISALLOWED_CHANNEL",
+        referenceId: signUpRes.user.id,
+        userId: signUpRes.user.id,
+        amount: 1000,
+        currency: "NGN",
+        status: "pending",
+        plan: "starter",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any,
+    });
+
+    const reqHeaders = new Headers(headers);
+    reqHeaders.set("content-type", "application/json");
+    reqHeaders.set("origin", "http://localhost:3000");
+
+    const req = new Request("http://localhost:3000/api/auth/paystack/verify-transaction", {
+      method: "POST",
+      headers: reqHeaders,
+      body: JSON.stringify({ reference: "REF_DISALLOWED_CHANNEL" }),
+    });
+
+    const res = await auth.handler(req);
+    const body = await res.json();
+    const tx = await ctx.adapter.findOne<any>({
+      model: "paystackTransaction",
+      where: [{ field: "reference", value: "REF_DISALLOWED_CHANNEL" }],
+    });
+
+    expect(res.status).toBe(400);
+    expect(body.message).toContain("This subscription requires one of: card.");
+    expect(tx?.status).toBe("failed");
+  });
+
   it("should grant trial to first-time subscriber", async () => {
     const onTrialStart = vi.fn();
     const paystackSdk = {

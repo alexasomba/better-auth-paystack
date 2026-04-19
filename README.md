@@ -21,9 +21,10 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 - [x] **Auto Customer Creation**: Optional Paystack customer creation on user sign up or organization creation.
 - [x] **Trial Management**: Configurable trial periods with built-in abuse prevention logic.
 - [x] **Organization Billing**: Associate subscriptions with organizations and authorize access via roles.
+- [x] **Subscription Channel Controls**: Restrict subscription checkout to specific Paystack payment channels such as card-only.
 - [x] **Enforced Limits & Seats**: Automatic enforcement of member seat upgrades and resource limits (teams).
 - [x] **Scheduled Changes**: Defer subscription updates or cancellations to the end of the billing cycle.
-- [x] **Proration**: Immediate mid-cycle prorated charges for seat and plan upgrades.
+- [x] **Proration**: Immediate mid-cycle prorated upgrades for local plans, using saved-card charges when possible and checkout fallback when interactive payment is required.
 - [x] **Popup Modal Flow**: Optional support for Paystack's inline checkout experience via `@alexasomba/paystack-inline`.
 - [x] **Webhook Security**: Pre-configured signature verification (HMAC-SHA512) and optional IP whitelisting.
 - [x] **Transaction History**: Built-in support for listing and viewing local transaction records.
@@ -77,6 +78,7 @@ export const auth = betterAuth({
       createCustomerOnSignUp: true,
       subscription: {
         enabled: true,
+        allowedPaymentChannels: ["card"], // Optional: enforce card-only subscriptions
         plans: [
           {
             name: "pro",
@@ -291,15 +293,38 @@ Defer changes to the end of the current billing cycle:
 ### Mid-Cycle Proration (`prorateAndCharge`)
 
 The plugin can dynamically calculate the cost difference for immediate mid-cycle upgrades (like adding more seats).
-If the user has a saved Paystack authorization code, the plugin will execute a prorated charge for the remaining cycle days and immediately sync the new amount/seats.
+For locally managed plans:
+
+- If the subscription already has a reusable Paystack authorization code, the plugin charges the prorated delta off-session, records a local `paystackTransaction`, and immediately updates the subscription.
+- If there is no reusable authorization code available (for example, transfer-based payments), the plugin initializes a new checkout for the prorated delta instead of silently upgrading without payment.
+- If the prorated amount is below Paystack's minimum charge for the currency, the request is rejected so you can schedule the change for period end instead of undercharging.
 
 ```ts
 await authClient.paystack.transaction.initialize({
   plan: "pro",
   quantity: 5, // Upgrading seats
-  prorateAndCharge: true, // Will calculate and charge the prorated amount instantly
+  prorateAndCharge: true, // Charges saved authorization or returns a checkout redirect for the delta
 });
 ```
+
+When the flow falls back to checkout, verify the returned transaction reference after payment. The plugin uses the stored proration metadata to apply the pending plan/seat change only after successful verification.
+
+### Restricting Subscription Payment Channels
+
+Use `subscription.allowedPaymentChannels` to constrain which Paystack checkout channels can be used for subscription flows.
+This applies to standard subscription checkout, trial authorization flows, and interactive proration checkout fallbacks.
+
+```ts
+paystack({
+  subscription: {
+    enabled: true,
+    allowedPaymentChannels: ["card"],
+    plans: [{ name: "starter", amount: 50000, currency: "NGN", interval: "monthly" }],
+  },
+});
+```
+
+If a subscription payment is later verified with a disallowed channel, the plugin rejects activation instead of silently creating the subscription.
 
 ### Webhook Security
 
@@ -460,6 +485,11 @@ type initializeTransaction = {
    * Amount to charge (if sending raw amount).
    */
   amount?: number;
+  /**
+   * For existing locally managed subscriptions, calculate a mid-cycle delta and either
+   * charge the saved authorization or return a checkout redirect for interactive payment.
+   */
+  prorateAndCharge?: boolean;
   // ... same as upgradeSubscription
 };
 ```
@@ -597,6 +627,8 @@ The following fields are indexed:
 - **`user` & `organization`**: `paystackCustomerCode`.
 - **`paystackProduct`**: `slug` (unique), `paystackId` (unique).
 
+Proration upgrades and trusted renewal charges also persist `paystackTransaction` rows, so local transaction history stays aligned with successful off-session charges.
+
 ### Syncing Products
 
 The plugin provides two ways to keep your product inventory aligned with Paystack:
@@ -620,8 +652,8 @@ await syncPaystackProducts(ctx, paystackOptions);
 
 ### SDK Compatibility Note
 
-Immediate proration and remote seat synchronization require a Paystack client that supports subscription updates.
-If you inject a custom client that does not expose subscription update operations, the plugin will fail explicitly instead of silently updating only local state.
+The plugin now targets the official `@alexasomba/paystack-node` grouped client surface directly.
+If you inject a custom client, it should match the real SDK methods used by the plugin such as `transaction.initialize`, `transaction.verify`, `transaction.chargeAuthorization`, `subscription.create`, `subscription.disable`, and `subscription.enable`.
 
 ---
 

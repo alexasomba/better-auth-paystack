@@ -15,6 +15,8 @@ export function CallbackPage() {
     ((searchParams as any).trxref as string | undefined);
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [error, setError] = useState("");
+  const [successTitle, setSuccessTitle] = useState("Payment Successful!");
+  const [successMessage, setSuccessMessage] = useState("Redirecting you to dashboard...");
   const processedRef = useRef(false);
 
   useEffect(() => {
@@ -54,6 +56,60 @@ export function CallbackPage() {
           throw new Error("Verification did not complete successfully");
         }
 
+        const metadataRaw = (result.data as { metadata?: unknown }).metadata;
+        const metadata = (() => {
+          if (typeof metadataRaw === "string") {
+            try {
+              return JSON.parse(metadataRaw) as Record<string, unknown>;
+            } catch {
+              return {};
+            }
+          }
+          return (metadataRaw as Record<string, unknown> | null | undefined) ?? {};
+        })();
+
+        const isTrial = metadata.isTrial === true || metadata.isTrial === "true";
+        const trialRequested =
+          metadata.trialRequested === true || metadata.trialRequested === "true";
+        const trialGranted = metadata.trialGranted === true || metadata.trialGranted === "true";
+        const trialPlan =
+          typeof metadata.plan === "string" && metadata.plan !== "" ? metadata.plan : null;
+        const productName =
+          typeof metadata.product === "string" && metadata.product !== "" ? metadata.product : null;
+        const isProration = metadata.type === "proration";
+
+        if (isTrial) {
+          setSuccessTitle("Trial Started!");
+          setSuccessMessage(
+            trialPlan !== null
+              ? `${trialPlan} is now in trial mode. Redirecting you to dashboard...`
+              : "Your trial is active. Redirecting you to dashboard...",
+          );
+        } else if (isProration) {
+          setSuccessTitle("Upgrade Successful!");
+          setSuccessMessage("Your prorated upgrade payment has been confirmed.");
+        } else if (trialRequested && trialGranted === false) {
+          setSuccessTitle("Subscription Activated");
+          setSuccessMessage(
+            trialPlan !== null
+              ? `Your ${trialPlan} trial was already used, so this checkout started paid billing immediately.`
+              : "Your previous trial was already used, so this checkout started paid billing immediately.",
+          );
+        } else if (trialPlan !== null) {
+          setSuccessTitle("Subscription Active!");
+          setSuccessMessage(
+            `Your ${trialPlan} subscription payment has been confirmed. Redirecting you to dashboard...`,
+          );
+        } else if (productName !== null) {
+          setSuccessTitle("Purchase Successful!");
+          setSuccessMessage(
+            `${productName} has been paid for successfully. Redirecting you to dashboard...`,
+          );
+        } else {
+          setSuccessTitle("Payment Successful!");
+          setSuccessMessage("Redirecting you to dashboard...");
+        }
+
         setStatus("success");
         setTimeout(() => {
           void router.navigate({ to: "/dashboard" });
@@ -86,13 +142,13 @@ export function CallbackPage() {
         <CardHeader>
           <CardTitle className="text-center">
             {status === "verifying" && "Verifying Payment..."}
-            {status === "success" && "Payment Successful!"}
+            {status === "success" && successTitle}
             {status === "error" && "Verification Failed"}
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center text-muted-foreground">
           {status === "verifying" && <p>Please wait while we confirm your transaction.</p>}
-          {status === "success" && <p>Redirecting you to dashboard...</p>}
+          {status === "success" && <p>{successMessage}</p>}
           {status === "error" && <p className="text-red-500">{error}</p>}
         </CardContent>
       </Card>

@@ -3,6 +3,22 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import PaymentManager from "@/components/dashboard/PaymentManager";
 import { authClient } from "@/lib/auth-client";
 
+const {
+  syncProductsMock,
+  syncPlansMock,
+  chargeRenewalMock,
+  syncProductsServerFnMock,
+  syncPlansServerFnMock,
+  chargeRenewalServerFnMock,
+} = vi.hoisted(() => ({
+  syncProductsMock: vi.fn(),
+  syncPlansMock: vi.fn(),
+  chargeRenewalMock: vi.fn(),
+  syncProductsServerFnMock: { __serverFn: "syncProducts" },
+  syncPlansServerFnMock: { __serverFn: "syncPlans" },
+  chargeRenewalServerFnMock: { __serverFn: "chargeRenewal" },
+}));
+
 // Mock authClient
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
@@ -24,6 +40,26 @@ vi.mock("@/lib/auth-client", () => ({
     },
   },
 }));
+
+vi.mock("@/lib/paystack-admin", () => ({
+  syncProductsServerFn: syncProductsServerFnMock,
+  syncPlansServerFn: syncPlansServerFnMock,
+  chargeRenewalServerFn: chargeRenewalServerFnMock,
+}));
+
+vi.mock("@tanstack/react-start", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@tanstack/react-start");
+
+  return {
+    ...actual,
+    useServerFn: (serverFn: { __serverFn?: string }) => {
+      if (serverFn.__serverFn === "syncProducts") return syncProductsMock;
+      if (serverFn.__serverFn === "syncPlans") return syncPlansMock;
+      if (serverFn.__serverFn === "chargeRenewal") return chargeRenewalMock;
+      return vi.fn();
+    },
+  };
+});
 
 // Mock icons
 vi.mock("@phosphor-icons/react", () => ({
@@ -88,6 +124,12 @@ describe("PaymentManager component", () => {
       data: { products: [] },
     } as any);
     vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: [] } as any);
+    syncProductsMock.mockResolvedValue({ status: "success", count: 2 });
+    syncPlansMock.mockResolvedValue({ status: "success", count: 3 });
+    chargeRenewalMock.mockResolvedValue({
+      status: "success",
+      reference: "rec_123",
+    });
 
     // Silence console errors in tests
     vi.spyOn(console, "error").mockImplementation(() => {
@@ -296,6 +338,155 @@ describe("PaymentManager component", () => {
     await waitFor(() => {
       expect(screen.getByText("₦100.00")).toBeInTheDocument();
       expect(screen.getByText(/for 10 seats/)).toBeInTheDocument();
+    });
+  });
+
+  it("surfaces trial messaging for eligible plans and active trial subscriptions", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [
+          {
+            name: "Starter",
+            amount: 1000,
+            currency: "NGN",
+            freeTrial: { days: 7 },
+          },
+        ],
+        products: [],
+      },
+    } as any);
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
+      data: {
+        subscriptions: [
+          {
+            plan: "Starter",
+            status: "trialing",
+            paystackSubscriptionCode: "LOC_trial_123",
+            trialEnd: "2026-04-26T00:00:00.000Z",
+            cancelAtPeriodEnd: false,
+          },
+        ],
+      },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Trial Used")).toBeInTheDocument();
+      expect(screen.getByText(/Trial active until 26 Apr 2026/)).toBeInTheDocument();
+      expect(screen.getByText(/paid billing starts after the trial ends/i)).toBeInTheDocument();
+      expect(screen.queryByText("Manage Billing")).not.toBeInTheDocument();
+      expect(screen.getByText(/This plan is managed in-app/i)).toBeInTheDocument();
+    });
+  });
+
+  it("uses a trial-specific subscribe CTA for trial-enabled plans", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [
+          {
+            name: "Starter",
+            amount: 1000,
+            currency: "NGN",
+            freeTrial: { days: 7 },
+          },
+        ],
+        products: [],
+      },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Start 7-Day Trial")).toBeInTheDocument();
+      expect(
+        screen.getByText(/authorizes your payment method with Paystack's minimum amount first/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows a paid CTA when the current billing profile has already used its trial", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [
+          {
+            name: "Starter",
+            amount: 1000,
+            currency: "NGN",
+            freeTrial: { days: 7 },
+          },
+        ],
+        products: [],
+      },
+    } as any);
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
+      data: {
+        subscriptions: [
+          {
+            plan: "Old Trial",
+            status: "canceled",
+            trialStart: "2026-04-01T00:00:00.000Z",
+            trialEnd: "2026-04-08T00:00:00.000Z",
+          },
+        ],
+      },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Trial Used")).toBeInTheDocument();
+      expect(screen.getAllByText("Subscribe Now").length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/this billing profile has already used its trial/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("can trigger trusted server operations from the dashboard", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [{ name: "Starter", amount: 1000, currency: "NGN" }],
+        products: [],
+      },
+    } as any);
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
+      data: {
+        subscriptions: [
+          {
+            id: "sub_local_123",
+            plan: "Team",
+            status: "active",
+            referenceId: "user_123",
+            paystackSubscriptionCode: "LOC_sub_local_123",
+            cancelAtPeriodEnd: false,
+          },
+        ],
+      },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Trusted Server Operations")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Sync Products"));
+    await waitFor(() => {
+      expect(syncProductsMock).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByText("Synced 2 products from Paystack into local storage."),
+      ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Charge Renewal"));
+    await waitFor(() => {
+      expect(chargeRenewalMock).toHaveBeenCalledWith({
+        data: { subscriptionId: "sub_local_123" },
+      });
+      expect(
+        screen.getByText("Renewal charged successfully for reference rec_123."),
+      ).toBeInTheDocument();
     });
   });
 

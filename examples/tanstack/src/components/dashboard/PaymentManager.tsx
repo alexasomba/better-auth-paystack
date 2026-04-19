@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
   Buildings,
@@ -12,6 +13,11 @@ import {
   User,
 } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth-client";
+import {
+  chargeRenewalServerFn,
+  syncPlansServerFn,
+  syncProductsServerFn,
+} from "@/lib/paystack-admin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +43,16 @@ interface Organization {
   slug: string;
 }
 
+interface SyncResult {
+  status: "success";
+  count: number;
+}
+
+interface RenewalResult {
+  status: "success" | "failed";
+  reference: string | null;
+}
+
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [config, setConfig] = useState<{
@@ -50,10 +66,42 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedBillingTarget, setSelectedBillingTarget] = useState<string>("personal"); // "personal" or org.id
   const [quantity, setQuantity] = useState(1);
+  const [serverOpsMessage, setServerOpsMessage] = useState<string | null>(null);
+  const [serverOpsLoading, setServerOpsLoading] = useState<null | "plans" | "products" | "renewal">(
+    null,
+  );
+  const [selectedRenewalSubscriptionId, setSelectedRenewalSubscriptionId] = useState("");
+  const syncProducts = useServerFn(syncProductsServerFn);
+  const syncPlans = useServerFn(syncPlansServerFn);
+  const chargeRenewal = useServerFn(chargeRenewalServerFn);
 
   const activeSubscription = subscriptions.find((sub: Subscription) =>
     ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status),
   );
+  const trialPreviouslyUsed = subscriptions.some(
+    (subscription) =>
+      (subscription.trialStart !== undefined && subscription.trialStart !== null) ||
+      (subscription.trialEnd !== undefined && subscription.trialEnd !== null) ||
+      subscription.status === "trialing",
+  );
+  const localRenewalCandidates = subscriptions.filter((subscription) => {
+    const subscriptionCode = subscription.paystackSubscriptionCode ?? "";
+    return (
+      (subscriptionCode.startsWith("LOC_") || subscriptionCode.startsWith("sub_local_")) &&
+      ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(subscription.status)
+    );
+  });
+
+  const formatDate = (value: Date | string | null | undefined) => {
+    if (value === undefined || value === null || value === "") return null;
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat("en-NG", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date);
+  };
 
   const fetchNativeProducts = useCallback(async () => {
     try {
@@ -126,6 +174,19 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     }
     void fetchOrganizations();
   }, []);
+
+  useEffect(() => {
+    if (localRenewalCandidates.length === 0) {
+      setSelectedRenewalSubscriptionId("");
+      return;
+    }
+
+    setSelectedRenewalSubscriptionId((current) =>
+      localRenewalCandidates.some((subscription) => subscription.id === current)
+        ? current
+        : (localRenewalCandidates[0]?.id ?? ""),
+    );
+  }, [localRenewalCandidates]);
 
   const handleSubscribe = async (planName: string) => {
     setActionLoading(true);
@@ -333,6 +394,58 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     }
   };
 
+  const handleSyncProducts = async () => {
+    setServerOpsLoading("products");
+    setServerOpsMessage(null);
+    try {
+      const result = (await syncProducts()) as SyncResult;
+      setServerOpsMessage(`Synced ${result.count} products from Paystack into local storage.`);
+      void fetchNativeProducts();
+    } catch (error: unknown) {
+      setServerOpsMessage(error instanceof Error ? error.message : "Failed to sync products.");
+    } finally {
+      setServerOpsLoading(null);
+    }
+  };
+
+  const handleSyncPlans = async () => {
+    setServerOpsLoading("plans");
+    setServerOpsMessage(null);
+    try {
+      const result = (await syncPlans()) as SyncResult;
+      setServerOpsMessage(`Synced ${result.count} plans from Paystack into local storage.`);
+      void fetchNativePlans();
+    } catch (error: unknown) {
+      setServerOpsMessage(error instanceof Error ? error.message : "Failed to sync plans.");
+    } finally {
+      setServerOpsLoading(null);
+    }
+  };
+
+  const handleChargeRenewal = async () => {
+    if (selectedRenewalSubscriptionId === "") {
+      setServerOpsMessage("Pick a local subscription before charging a renewal.");
+      return;
+    }
+
+    setServerOpsLoading("renewal");
+    setServerOpsMessage(null);
+    try {
+      const result = (await chargeRenewal({
+        data: { subscriptionId: selectedRenewalSubscriptionId },
+      })) as RenewalResult;
+      setServerOpsMessage(
+        result.status === "success"
+          ? `Renewal charged successfully for reference ${result.reference}.`
+          : "Renewal attempt did not succeed.",
+      );
+    } catch (error: unknown) {
+      setServerOpsMessage(error instanceof Error ? error.message : "Failed to charge renewal.");
+    } finally {
+      setServerOpsLoading(null);
+    }
+  };
+
   // Subscription management functions are now handled via Paystack management link
   // or can be re-enabled if needed:
   // const handleManageSubscription = ...
@@ -357,6 +470,13 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       currency: currencyCode,
     }).format(amount / 100);
   };
+
+  const isPaystackManagedSubscriptionCode = (subscriptionCode: string | null | undefined) =>
+    subscriptionCode !== undefined &&
+    subscriptionCode !== null &&
+    subscriptionCode !== "" &&
+    !subscriptionCode.startsWith("LOC_") &&
+    !subscriptionCode.startsWith("sub_local_");
 
   if (activeTab === "subscriptions") {
     return (
@@ -384,6 +504,15 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                     </span>
                     {activeSubscription.cancelAtPeriodEnd === true && " (Ends at period end)"}
                   </p>
+                  {activeSubscription.status === "trialing" && (
+                    <p className="text-xs text-amber-700 mt-1">
+                      Trial active
+                      {formatDate(activeSubscription.trialEnd) !== null
+                        ? ` until ${formatDate(activeSubscription.trialEnd)}`
+                        : ""}
+                      . Your paid billing starts after the trial ends.
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
@@ -391,45 +520,55 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                   activeSubscription.paystackSubscriptionCode !== null &&
                   activeSubscription.paystackSubscriptionCode !== "" && (
                     <>
+                      {isPaystackManagedSubscriptionCode(
+                        activeSubscription.paystackSubscriptionCode,
+                      ) && (
+                        <Button
+                          onClick={() =>
+                            handleManageBilling(activeSubscription.paystackSubscriptionCode!)
+                          }
+                          disabled={actionLoading}
+                          size="sm"
+                          variant="outline"
+                          className="h-9 gap-2 text-xs"
+                        >
+                          <ArrowRight size={12} />
+                          Manage Billing
+                        </Button>
+                      )}
+                      {!isPaystackManagedSubscriptionCode(
+                        activeSubscription.paystackSubscriptionCode,
+                      ) && (
+                        <p className="text-[11px] text-muted-foreground max-w-56">
+                          This plan is managed in-app, so billing changes happen here instead of on
+                          Paystack's subscription portal.
+                        </p>
+                      )}
                       <Button
                         onClick={() =>
-                          handleManageBilling(activeSubscription.paystackSubscriptionCode!)
+                          activeSubscription.cancelAtPeriodEnd === true
+                            ? handleRestoreSubscription(
+                                activeSubscription.paystackSubscriptionCode!,
+                              )
+                            : handleCancelSubscription(activeSubscription.paystackSubscriptionCode!)
                         }
                         disabled={actionLoading}
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         className="h-9 gap-2 text-xs"
                       >
-                        <ArrowRight size={12} />
-                        Manage Billing
+                        {activeSubscription.cancelAtPeriodEnd === true ? (
+                          <>
+                            <CheckCircle size={12} />
+                            Restore Renewal
+                          </>
+                        ) : (
+                          <>
+                            <Clock size={12} />
+                            Cancel At Period End
+                          </>
+                        )}
                       </Button>
-                      {activeSubscription.cancelAtPeriodEnd === true ? (
-                        <Button
-                          onClick={() =>
-                            handleRestoreSubscription(activeSubscription.paystackSubscriptionCode!)
-                          }
-                          disabled={actionLoading}
-                          size="sm"
-                          variant="secondary"
-                          className="h-9 gap-2 text-xs"
-                        >
-                          <CheckCircle size={12} />
-                          Restore Renewal
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() =>
-                            handleCancelSubscription(activeSubscription.paystackSubscriptionCode!)
-                          }
-                          disabled={actionLoading}
-                          size="sm"
-                          variant="secondary"
-                          className="h-9 gap-2 text-xs"
-                        >
-                          <Clock size={12} />
-                          Cancel At Period End
-                        </Button>
-                      )}
                     </>
                   )}
               </div>
@@ -516,6 +655,92 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 <PlanCard key={plan.name} plan={plan} variant="local" />
               ))}
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-dashed p-5 space-y-4 bg-muted/20">
+            <div>
+              <h3 className="text-lg font-semibold">Trusted Server Operations</h3>
+              <p className="text-xs text-muted-foreground">
+                These actions stay server-owned in the real plugin. This example exposes a small
+                authenticated dashboard for inspection and manual triggering.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border bg-background p-4 space-y-3">
+                <p className="text-sm font-medium">Catalog Sync</p>
+                <p className="text-xs text-muted-foreground">
+                  Local cache: {nativeProducts.length} synced products, {nativePlans.length} synced
+                  plans.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSyncProducts}
+                    disabled={serverOpsLoading !== null}
+                    className="h-9"
+                  >
+                    {serverOpsLoading === "products" ? "Syncing Products..." : "Sync Products"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSyncPlans}
+                    disabled={serverOpsLoading !== null}
+                    className="h-9"
+                  >
+                    {serverOpsLoading === "plans" ? "Syncing Plans..." : "Sync Plans"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border bg-background p-4 space-y-3">
+                <p className="text-sm font-medium">Manual Renewal Charge</p>
+                <p className="text-xs text-muted-foreground">
+                  Demonstrates the trusted renewal helper for locally managed subscriptions with a
+                  saved authorization code.
+                </p>
+                <Select
+                  value={selectedRenewalSubscriptionId}
+                  onValueChange={(value) =>
+                    value !== null && setSelectedRenewalSubscriptionId(value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a local subscription" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {localRenewalCandidates.map((subscription) => (
+                      <SelectItem key={subscription.id} value={subscription.id}>
+                        {subscription.plan} · {subscription.referenceId}
+                      </SelectItem>
+                    ))}
+                    {localRenewalCandidates.length === 0 && (
+                      <SelectItem value="none" disabled>
+                        No local renewal candidates
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  onClick={handleChargeRenewal}
+                  disabled={
+                    serverOpsLoading !== null ||
+                    selectedRenewalSubscriptionId === "" ||
+                    localRenewalCandidates.length === 0
+                  }
+                  className="h-9"
+                >
+                  {serverOpsLoading === "renewal" ? "Charging Renewal..." : "Charge Renewal"}
+                </Button>
+              </div>
+            </div>
+
+            {serverOpsMessage !== null && serverOpsMessage !== "" && (
+              <p className="text-xs text-muted-foreground">{serverOpsMessage}</p>
+            )}
           </div>
 
           {/* Native Plans Section */}
@@ -656,6 +881,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   function PlanCard({ plan, variant }: { plan: PaystackPlan; variant: "local" | "native" }) {
     const currentPlanSubscription = activeSubscription;
     const isCurrentPlan = currentPlanSubscription?.plan.toLowerCase() === plan.name.toLowerCase();
+    const trialDays =
+      plan.freeTrial?.days !== undefined && plan.freeTrial.days > 0 ? plan.freeTrial.days : null;
+    const trialAvailable = trialDays !== null && trialPreviouslyUsed === false;
+    const trialConsumed = trialDays !== null && trialPreviouslyUsed === true;
 
     // Dynamic amount based on quantity for organizations, but only for local/custom plans
     // Native plans have fixed pricing on Paystack.
@@ -682,21 +911,36 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         )}
 
         <div className="absolute top-4 right-4">
-          {isNative ? (
-            <Badge
-              variant="secondary"
-              className="text-[10px] uppercase tracking-wider bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none"
-            >
-              Paystack Managed
-            </Badge>
-          ) : (
-            <Badge
-              variant="secondary"
-              className="text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-none"
-            >
-              Custom Plan
-            </Badge>
-          )}
+          <div className="flex flex-col items-end gap-2">
+            {isNative ? (
+              <Badge
+                variant="secondary"
+                className="text-[10px] uppercase tracking-wider bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none"
+              >
+                Paystack Managed
+              </Badge>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-none"
+              >
+                Custom Plan
+              </Badge>
+            )}
+            {trialDays !== null && (
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "text-[10px] uppercase tracking-wider shadow-none",
+                  trialConsumed
+                    ? "bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200"
+                    : "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200",
+                )}
+              >
+                {trialConsumed ? "Trial Used" : `${trialDays}-Day Trial`}
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div className="mb-4 mt-6">
@@ -722,6 +966,13 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             plan.description !== "" && (
               <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{plan.description}</p>
             )}
+          {trialDays !== null && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-900">
+              {trialAvailable
+                ? `Start with a ${trialDays}-day trial. Checkout authorizes your payment method with Paystack's minimum amount first, then paid billing begins after the trial ends.`
+                : "This billing profile has already used its trial. Checkout will start paid billing immediately for this plan."}
+            </div>
+          )}
         </div>
 
         <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
@@ -776,7 +1027,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
               className="w-full h-11 gap-2"
             >
               <CreditCard weight="duotone" size={20} />
-              {actionLoading ? "Processing..." : "Subscribe Now"}
+              {actionLoading
+                ? "Processing..."
+                : trialAvailable
+                  ? `Start ${trialDays}-Day Trial`
+                  : "Subscribe Now"}
             </Button>
           )}
         </div>

@@ -26,6 +26,7 @@ import type {
   PaystackTransactionResponse,
   User,
   PaystackUser,
+  PaystackCheckoutChannel,
 } from "./types";
 import {
   syncProductQuantityFromPaystack,
@@ -53,6 +54,7 @@ const PAYSTACK_ERROR_CODES: {
   FAILED_TO_DISABLE_SUBSCRIPTION: RawError<"FAILED_TO_DISABLE_SUBSCRIPTION">;
   FAILED_TO_ENABLE_SUBSCRIPTION: RawError<"FAILED_TO_ENABLE_SUBSCRIPTION">;
   EMAIL_VERIFICATION_REQUIRED: RawError<"EMAIL_VERIFICATION_REQUIRED">;
+  SUBSCRIPTION_PAYMENT_CHANNEL_NOT_ALLOWED: RawError<"SUBSCRIPTION_PAYMENT_CHANNEL_NOT_ALLOWED">;
 } = defineErrorCodes({
   SUBSCRIPTION_NOT_FOUND: "Subscription not found",
   SUBSCRIPTION_PLAN_NOT_FOUND: "Subscription plan not found",
@@ -62,7 +64,24 @@ const PAYSTACK_ERROR_CODES: {
   FAILED_TO_DISABLE_SUBSCRIPTION: "Failed to disable subscription",
   FAILED_TO_ENABLE_SUBSCRIPTION: "Failed to enable subscription",
   EMAIL_VERIFICATION_REQUIRED: "Email verification is required before you can subscribe to a plan",
+  SUBSCRIPTION_PAYMENT_CHANNEL_NOT_ALLOWED:
+    "This subscription only supports specific payment channels",
 });
+
+function getAllowedSubscriptionChannels(
+  options: AnyPaystackOptions,
+): PaystackCheckoutChannel[] | undefined {
+  const channels = options.subscription?.allowedPaymentChannels;
+  return Array.isArray(channels) && channels.length > 0 ? channels : undefined;
+}
+
+function isAllowedSubscriptionChannel(
+  channel: string | null | undefined,
+  allowedChannels: readonly PaystackCheckoutChannel[] | undefined,
+): boolean {
+  if (allowedChannels === undefined) return true;
+  return channel !== undefined && channel !== null && allowedChannels.includes(channel as never);
+}
 
 async function hmacSha512Hex(secret: string, message: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -745,7 +764,12 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       // Check trial eligibility - prevent trial abuse
       let trialStart: Date | undefined;
       let trialEnd: Date | undefined;
-      if (plan?.freeTrial?.days !== undefined && plan.freeTrial.days > 0) {
+      const requestedTrialDays =
+        plan?.freeTrial?.days !== undefined && plan.freeTrial.days > 0 ? plan.freeTrial.days : 0;
+      const trialRequested = requestedTrialDays > 0;
+      let trialGranted = false;
+      let trialDeniedReason: "already_used" | undefined;
+      if (trialRequested) {
         // Check if user/referenceId has ever had a trial
         const previousTrials = await ctx.context.adapter.findMany<Subscription>({
           model: "subscription",
@@ -761,7 +785,10 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         if (hadTrial === false) {
           trialStart = new Date();
           trialEnd = new Date();
-          trialEnd.setDate(trialEnd.getDate() + plan.freeTrial.days);
+          trialEnd.setDate(trialEnd.getDate() + requestedTrialDays);
+          trialGranted = true;
+        } else {
+          trialDeniedReason = "already_used";
         }
       }
 
@@ -817,15 +844,22 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           }
         }
 
+        const allowedSubscriptionChannels = plan
+          ? getAllowedSubscriptionChannels(options)
+          : undefined;
+
         // Construct Metadata
         const metadata = JSON.stringify({
           referenceId,
           userId: user.id,
           plan: plan !== undefined ? plan.name.toLowerCase() : undefined, // Undefined for one-time
           product: product !== undefined ? product.name.toLowerCase() : undefined,
-          isTrial: trialStart !== undefined,
-          trialEnd: trialEnd !== undefined ? trialEnd.toISOString() : undefined,
           ...extraMetadata,
+          isTrial: trialStart !== undefined,
+          trialRequested,
+          trialGranted,
+          trialDeniedReason,
+          trialEnd: trialEnd !== undefined ? trialEnd.toISOString() : undefined,
         });
 
         const initBody: {
@@ -836,6 +870,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           quantity?: number;
           amount?: number;
           plan?: string;
+          channels?: PaystackCheckoutChannel[];
           [key: string]: unknown;
         } = {
           email: targetEmail,
@@ -845,6 +880,10 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           currency: finalCurrency,
           quantity,
         };
+
+        if (allowedSubscriptionChannels !== undefined) {
+          initBody.channels = allowedSubscriptionChannels;
+        }
 
         // Handle prorateAndCharge for existing active subscriptions
         if (plan !== undefined && prorateAndCharge === true) {
@@ -994,6 +1033,9 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
                       currency: finalCurrency,
                       callback_url: callbackURL ?? undefined,
                       metadata: JSON.stringify(prorationMetadata),
+                      ...(allowedSubscriptionChannels !== undefined
+                        ? { channels: allowedSubscriptionChannels }
+                        : {}),
                     } as components["schemas"]["TransactionInitialize"],
                   });
                   const initRes =
@@ -1497,6 +1539,7 @@ export const verifyTransaction = <P extends string = "/verify-transaction">(
         paystackIdRaw !== undefined && paystackIdRaw !== null ? String(paystackIdRaw) : undefined;
       const authorizationCode = (data.authorization as { authorization_code?: string | null })
         ?.authorization_code;
+      const allowedSubscriptionChannels = getAllowedSubscriptionChannels(options);
 
       if (status === "success") {
         const session = await getSessionFromCtx(ctx);
@@ -1520,6 +1563,33 @@ export const verifyTransaction = <P extends string = "/verify-transaction">(
             : session !== undefined && session !== null
               ? session.user.id
               : undefined;
+
+        const isSubscriptionFlow =
+          (txRecord?.plan !== undefined && txRecord.plan !== null && txRecord.plan !== "") ||
+          Boolean((data as { plan?: unknown }).plan);
+
+        if (
+          isSubscriptionFlow &&
+          isAllowedSubscriptionChannel(data.channel ?? undefined, allowedSubscriptionChannels) ===
+            false
+        ) {
+          await ctx.context.adapter.update({
+            model: "paystackTransaction",
+            update: {
+              status: "failed",
+              paystackId,
+              amount: data.amount,
+              currency: data.currency,
+              updatedAt: new Date(),
+            },
+            where: [{ field: "reference", value: reference }],
+          });
+
+          throw new APIError("BAD_REQUEST", {
+            code: "SUBSCRIPTION_PAYMENT_CHANNEL_NOT_ALLOWED",
+            message: `This subscription requires one of: ${allowedSubscriptionChannels?.join(", ") ?? "allowed channels"}.`,
+          });
+        }
 
         // Authorization check: ensure the current user has access to this referenceId
         if (
