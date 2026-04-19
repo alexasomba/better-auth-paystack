@@ -463,7 +463,10 @@ describe("PaymentManager component", () => {
       },
     } as any);
     vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
-      data: {},
+      data: {
+        prorated: true,
+        message: "Subscription successfully upgraded with prorated charge.",
+      },
     } as any);
 
     render(<PaymentManager activeTab="subscriptions" />);
@@ -481,7 +484,9 @@ describe("PaymentManager component", () => {
           prorateAndCharge: true,
         }),
       );
-      expect(window.alert).toHaveBeenCalledWith("Upgrade processed successfully.");
+      expect(window.alert).toHaveBeenCalledWith(
+        "Subscription successfully upgraded with prorated charge.",
+      );
     });
   });
 });

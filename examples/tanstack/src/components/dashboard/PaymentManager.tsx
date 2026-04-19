@@ -217,8 +217,24 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       const res = await (authClient as any).paystack.initializeTransaction(payload);
       if (typeof res.data?.url === "string") {
         window.location.href = res.data.url;
+      } else if (res.data?.prorated === true) {
+        setSubscriptions((current) =>
+          current.map((subscription) =>
+            subscription === activeSubscription
+              ? {
+                  ...subscription,
+                  plan: planName,
+                  seats:
+                    selectedBillingTarget !== "" && selectedBillingTarget !== "personal"
+                      ? quantity
+                      : subscription.seats,
+                }
+              : subscription,
+          ),
+        );
+        alert(res.data?.message ?? "Subscription upgraded with proration.");
       } else {
-        alert("Upgrade processed successfully.");
+        alert(res.data?.message ?? "Upgrade processed successfully.");
       }
     } catch (e: unknown) {
       if (e instanceof Error) {
