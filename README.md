@@ -65,6 +65,7 @@ BETTER_AUTH_URL=http://localhost:8787
 import { betterAuth } from "better-auth";
 import { paystack } from "@alexasomba/better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
+import { admin } from "better-auth/plugins";
 
 const paystackClient = createPaystack({
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
@@ -72,6 +73,7 @@ const paystackClient = createPaystack({
 
 export const auth = betterAuth({
   plugins: [
+    admin(),
     paystack({
       paystackClient,
       webhook: { secret: process.env.PAYSTACK_WEBHOOK_SECRET! },
@@ -110,9 +112,13 @@ If you still have older code using top-level `paystackWebhookSecret`, it is trea
 ```ts title="client.ts"
 import { createAuthClient } from "better-auth/client";
 import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+import { adminClient } from "better-auth/client/plugins";
 
 export const client = createAuthClient({
-  plugins: [paystackClient({ subscription: true })],
+  plugins: [
+    adminClient(),
+    paystackClient({ subscription: true })
+  ],
 });
 ```
 
@@ -158,6 +164,8 @@ import {
   chargeSubscriptionRenewal,
   syncPaystackPlans,
   syncPaystackProducts,
+  type ChargeRecurringSubscriptionResult,
+  type PaystackSyncResult,
 } from "@alexasomba/better-auth-paystack";
 
 const ctx = { context: await auth.$context } as any;

@@ -13,6 +13,7 @@ A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin w
 - [x] Scheduled plan changes and immediate upgrades for local plans
 - [x] **Organization billing** - Bill subscriptions to organizations instead of personal accounts
 - [x] **Plan Code subscriptions** - Use Paystack-managed plans (`planCode`)
+- [x] **Admin Plugin** - Native Better Auth administrative capabilities
 - [x] Dynamic plan configuration via `/paystack/config`
 
 ## Tech Stack
@@ -91,11 +92,12 @@ src/
 
 ```ts
 import { paystack } from "@alexasomba/better-auth-paystack";
-import { organization } from "better-auth/plugins";
+import { organization, admin } from "better-auth/plugins";
 
 export const auth = betterAuth({
   plugins: [
     organization(),
+    admin(),
     paystack({
       paystackClient,
       webhook: { secret: env.PAYSTACK_WEBHOOK_SECRET },
@@ -132,11 +134,15 @@ export const auth = betterAuth({
 ```ts
 import { createAuthClient } from "better-auth/react";
 import { paystackClient } from "@alexasomba/better-auth-paystack/client";
-import { organizationClient } from "better-auth/client/plugins";
+import { organizationClient, adminClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_BETTER_AUTH_URL,
-  plugins: [paystackClient({ subscription: true }), organizationClient()],
+  plugins: [
+    paystackClient({ subscription: true }),
+    organizationClient(),
+    adminClient(),
+  ],
 });
 ```
 
