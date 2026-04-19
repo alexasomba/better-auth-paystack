@@ -12,8 +12,6 @@ vi.mock("@/lib/auth-client", () => ({
       listPlans: vi.fn(),
       getSubscriptionManageLink: vi.fn(),
       initializeTransaction: vi.fn(),
-      restore: vi.fn(),
-      disable: vi.fn(),
     },
     organization: {
       list: vi.fn(),
@@ -21,6 +19,8 @@ vi.mock("@/lib/auth-client", () => ({
     subscription: {
       list: vi.fn(),
       billingPortal: vi.fn(),
+      cancel: vi.fn(),
+      restore: vi.fn(),
     },
   },
 }));
@@ -73,6 +73,9 @@ vi.mock("@/components/ui/select", () => ({
 describe("PaymentManager component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(window, "alert").mockImplementation(() => {
+      /* noop */
+    });
 
     // Default mock returns
     vi.mocked((authClient as any).paystack.config).mockResolvedValue({
@@ -317,6 +320,168 @@ describe("PaymentManager component", () => {
       expect((authClient as any).subscription.list).toHaveBeenLastCalledWith({
         query: { referenceId: "org_123" },
       });
+    });
+  });
+
+  it("should schedule cancellation for the active subscription", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [{ name: "Starter", amount: 1000, currency: "NGN" }],
+        products: [],
+      },
+    } as any);
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
+      data: {
+        subscriptions: [
+          {
+            plan: "Starter",
+            status: "active",
+            paystackSubscriptionCode: "SUB_active_123",
+            cancelAtPeriodEnd: false,
+          },
+        ],
+      },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Cancel At Period End")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Cancel At Period End"));
+
+    await waitFor(() => {
+      expect((authClient as any).subscription.cancel).toHaveBeenCalledWith({
+        subscriptionCode: "SUB_active_123",
+        atPeriodEnd: true,
+      });
+      expect(screen.getByText("Restore Renewal")).toBeInTheDocument();
+    });
+  });
+
+  it("should restore a subscription already marked for cancellation", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [{ name: "Starter", amount: 1000, currency: "NGN" }],
+        products: [],
+      },
+    } as any);
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
+      data: {
+        subscriptions: [
+          {
+            plan: "Starter",
+            status: "active",
+            paystackSubscriptionCode: "SUB_restore_123",
+            cancelAtPeriodEnd: true,
+          },
+        ],
+      },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Restore Renewal")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Restore Renewal"));
+
+    await waitFor(() => {
+      expect((authClient as any).subscription.restore).toHaveBeenCalledWith({
+        subscriptionCode: "SUB_restore_123",
+      });
+      expect(screen.getByText("Cancel At Period End")).toBeInTheDocument();
+    });
+  });
+
+  it("should schedule a plan change when another plan is selected", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [
+          { name: "Starter", amount: 1000, currency: "NGN" },
+          { name: "Pro", amount: 2000, currency: "NGN" },
+        ],
+        products: [],
+      },
+    } as any);
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
+      data: {
+        subscriptions: [
+          {
+            plan: "Starter",
+            status: "active",
+            paystackSubscriptionCode: "SUB_schedule_123",
+            cancelAtPeriodEnd: false,
+          },
+        ],
+      },
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Schedule Change").length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByText("Schedule Change")[0]);
+
+    await waitFor(() => {
+      expect((authClient as any).paystack.initializeTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          plan: "Pro",
+          scheduleAtPeriodEnd: true,
+        }),
+      );
+      expect(window.alert).toHaveBeenCalledWith(
+        "Plan change scheduled for the end of the current billing period.",
+      );
+    });
+  });
+
+  it("should prorate an immediate upgrade for a custom plan", async () => {
+    vi.mocked((authClient as any).paystack.config).mockResolvedValue({
+      data: {
+        plans: [
+          { name: "Starter", amount: 1000, currency: "NGN", planCode: "PLN_starter" },
+          { name: "Team", amount: 3000, currency: "NGN" },
+        ],
+        products: [],
+      },
+    } as any);
+    vi.mocked((authClient as any).subscription.list).mockResolvedValue({
+      data: {
+        subscriptions: [
+          {
+            plan: "Starter",
+            status: "active",
+            paystackSubscriptionCode: "SUB_upgrade_123",
+            cancelAtPeriodEnd: false,
+          },
+        ],
+      },
+    } as any);
+    vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
+      data: {},
+    } as any);
+
+    render(<PaymentManager activeTab="subscriptions" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Upgrade Now")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Upgrade Now"));
+
+    await waitFor(() => {
+      expect((authClient as any).paystack.initializeTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          plan: "Team",
+          prorateAndCharge: true,
+        }),
+      );
+      expect(window.alert).toHaveBeenCalledWith("Upgrade processed successfully.");
     });
   });
 });

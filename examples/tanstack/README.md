@@ -9,7 +9,8 @@ A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin w
 - [x] Anonymous sign-in (demo purposes)
 - [x] Paystack subscription checkout (redirect flow)
 - [x] Transaction verification and status tracking
-- [x] Subscription management (list, cancel)
+- [x] Subscription management (list, cancel, restore, billing portal)
+- [x] Scheduled plan changes and immediate upgrades for local plans
 - [x] **Organization billing** - Bill subscriptions to organizations instead of personal accounts
 - [x] **Plan Code subscriptions** - Use Paystack-managed plans (`planCode`)
 - [x] Dynamic plan configuration via `/paystack/config`
@@ -152,6 +153,42 @@ if (result.data?.url) {
   window.location.href = result.data.url;
 }
 ```
+
+### Advanced Server Flows
+
+Some plugin capabilities are intentionally server-side and are not triggered from the dashboard UI. In the TanStack example, these are the right primitives to use from server functions, jobs, or admin routes:
+
+```ts
+import {
+  chargeSubscriptionRenewal,
+  syncPaystackPlans,
+  syncPaystackProducts,
+} from "@alexasomba/better-auth-paystack";
+
+// Example: sync your Paystack catalog into Better Auth's local tables
+await syncPaystackProducts(ctx, options);
+await syncPaystackPlans(ctx, options);
+
+// Example: charge a saved authorization for a recurring renewal
+await chargeSubscriptionRenewal(ctx, options, {
+  subscriptionId: "sub_123",
+});
+```
+
+What the dashboard demonstrates:
+
+- checkout redirects for subscriptions and one-time payments
+- cancel / restore flows
+- billing portal / manage-link flow
+- scheduled plan changes
+- immediate upgrades for local plans using `prorateAndCharge`
+
+What stays server-owned:
+
+- catalog sync jobs
+- recurring renewal charging
+- webhook processing and subscription lifecycle hooks
+- trial start logic and other automation around subscriptions
 
 ## Environment Variables
 

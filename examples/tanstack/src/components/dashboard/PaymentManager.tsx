@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Buildings,
   CheckCircle,
+  Clock,
   Coins,
   CreditCard,
   Package,
@@ -49,6 +50,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedBillingTarget, setSelectedBillingTarget] = useState<string>("personal"); // "personal" or org.id
   const [quantity, setQuantity] = useState(1);
+
+  const activeSubscription = subscriptions.find((sub: Subscription) =>
+    ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status),
+  );
 
   const fetchNativeProducts = useCallback(async () => {
     try {
@@ -125,7 +130,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const handleSubscribe = async (planName: string) => {
     setActionLoading(true);
     try {
-      const initPayload: { plan: string; callbackURL: string; referenceId?: string } = {
+      const initPayload: {
+        plan: string;
+        callbackURL: string;
+        referenceId?: string;
+        quantity?: number;
+        scheduleAtPeriodEnd?: boolean;
+        prorateAndCharge?: boolean;
+      } = {
         plan: planName,
         callbackURL: `${window.location.origin}/billing/paystack/callback`,
       };
@@ -147,6 +159,72 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       if (e instanceof Error) {
         alert(e.message || "Failed to initialize payment");
       }
+      setActionLoading(false);
+    }
+  };
+
+  const handleSchedulePlanChange = async (planName: string) => {
+    setActionLoading(true);
+    try {
+      const payload: {
+        plan: string;
+        callbackURL: string;
+        referenceId?: string;
+        scheduleAtPeriodEnd: true;
+      } = {
+        plan: planName,
+        callbackURL: `${window.location.origin}/billing/paystack/callback`,
+        scheduleAtPeriodEnd: true,
+      };
+
+      if (selectedBillingTarget !== "" && selectedBillingTarget !== "personal") {
+        payload.referenceId = selectedBillingTarget;
+      }
+
+      await (authClient as any).paystack.initializeTransaction(payload);
+      alert("Plan change scheduled for the end of the current billing period.");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert(e.message || "Failed to schedule plan change");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpgradeNow = async (planName: string) => {
+    setActionLoading(true);
+    try {
+      const payload: {
+        plan: string;
+        callbackURL: string;
+        referenceId?: string;
+        quantity?: number;
+        prorateAndCharge: true;
+      } = {
+        plan: planName,
+        callbackURL: `${window.location.origin}/billing/paystack/callback`,
+        prorateAndCharge: true,
+      };
+
+      if (selectedBillingTarget !== "" && selectedBillingTarget !== "personal") {
+        payload.referenceId = selectedBillingTarget;
+        if (quantity > 1) {
+          payload.quantity = quantity;
+        }
+      }
+
+      const res = await (authClient as any).paystack.initializeTransaction(payload);
+      if (typeof res.data?.url === "string") {
+        window.location.href = res.data.url;
+      } else {
+        alert("Upgrade processed successfully.");
+      }
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert(e.message || "Failed to upgrade subscription");
+      }
+    } finally {
       setActionLoading(false);
     }
   };
@@ -194,6 +272,51 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     }
   };
 
+  const handleCancelSubscription = async (subscriptionCode: string) => {
+    setActionLoading(true);
+    try {
+      await authClient.subscription.cancel({
+        subscriptionCode,
+        atPeriodEnd: true,
+      });
+      setSubscriptions((current) =>
+        current.map((subscription) =>
+          subscription.paystackSubscriptionCode === subscriptionCode
+            ? { ...subscription, cancelAtPeriodEnd: true, status: "active" }
+            : subscription,
+        ),
+      );
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert(e.message || "Failed to schedule cancellation");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRestoreSubscription = async (subscriptionCode: string) => {
+    setActionLoading(true);
+    try {
+      await authClient.subscription.restore({
+        subscriptionCode,
+      });
+      setSubscriptions((current) =>
+        current.map((subscription) =>
+          subscription.paystackSubscriptionCode === subscriptionCode
+            ? { ...subscription, cancelAtPeriodEnd: false, status: "active" }
+            : subscription,
+        ),
+      );
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        alert(e.message || "Failed to restore subscription");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Subscription management functions are now handled via Paystack management link
   // or can be re-enabled if needed:
   // const handleManageSubscription = ...
@@ -206,10 +329,6 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       </div>
     );
   }
-
-  const activeSubscription = subscriptions.find((sub: Subscription) =>
-    ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status),
-  );
 
   const formatCurrency = (
     amount: number | null | undefined,
@@ -255,18 +374,47 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 {activeSubscription.paystackSubscriptionCode !== undefined &&
                   activeSubscription.paystackSubscriptionCode !== null &&
                   activeSubscription.paystackSubscriptionCode !== "" && (
-                    <Button
-                      onClick={() =>
-                        handleManageBilling(activeSubscription.paystackSubscriptionCode!)
-                      }
-                      disabled={actionLoading}
-                      size="sm"
-                      variant="outline"
-                      className="h-9 gap-2 text-xs"
-                    >
-                      <ArrowRight size={12} />
-                      Manage Billing
-                    </Button>
+                    <>
+                      <Button
+                        onClick={() =>
+                          handleManageBilling(activeSubscription.paystackSubscriptionCode!)
+                        }
+                        disabled={actionLoading}
+                        size="sm"
+                        variant="outline"
+                        className="h-9 gap-2 text-xs"
+                      >
+                        <ArrowRight size={12} />
+                        Manage Billing
+                      </Button>
+                      {activeSubscription.cancelAtPeriodEnd === true ? (
+                        <Button
+                          onClick={() =>
+                            handleRestoreSubscription(activeSubscription.paystackSubscriptionCode!)
+                          }
+                          disabled={actionLoading}
+                          size="sm"
+                          variant="secondary"
+                          className="h-9 gap-2 text-xs"
+                        >
+                          <CheckCircle size={12} />
+                          Restore Renewal
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() =>
+                            handleCancelSubscription(activeSubscription.paystackSubscriptionCode!)
+                          }
+                          disabled={actionLoading}
+                          size="sm"
+                          variant="secondary"
+                          className="h-9 gap-2 text-xs"
+                        >
+                          <Clock size={12} />
+                          Cancel At Period End
+                        </Button>
+                      )}
+                    </>
                   )}
               </div>
             </div>
@@ -490,9 +638,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   );
 
   function PlanCard({ plan, variant }: { plan: PaystackPlan; variant: "local" | "native" }) {
-    const currentPlanSubscription = subscriptions.find((sub: Subscription) =>
-      ["active", "trialing", "non-renewing", "past_due", "unpaid"].includes(sub.status),
-    );
+    const currentPlanSubscription = activeSubscription;
     const isCurrentPlan = currentPlanSubscription?.plan.toLowerCase() === plan.name.toLowerCase();
 
     // Dynamic amount based on quantity for organizations, but only for local/custom plans
@@ -578,24 +724,45 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         </ul>
 
         <div className="mt-auto">
-          <Button
-            onClick={() => !isCurrentPlan && handleSubscribe(plan.name)}
-            disabled={actionLoading || isCurrentPlan}
-            variant={isCurrentPlan ? "outline" : variant === "native" ? "secondary" : "default"}
-            className="w-full h-11 gap-2"
-          >
-            {isCurrentPlan ? (
-              <>
-                <CheckCircle weight="fill" size={20} />
-                Active
-              </>
-            ) : (
-              <>
-                <CreditCard weight="duotone" size={20} />
-                {actionLoading ? "Processing..." : "Subscribe Now"}
-              </>
-            )}
-          </Button>
+          {isCurrentPlan ? (
+            <Button disabled variant="outline" className="w-full h-11 gap-2">
+              <CheckCircle weight="fill" size={20} />
+              Active
+            </Button>
+          ) : currentPlanSubscription !== undefined ? (
+            <div className="flex flex-col gap-2">
+              {!isNative && (
+                <Button
+                  onClick={() => handleUpgradeNow(plan.name)}
+                  disabled={actionLoading}
+                  variant="default"
+                  className="w-full h-11 gap-2"
+                >
+                  <CreditCard weight="duotone" size={20} />
+                  {actionLoading ? "Processing..." : "Upgrade Now"}
+                </Button>
+              )}
+              <Button
+                onClick={() => handleSchedulePlanChange(plan.name)}
+                disabled={actionLoading}
+                variant="outline"
+                className="w-full h-11 gap-2"
+              >
+                <Clock size={20} />
+                Schedule Change
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => handleSubscribe(plan.name)}
+              disabled={actionLoading}
+              variant={variant === "native" ? "secondary" : "default"}
+              className="w-full h-11 gap-2"
+            >
+              <CreditCard weight="duotone" size={20} />
+              {actionLoading ? "Processing..." : "Subscribe Now"}
+            </Button>
+          )}
         </div>
       </div>
     );
