@@ -6,7 +6,7 @@ catalog:
   "@alexasomba/paystack-node": "^1.9.4"
   "@arethetypeswrong/cli": "^0.18.2"
   "@base-ui/react": "latest"
-  "@better-auth/core": "1.7.0-beta.1"
+  "@better-auth/core": "1.7.0-beta.2"
   "@better-auth/infra": "^0.2.4"
   "@better-fetch/fetch": "^1.1.21"
   "@cloudflare/vite-plugin": "^1.32.3"
