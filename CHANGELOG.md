@@ -51,10 +51,9 @@
 
 ## [2.2.0](https://github.com/alexasomba/better-auth-paystack/compare/better-auth-paystack-v2.1.0...better-auth-paystack-v2.2.0) (2026-04-19)
 
-
 ### Features
 
-* stabilize paystack integration, enhance type safety, and add admin capabilities ([#109](https://github.com/alexasomba/better-auth-paystack/issues/109)) ([0a25f8e](https://github.com/alexasomba/better-auth-paystack/commit/0a25f8e6f8b4db94ffc1896225985a54ec12aefe))
+- stabilize paystack integration, enhance type safety, and add admin capabilities ([#109](https://github.com/alexasomba/better-auth-paystack/issues/109)) ([0a25f8e](https://github.com/alexasomba/better-auth-paystack/commit/0a25f8e6f8b4db94ffc1896225985a54ec12aefe))
 
 ## [2.1.0](https://github.com/alexasomba/better-auth-paystack/compare/better-auth-paystack-v2.0.0...better-auth-paystack-v2.1.0) (2026-04-17)
 
