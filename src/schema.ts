@@ -1,9 +1,8 @@
-import type { BetterAuthPluginDBSchema } from "@better-auth/core/db";
-import { mergeSchema } from "better-auth/db";
+import { mergeSchema, type BetterAuthPluginDBSchema } from "better-auth/db";
 
 import type { PaystackOptions } from "./types";
 
-export const transactions: BetterAuthPluginDBSchema = {
+export const transactions = {
   paystackTransaction: {
     fields: {
       reference: {
@@ -61,7 +60,7 @@ export const transactions: BetterAuthPluginDBSchema = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const subscriptions: BetterAuthPluginDBSchema = {
+export const subscriptions = {
   subscription: {
     fields: {
       plan: {
@@ -138,7 +137,7 @@ export const subscriptions: BetterAuthPluginDBSchema = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const user: BetterAuthPluginDBSchema = {
+export const user = {
   user: {
     fields: {
       paystackCustomerCode: {
@@ -150,7 +149,7 @@ export const user: BetterAuthPluginDBSchema = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const organization: BetterAuthPluginDBSchema = {
+export const organization = {
   organization: {
     fields: {
       paystackCustomerCode: {
@@ -166,7 +165,7 @@ export const organization: BetterAuthPluginDBSchema = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const products: BetterAuthPluginDBSchema = {
+export const products = {
   paystackProduct: {
     fields: {
       name: {
@@ -221,7 +220,7 @@ export const products: BetterAuthPluginDBSchema = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const plans: BetterAuthPluginDBSchema = {
+export const plans = {
   paystackPlan: {
     fields: {
       name: {
@@ -270,8 +269,20 @@ export const plans: BetterAuthPluginDBSchema = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
+export const paystackPluginSchema = {
+  ...subscriptions,
+  ...transactions,
+  ...user,
+  ...organization,
+  ...products,
+  ...plans,
+} satisfies BetterAuthPluginDBSchema;
+
+export type PaystackPluginSchema = typeof paystackPluginSchema;
+
 export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema => {
   let baseSchema: BetterAuthPluginDBSchema;
+  const optionSchema = options.schema as Parameters<typeof mergeSchema>[1];
 
   if (options.subscription?.enabled === true) {
     baseSchema = {
@@ -303,9 +314,9 @@ export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema =>
     options.subscription?.enabled !== true &&
     "subscription" in options.schema
   ) {
-    const { subscription: _subscription, ...restSchema } = options.schema;
+    const { subscription: _subscription, ...restSchema } = optionSchema ?? {};
     return mergeSchema(baseSchema, restSchema);
   }
 
-  return mergeSchema(baseSchema, options.schema);
+  return mergeSchema(baseSchema, optionSchema);
 };

@@ -83,7 +83,6 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
-    "@better-auth/core": "catalog:",
     "@better-fetch/fetch": "catalog:",
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",

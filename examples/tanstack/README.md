@@ -138,15 +138,13 @@ import { organizationClient, adminClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_BETTER_AUTH_URL,
-  plugins: [
-    paystackClient({ subscription: true }),
-    organizationClient(),
-    adminClient(),
-  ],
+  plugins: [paystackClient({ subscription: true }), organizationClient(), adminClient()],
 });
 ```
 
 ### Billing to an Organization
+
+Organization billing requires the signed-in user to be an organization owner/admin unless you provide a custom `subscription.authorizeReference` callback on the server.
 
 ```ts
 // Initialize a subscription for an organization

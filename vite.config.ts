@@ -14,7 +14,6 @@ const config: UserConfig = defineConfig({
       /^better-auth($|\/)/,
       /^better-call($|\/)/,
       /^@better-fetch\/fetch($|\/)/,
-      /^@better-auth\/core($|\/)/,
       /^@alexasomba\/paystack-node($|\/)/,
       "kysely",
       "@standard-schema/spec",
