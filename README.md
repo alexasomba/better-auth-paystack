@@ -434,7 +434,7 @@ The client plugin exposes fully typed canonical methods under `authClient.paysta
 - `authClient.subscription.create`, `upgrade`, `cancel`, `restore`, `list`, `billingPortal`
 - `authClient.paystack.config`, `listProducts`, `listPlans`, plus the transaction/subscription helpers above
 
-Deprecated compatibility aliases remain available for this major line:
+Deprecated compatibility aliases remain available in `2.x` and are planned for removal in the clean `3.0.0` release:
 
 - `authClient.subscription.disable(...)` -> use `authClient.subscription.cancel(...)`
 - `authClient.subscription.enable(...)` -> use `authClient.subscription.restore(...)`
