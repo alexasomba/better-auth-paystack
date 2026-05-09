@@ -3,7 +3,7 @@ packages:
   - "examples/*"
 
 catalog:
-  "@alexasomba/paystack-node": "^1.9.4"
+  "@alexasomba/paystack-node": "^1.10.1"
   "@arethetypeswrong/cli": "^0.18.2"
   "@base-ui/react": "^1.4.1"
   "@better-auth/core": "^1.6.9"

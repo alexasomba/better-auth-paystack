@@ -30,7 +30,7 @@ export const data: Record<string, unknown[]> = {
 const memory = memoryAdapter(data);
 
 const baseURL =
-  process.env.BETTER_AUTH_URL ?? process.env.VITE_BETTER_AUTH_URL ?? "http://localhost:8787";
+  process.env.BETTER_AUTH_URL ?? process.env.VITE_BETTER_AUTH_URL ?? "http://localhost:3000";
 
 const secretKey = process.env.PAYSTACK_SECRET_KEY;
 const webhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET;
@@ -46,6 +46,14 @@ export const paystackClient =
   secretKey !== undefined && secretKey !== null && secretKey !== ""
     ? createPaystack({
         secretKey,
+        timeoutMs: 30_000,
+        retry: {
+          retries: 3,
+          minDelayMs: 500,
+          maxDelayMs: 5_000,
+          retryOnStatuses: [408, 429, 500, 502, 503, 504],
+        },
+        idempotencyKey: "auto",
       })
     : null;
 

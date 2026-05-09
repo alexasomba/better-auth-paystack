@@ -8,141 +8,285 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as DashboardRouteImport } from "./routes/dashboard";
-import { Route as BillingRouteImport } from "./routes/billing";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as BillingPaystackCallbackRouteImport } from "./routes/billing/paystack/callback";
-import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as OpenapiDotjsonRouteImport } from './routes/openapi[.]json'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as BillingRouteImport } from './routes/billing'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as DotwellKnownSplatRouteImport } from './routes/[.]well-known/$'
+import { Route as BillingPaystackCallbackRouteImport } from './routes/billing/paystack/callback'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
+  id: '/openapi.json',
+  path: '/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
-  id: "/dashboard",
-  path: "/dashboard",
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const BillingRoute = BillingRouteImport.update({
-  id: "/billing",
-  path: "/billing",
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownSplatRoute = DotwellKnownSplatRouteImport.update({
+  id: '/.well-known/$',
+  path: '/.well-known/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BillingPaystackCallbackRoute = BillingPaystackCallbackRouteImport.update({
-  id: "/paystack/callback",
-  path: "/paystack/callback",
+  id: '/paystack/callback',
+  path: '/paystack/callback',
   getParentRoute: () => BillingRoute,
-} as any);
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: "/api/auth/$",
-  path: "/api/auth/$",
+  id: '/api/auth/$',
+  path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/billing": typeof BillingRouteWithChildren;
-  "/dashboard": typeof DashboardRoute;
-  "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/billing/paystack/callback": typeof BillingPaystackCallbackRoute;
+  '/': typeof IndexRoute
+  '/billing': typeof BillingRouteWithChildren
+  '/dashboard': typeof DashboardRoute
+  '/mcp': typeof McpRoute
+  '/openapi.json': typeof OpenapiDotjsonRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/.well-known/$': typeof DotwellKnownSplatRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/billing/paystack/callback': typeof BillingPaystackCallbackRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/billing": typeof BillingRouteWithChildren;
-  "/dashboard": typeof DashboardRoute;
-  "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/billing/paystack/callback": typeof BillingPaystackCallbackRoute;
+  '/': typeof IndexRoute
+  '/billing': typeof BillingRouteWithChildren
+  '/dashboard': typeof DashboardRoute
+  '/mcp': typeof McpRoute
+  '/openapi.json': typeof OpenapiDotjsonRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/.well-known/$': typeof DotwellKnownSplatRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/billing/paystack/callback': typeof BillingPaystackCallbackRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/billing": typeof BillingRouteWithChildren;
-  "/dashboard": typeof DashboardRoute;
-  "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/billing/paystack/callback": typeof BillingPaystackCallbackRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/billing': typeof BillingRouteWithChildren
+  '/dashboard': typeof DashboardRoute
+  '/mcp': typeof McpRoute
+  '/openapi.json': typeof OpenapiDotjsonRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/.well-known/$': typeof DotwellKnownSplatRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/billing/paystack/callback': typeof BillingPaystackCallbackRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/billing" | "/dashboard" | "/api/auth/$" | "/billing/paystack/callback";
-  fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/billing" | "/dashboard" | "/api/auth/$" | "/billing/paystack/callback";
-  id: "__root__" | "/" | "/billing" | "/dashboard" | "/api/auth/$" | "/billing/paystack/callback";
-  fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/billing'
+    | '/dashboard'
+    | '/mcp'
+    | '/openapi.json'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/.well-known/$'
+    | '/api/health'
+    | '/api/auth/$'
+    | '/billing/paystack/callback'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/billing'
+    | '/dashboard'
+    | '/mcp'
+    | '/openapi.json'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/.well-known/$'
+    | '/api/health'
+    | '/api/auth/$'
+    | '/billing/paystack/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/billing'
+    | '/dashboard'
+    | '/mcp'
+    | '/openapi.json'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/.well-known/$'
+    | '/api/health'
+    | '/api/auth/$'
+    | '/billing/paystack/callback'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  BillingRoute: typeof BillingRouteWithChildren;
-  DashboardRoute: typeof DashboardRoute;
-  ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
+  IndexRoute: typeof IndexRoute
+  BillingRoute: typeof BillingRouteWithChildren
+  DashboardRoute: typeof DashboardRoute
+  McpRoute: typeof McpRoute
+  OpenapiDotjsonRoute: typeof OpenapiDotjsonRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  DotwellKnownSplatRoute: typeof DotwellKnownSplatRoute
+  ApiHealthRoute: typeof ApiHealthRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/dashboard": {
-      id: "/dashboard";
-      path: "/dashboard";
-      fullPath: "/dashboard";
-      preLoaderRoute: typeof DashboardRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/billing": {
-      id: "/billing";
-      path: "/billing";
-      fullPath: "/billing";
-      preLoaderRoute: typeof BillingRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/billing/paystack/callback": {
-      id: "/billing/paystack/callback";
-      path: "/paystack/callback";
-      fullPath: "/billing/paystack/callback";
-      preLoaderRoute: typeof BillingPaystackCallbackRouteImport;
-      parentRoute: typeof BillingRoute;
-    };
-    "/api/auth/$": {
-      id: "/api/auth/$";
-      path: "/api/auth/$";
-      fullPath: "/api/auth/$";
-      preLoaderRoute: typeof ApiAuthSplatRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/openapi.json': {
+      id: '/openapi.json'
+      path: '/openapi.json'
+      fullPath: '/openapi.json'
+      preLoaderRoute: typeof OpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/$': {
+      id: '/.well-known/$'
+      path: '/.well-known/$'
+      fullPath: '/.well-known/$'
+      preLoaderRoute: typeof DotwellKnownSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing/paystack/callback': {
+      id: '/billing/paystack/callback'
+      path: '/paystack/callback'
+      fullPath: '/billing/paystack/callback'
+      preLoaderRoute: typeof BillingPaystackCallbackRouteImport
+      parentRoute: typeof BillingRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface BillingRouteChildren {
-  BillingPaystackCallbackRoute: typeof BillingPaystackCallbackRoute;
+  BillingPaystackCallbackRoute: typeof BillingPaystackCallbackRoute
 }
 
 const BillingRouteChildren: BillingRouteChildren = {
   BillingPaystackCallbackRoute: BillingPaystackCallbackRoute,
-};
+}
 
-const BillingRouteWithChildren = BillingRoute._addFileChildren(BillingRouteChildren);
+const BillingRouteWithChildren =
+  BillingRoute._addFileChildren(BillingRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BillingRoute: BillingRouteWithChildren,
   DashboardRoute: DashboardRoute,
+  McpRoute: McpRoute,
+  OpenapiDotjsonRoute: OpenapiDotjsonRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  DotwellKnownSplatRoute: DotwellKnownSplatRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx";
-import type { createStart } from "@tanstack/react-start";
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

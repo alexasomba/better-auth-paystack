@@ -48,6 +48,7 @@ export default function OrganizationManager() {
   const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ tone: "error" | "success"; text: string } | null>(null);
 
   // Form state
   const [orgName, setOrgName] = useState("");
@@ -113,16 +114,25 @@ export default function OrganizationManager() {
         slug,
       });
 
+      if (result.error !== null && result.error !== undefined) {
+        setMessage({
+          tone: "error",
+          text: result.error.message ?? "Failed to create organization",
+        });
+        return;
+      }
+
       if (result.data !== null && result.data !== undefined) {
         await loadOrganizations();
         setActiveOrg(result.data as Organization);
         setOrgName("");
         setOrgSlug("");
         setShowCreateForm(false);
+        setMessage({ tone: "success", text: "Organization created." });
       }
     } catch (error: unknown) {
       const message = (error as { message?: string })?.message ?? "Failed to create organization";
-      alert(message);
+      setMessage({ tone: "error", text: message });
     } finally {
       setCreating(false);
     }
@@ -200,6 +210,17 @@ export default function OrganizationManager() {
 
         {showCreateForm && (
           <CardContent>
+            {message !== null && (
+              <div
+                className={`mb-4 rounded-lg border px-3 py-2 text-sm ${
+                  message.tone === "error"
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
             <form
               onSubmit={(e) => {
                 void createOrganization(e);

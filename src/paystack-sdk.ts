@@ -1,5 +1,5 @@
 import { APIError } from "better-auth/api";
-import { PaystackResponse } from "@alexasomba/paystack-node";
+import { PaystackError, PaystackResponse } from "@alexasomba/paystack-node";
 import type { PaystackClientLike } from "./types";
 
 /**
@@ -18,6 +18,13 @@ export function unwrapSdkResult<T = unknown>(result: unknown): T {
     try {
       return result.unwrap() as T;
     } catch (e: unknown) {
+      if (e instanceof PaystackError) {
+        throw new APIError("BAD_REQUEST", {
+          message: e.message,
+          status: e.status,
+        });
+      }
+
       throw new APIError("BAD_REQUEST", {
         message: (e as Error)?.message ?? "Paystack API error",
       });

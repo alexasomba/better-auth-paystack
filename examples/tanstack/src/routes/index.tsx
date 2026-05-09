@@ -18,8 +18,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { linkHeader } from "@/lib/agent-discovery";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+  headers: () => ({
+    Link: linkHeader,
+  }),
+  component: Home,
+});
 
 function Home() {
   const router = useRouter();
@@ -31,6 +37,71 @@ function Home() {
       void router.navigate({ to: "/dashboard" });
     }
   }, [sessionData, router]);
+
+  useEffect(() => {
+    const modelContext = navigator.modelContext;
+
+    if (modelContext === undefined) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const tools = [
+      {
+        name: "open_home",
+        description: "Navigate to the Better Auth Paystack demo home page.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => {
+          globalThis.location.assign("/");
+          return { ok: true };
+        },
+      },
+      {
+        name: "open_dashboard",
+        description: "Navigate to the authenticated billing dashboard.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => {
+          globalThis.location.assign("/dashboard");
+          return { ok: true };
+        },
+      },
+      {
+        name: "get_agent_resources",
+        description: "Return the site discovery resources for API and agent automation.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+        execute: () => ({
+          apiCatalog: "/.well-known/api-catalog",
+          openApi: "/openapi.json",
+          health: "/api/health",
+          sitemap: "/sitemap.xml",
+        }),
+      },
+    ];
+
+    if (modelContext.registerTool !== undefined) {
+      for (const tool of tools) {
+        modelContext.registerTool(tool, { signal: controller.signal });
+      }
+    } else if (modelContext.provideContext !== undefined) {
+      modelContext.provideContext({ tools }, { signal: controller.signal });
+    }
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
 
   const handleAnonymousLogin = async () => {
     setIsAuthActionInProgress(true);
