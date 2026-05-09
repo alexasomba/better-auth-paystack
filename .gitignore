@@ -9,6 +9,10 @@ dist/
 .github/copilot-instructions.md
 ci-artifacts/
 coverage/
+playwright-report/
+test-results/
+examples/*/playwright-report/
+examples/*/test-results/
 
 # TypeScript build cache
 *.tsbuildinfo
