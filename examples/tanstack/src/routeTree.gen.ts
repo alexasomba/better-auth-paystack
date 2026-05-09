@@ -9,12 +9,38 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
+import { Route as SitemapDotxmlRouteImport } from "./routes/sitemap[.]xml";
+import { Route as RobotsDottxtRouteImport } from "./routes/robots[.]txt";
+import { Route as OpenapiDotjsonRouteImport } from "./routes/openapi[.]json";
+import { Route as McpRouteImport } from "./routes/mcp";
 import { Route as DashboardRouteImport } from "./routes/dashboard";
 import { Route as BillingRouteImport } from "./routes/billing";
 import { Route as IndexRouteImport } from "./routes/index";
+import { Route as ApiHealthRouteImport } from "./routes/api/health";
+import { Route as DotwellKnownSplatRouteImport } from "./routes/[.]well-known/$";
 import { Route as BillingPaystackCallbackRouteImport } from "./routes/billing/paystack/callback";
 import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: "/sitemap.xml",
+  path: "/sitemap.xml",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: "/robots.txt",
+  path: "/robots.txt",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const OpenapiDotjsonRoute = OpenapiDotjsonRouteImport.update({
+  id: "/openapi.json",
+  path: "/openapi.json",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const McpRoute = McpRouteImport.update({
+  id: "/mcp",
+  path: "/mcp",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const DashboardRoute = DashboardRouteImport.update({
   id: "/dashboard",
   path: "/dashboard",
@@ -28,6 +54,16 @@ const BillingRoute = BillingRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: "/",
   path: "/",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: "/api/health",
+  path: "/api/health",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const DotwellKnownSplatRoute = DotwellKnownSplatRouteImport.update({
+  id: "/.well-known/$",
+  path: "/.well-known/$",
   getParentRoute: () => rootRouteImport,
 } as any);
 const BillingPaystackCallbackRoute = BillingPaystackCallbackRouteImport.update({
@@ -45,6 +81,12 @@ export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "/billing": typeof BillingRouteWithChildren;
   "/dashboard": typeof DashboardRoute;
+  "/mcp": typeof McpRoute;
+  "/openapi.json": typeof OpenapiDotjsonRoute;
+  "/robots.txt": typeof RobotsDottxtRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
+  "/.well-known/$": typeof DotwellKnownSplatRoute;
+  "/api/health": typeof ApiHealthRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/billing/paystack/callback": typeof BillingPaystackCallbackRoute;
 }
@@ -52,6 +94,12 @@ export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/billing": typeof BillingRouteWithChildren;
   "/dashboard": typeof DashboardRoute;
+  "/mcp": typeof McpRoute;
+  "/openapi.json": typeof OpenapiDotjsonRoute;
+  "/robots.txt": typeof RobotsDottxtRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
+  "/.well-known/$": typeof DotwellKnownSplatRoute;
+  "/api/health": typeof ApiHealthRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/billing/paystack/callback": typeof BillingPaystackCallbackRoute;
 }
@@ -60,26 +108,100 @@ export interface FileRoutesById {
   "/": typeof IndexRoute;
   "/billing": typeof BillingRouteWithChildren;
   "/dashboard": typeof DashboardRoute;
+  "/mcp": typeof McpRoute;
+  "/openapi.json": typeof OpenapiDotjsonRoute;
+  "/robots.txt": typeof RobotsDottxtRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
+  "/.well-known/$": typeof DotwellKnownSplatRoute;
+  "/api/health": typeof ApiHealthRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/billing/paystack/callback": typeof BillingPaystackCallbackRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/billing" | "/dashboard" | "/api/auth/$" | "/billing/paystack/callback";
+  fullPaths:
+    | "/"
+    | "/billing"
+    | "/dashboard"
+    | "/mcp"
+    | "/openapi.json"
+    | "/robots.txt"
+    | "/sitemap.xml"
+    | "/.well-known/$"
+    | "/api/health"
+    | "/api/auth/$"
+    | "/billing/paystack/callback";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/billing" | "/dashboard" | "/api/auth/$" | "/billing/paystack/callback";
-  id: "__root__" | "/" | "/billing" | "/dashboard" | "/api/auth/$" | "/billing/paystack/callback";
+  to:
+    | "/"
+    | "/billing"
+    | "/dashboard"
+    | "/mcp"
+    | "/openapi.json"
+    | "/robots.txt"
+    | "/sitemap.xml"
+    | "/.well-known/$"
+    | "/api/health"
+    | "/api/auth/$"
+    | "/billing/paystack/callback";
+  id:
+    | "__root__"
+    | "/"
+    | "/billing"
+    | "/dashboard"
+    | "/mcp"
+    | "/openapi.json"
+    | "/robots.txt"
+    | "/sitemap.xml"
+    | "/.well-known/$"
+    | "/api/health"
+    | "/api/auth/$"
+    | "/billing/paystack/callback";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   BillingRoute: typeof BillingRouteWithChildren;
   DashboardRoute: typeof DashboardRoute;
+  McpRoute: typeof McpRoute;
+  OpenapiDotjsonRoute: typeof OpenapiDotjsonRoute;
+  RobotsDottxtRoute: typeof RobotsDottxtRoute;
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute;
+  DotwellKnownSplatRoute: typeof DotwellKnownSplatRoute;
+  ApiHealthRoute: typeof ApiHealthRoute;
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/sitemap.xml": {
+      id: "/sitemap.xml";
+      path: "/sitemap.xml";
+      fullPath: "/sitemap.xml";
+      preLoaderRoute: typeof SitemapDotxmlRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/robots.txt": {
+      id: "/robots.txt";
+      path: "/robots.txt";
+      fullPath: "/robots.txt";
+      preLoaderRoute: typeof RobotsDottxtRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/openapi.json": {
+      id: "/openapi.json";
+      path: "/openapi.json";
+      fullPath: "/openapi.json";
+      preLoaderRoute: typeof OpenapiDotjsonRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/mcp": {
+      id: "/mcp";
+      path: "/mcp";
+      fullPath: "/mcp";
+      preLoaderRoute: typeof McpRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/dashboard": {
       id: "/dashboard";
       path: "/dashboard";
@@ -99,6 +221,20 @@ declare module "@tanstack/react-router" {
       path: "/";
       fullPath: "/";
       preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/health": {
+      id: "/api/health";
+      path: "/api/health";
+      fullPath: "/api/health";
+      preLoaderRoute: typeof ApiHealthRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/.well-known/$": {
+      id: "/.well-known/$";
+      path: "/.well-known/$";
+      fullPath: "/.well-known/$";
+      preLoaderRoute: typeof DotwellKnownSplatRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/billing/paystack/callback": {
@@ -132,6 +268,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BillingRoute: BillingRouteWithChildren,
   DashboardRoute: DashboardRoute,
+  McpRoute: McpRoute,
+  OpenapiDotjsonRoute: OpenapiDotjsonRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  DotwellKnownSplatRoute: DotwellKnownSplatRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 };
 export const routeTree = rootRouteImport
@@ -139,10 +281,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>();
 
 import type { getRouter } from "./router.tsx";
-import type { createStart } from "@tanstack/react-start";
+import type { startInstance } from "./start.ts";
 declare module "@tanstack/react-start" {
   interface Register {
     ssr: true;
     router: Awaited<ReturnType<typeof getRouter>>;
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
   }
 }
