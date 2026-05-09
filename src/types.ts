@@ -10,6 +10,12 @@ import type {
   PaystackProductClient,
   PaystackSubscriptionClient,
   PaystackTransactionClient,
+  TransactionChargeAuthorizationResponseData,
+  TransactionVerifyResponseData,
+  PlanListResponseData,
+  CustomerCreateResponseData,
+  SubscriptionListResponseData,
+  ProductFetchResponseData,
   components,
 } from "@alexasomba/paystack-node";
 import type { PaystackPluginSchema } from "./schema";
@@ -131,12 +137,12 @@ export type PaystackWebhookPayload = PaystackWebhookEvent;
 /**
  * Paystack SDK Result types
  */
-export type PaystackTransactionResponse = components["schemas"]["VerifyResponse"]["data"];
-export type PaystackPlanResponse = components["schemas"]["PlanListResponseArray"];
-export type PaystackCustomerResponse =
-  components["schemas"]["ChargeAuthorizationResponse"]["data"]["customer"];
-export type PaystackSubscriptionResponse = components["schemas"]["SubscriptionListResponseArray"];
-export type PaystackProductResponse = components["schemas"]["ProductListsResponseArray"];
+export type PaystackTransactionResponse = TransactionVerifyResponseData;
+export type PaystackChargeAuthorizationResponse = TransactionChargeAuthorizationResponseData;
+export type PaystackPlanResponse = PlanListResponseData;
+export type PaystackCustomerResponse = CustomerCreateResponseData;
+export type PaystackSubscriptionResponse = SubscriptionListResponseData;
+export type PaystackProductResponse = ProductFetchResponseData;
 
 export interface SubscriptionOptions {
   /**
@@ -299,7 +305,7 @@ export interface ChargeRecurringSubscriptionInput {
 
 export interface ChargeRecurringSubscriptionResult {
   status: "success" | "failed";
-  data: PaystackTransactionResponse;
+  data: PaystackChargeAuthorizationResponse;
 }
 
 export interface PaystackSyncResult {

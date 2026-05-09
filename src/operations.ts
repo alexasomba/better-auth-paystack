@@ -12,7 +12,7 @@ import type {
   PaystackPlan,
   PaystackProduct,
   PaystackSyncResult,
-  PaystackTransactionResponse,
+  PaystackChargeAuthorizationResponse,
   Subscription,
   User,
 } from "./types";
@@ -239,7 +239,7 @@ export async function chargeSubscriptionRenewal(
     },
   });
 
-  const chargeData = unwrapSdkResult<PaystackTransactionResponse>(chargeResRaw);
+  const chargeData = unwrapSdkResult<PaystackChargeAuthorizationResponse>(chargeResRaw);
   if (chargeData?.status === "success" && chargeData.reference !== undefined) {
     const now = new Date();
     const nextPeriodEnd = getNextPeriodEnd(now, plan.interval ?? "monthly");

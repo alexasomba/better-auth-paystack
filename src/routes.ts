@@ -23,6 +23,8 @@ import type {
   PaystackPlan,
   PaystackWebhookPayload,
   PaystackTransactionResponse,
+  PaystackChargeAuthorizationResponse,
+  ChargeRecurringSubscriptionResult,
   Session,
   User,
   PaystackUser,
@@ -1035,7 +1037,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
                       metadata: JSON.stringify(prorationMetadata),
                     },
                   });
-                  const sdkRes = unwrapSdkResult<PaystackTransactionResponse>(chargeResRaw);
+                  const sdkRes = unwrapSdkResult<PaystackChargeAuthorizationResponse>(chargeResRaw);
 
                   if (sdkRes?.status !== "success") {
                     throw new APIError("BAD_REQUEST", {
@@ -2785,90 +2787,7 @@ export const chargeRecurringSubscription = <P extends string = "/charge-recurrin
       z.core.$strip
     >;
   },
-  {
-    status: string;
-    data: {
-      id: number;
-      domain: string;
-      status: string;
-      reference: string;
-      receipt_number: string | null;
-      amount: number;
-      message: string | null;
-      gateway_response: string;
-      channel: string;
-      currency: string;
-      ip_address: string | null;
-      metadata: (string | Record<string, never> | number) | null;
-      log: {
-        start_time: number;
-        time_spent: number;
-        attempts: number;
-        errors: number;
-        success: boolean;
-        mobile: boolean;
-        input: unknown[];
-        history: {
-          type: string;
-          message: string;
-          time: number;
-        }[];
-      } | null;
-      fees: number | null;
-      fees_split: unknown;
-      authorization: {
-        authorization_code?: string;
-        bin?: string | null;
-        last4?: string;
-        exp_month?: string;
-        exp_year?: string;
-        channel?: string;
-        card_type?: string;
-        bank?: string;
-        country_code?: string;
-        brand?: string;
-        reusable?: boolean;
-        signature?: string;
-        account_name?: string | null;
-        receiver_bank_account_number?: string | null;
-        receiver_bank?: string | null;
-      };
-      customer: {
-        id: number;
-        first_name: string | null;
-        last_name: string | null;
-        email: string;
-        customer_code: string;
-        phone: string | null;
-        metadata: Record<string, never> | null;
-        risk_action: string;
-        international_format_phone?: string | null;
-      };
-      plan: (string | Record<string, never>) | null;
-      split: Record<string, never> | null;
-      order_id: unknown;
-      paidAt: string | null;
-      createdAt: string;
-      requested_amount: number;
-      pos_transaction_data: unknown;
-      source: unknown;
-      fees_breakdown: unknown;
-      connect: unknown;
-      transaction_date: string;
-      plan_object: {
-        id?: number;
-        name?: string;
-        plan_code?: string;
-        description?: unknown;
-        amount?: number;
-        interval?: string;
-        send_invoices?: boolean;
-        send_sms?: boolean;
-        currency?: string;
-      };
-      subaccount: Record<string, never> | null;
-    };
-  }
+  ChargeRecurringSubscriptionResult
 > => {
   return createAuthEndpoint(
     path,
@@ -2965,7 +2884,7 @@ export const chargeRecurringSubscription = <P extends string = "/charge-recurrin
         },
       });
 
-      const chargeData = unwrapSdkResult<PaystackTransactionResponse>(chargeResRaw);
+      const chargeData = unwrapSdkResult<PaystackChargeAuthorizationResponse>(chargeResRaw);
 
       if (chargeData?.status === "success" && chargeData.reference !== undefined) {
         const now = new Date();
