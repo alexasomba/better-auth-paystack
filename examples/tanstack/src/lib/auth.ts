@@ -46,6 +46,14 @@ export const paystackClient =
   secretKey !== undefined && secretKey !== null && secretKey !== ""
     ? createPaystack({
         secretKey,
+        timeoutMs: 30_000,
+        retry: {
+          retries: 3,
+          minDelayMs: 500,
+          maxDelayMs: 5_000,
+          retryOnStatuses: [408, 429, 500, 502, 503, 504],
+        },
+        idempotencyKey: "auto",
       })
     : null;
 

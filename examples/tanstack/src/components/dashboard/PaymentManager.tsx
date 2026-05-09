@@ -13,6 +13,7 @@ import {
   User,
 } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth-client";
+import { paystackActions, subscriptionActions } from "@/lib/paystack-client";
 import {
   chargeRenewalServerFn,
   syncPlansServerFn,
@@ -53,6 +54,19 @@ interface RenewalResult {
   reference: string | null;
 }
 
+interface OperationMessage {
+  tone: "success" | "error" | "info";
+  text: string;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message !== "" ? error.message : fallback;
+}
+
+function getProductPrice(product: PaystackProduct & { amount?: number }) {
+  return product.price ?? product.amount;
+}
+
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [config, setConfig] = useState<{
@@ -66,6 +80,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedBillingTarget, setSelectedBillingTarget] = useState<string>("personal"); // "personal" or org.id
   const [quantity, setQuantity] = useState(1);
+  const [actionMessage, setActionMessage] = useState<OperationMessage | null>(null);
   const [serverOpsMessage, setServerOpsMessage] = useState<string | null>(null);
   const [serverOpsLoading, setServerOpsLoading] = useState<null | "plans" | "products" | "renewal">(
     null,
@@ -105,23 +120,29 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   const fetchNativeProducts = useCallback(async () => {
     try {
-      const res = await (authClient as any).paystack.listProducts();
+      const res = await paystackActions.listProducts();
       if (res.data?.products !== undefined && res.data?.products !== null) {
         setNativeProducts(res.data.products as unknown as PaystackProduct[]);
       }
-    } catch (_) {
-      // Silently fail
+    } catch (error: unknown) {
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(error, "Failed to load synced products."),
+      });
     }
   }, []);
 
   const fetchNativePlans = useCallback(async () => {
     try {
-      const res = await (authClient as any).paystack.listPlans();
+      const res = await paystackActions.listPlans();
       if (res.data?.plans !== undefined && res.data?.plans !== null) {
         setNativePlans(res.data.plans as PaystackPlan[]);
       }
-    } catch (_) {
-      // Silently fail
+    } catch (error: unknown) {
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(error, "Failed to load synced plans."),
+      });
     }
   }, []);
 
@@ -130,8 +151,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       setIsLoading(true);
       try {
         const [configRes, subsRes] = await Promise.all([
-          (authClient as any).paystack.config(),
-          authClient.subscription.list({
+          paystackActions.config(),
+          subscriptionActions.list({
             query: {
               referenceId: selectedBillingTarget !== "personal" ? selectedBillingTarget : undefined,
             },
@@ -149,8 +170,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         if (subsRes.data?.subscriptions !== undefined && subsRes.data?.subscriptions !== null) {
           setSubscriptions(subsRes.data.subscriptions);
         }
-      } catch (_) {
-        // Silently fail
+      } catch (error: unknown) {
+        setActionMessage({
+          tone: "error",
+          text: getErrorMessage(error, "Failed to load billing details."),
+        });
       } finally {
         setIsLoading(false);
       }
@@ -168,8 +192,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         if (result.data !== undefined && result.data !== null) {
           setOrganizations(result.data as Organization[]);
         }
-      } catch (_) {
-        // Silently fail
+      } catch (error: unknown) {
+        setActionMessage({
+          tone: "error",
+          text: getErrorMessage(error, "Failed to load organizations."),
+        });
       }
     }
     void fetchOrganizations();
@@ -190,6 +217,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   const handleSubscribe = async (planName: string) => {
     setActionLoading(true);
+    setActionMessage(null);
     try {
       const initPayload: {
         plan: string;
@@ -207,25 +235,27 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         initPayload.referenceId = selectedBillingTarget;
         // Add quantity/seats for organization billing
         if (quantity > 1) {
-          (initPayload as Record<string, unknown>).quantity = quantity;
+          initPayload.quantity = quantity;
         }
       }
-      const res = await (authClient as any).paystack.initializeTransaction(initPayload);
+      const res = await paystackActions.initializeTransaction(initPayload);
       if (typeof res.data?.url === "string") {
         window.location.href = res.data.url;
       } else {
-        alert("Failed to get redirect URL from Paystack");
+        setActionMessage({ tone: "error", text: "Failed to get redirect URL from Paystack." });
       }
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        alert(e.message || "Failed to initialize payment");
-      }
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(e, "Failed to initialize payment."),
+      });
       setActionLoading(false);
     }
   };
 
   const handleSchedulePlanChange = async (planName: string) => {
     setActionLoading(true);
+    setActionMessage(null);
     try {
       const payload: {
         plan: string;
@@ -242,12 +272,16 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         payload.referenceId = selectedBillingTarget;
       }
 
-      await (authClient as any).paystack.initializeTransaction(payload);
-      alert("Plan change scheduled for the end of the current billing period.");
+      await paystackActions.initializeTransaction(payload);
+      setActionMessage({
+        tone: "success",
+        text: "Plan change scheduled for the end of the current billing period.",
+      });
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        alert(e.message || "Failed to schedule plan change");
-      }
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(e, "Failed to schedule plan change."),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -255,6 +289,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   const handleUpgradeNow = async (planName: string) => {
     setActionLoading(true);
+    setActionMessage(null);
     try {
       const payload: {
         plan: string;
@@ -275,7 +310,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         }
       }
 
-      const res = await (authClient as any).paystack.initializeTransaction(payload);
+      const res = await paystackActions.initializeTransaction(payload);
       if (typeof res.data?.url === "string") {
         window.location.href = res.data.url;
       } else if (res.data?.prorated === true) {
@@ -293,14 +328,21 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
               : subscription,
           ),
         );
-        alert(res.data?.message ?? "Subscription upgraded with proration.");
+        setActionMessage({
+          tone: "success",
+          text: res.data?.message ?? "Subscription upgraded with proration.",
+        });
       } else {
-        alert(res.data?.message ?? "Upgrade processed successfully.");
+        setActionMessage({
+          tone: "success",
+          text: res.data?.message ?? "Upgrade processed successfully.",
+        });
       }
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        alert(e.message || "Failed to upgrade subscription");
-      }
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(e, "Failed to upgrade subscription."),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -308,10 +350,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   const handleBuyProduct = async (product: PaystackProduct) => {
     setActionLoading(true);
+    setActionMessage(null);
     try {
       const metadata =
         typeof product.metadata === "string" ? JSON.parse(product.metadata) : product.metadata;
-      const res = await (authClient as any).paystack.initializeTransaction({
+      const res = await paystackActions.initializeTransaction({
         product: product.name,
         amount: product.price ?? 0,
         currency: product.currency ?? "NGN",
@@ -321,29 +364,37 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       if (typeof res.data?.url === "string") {
         window.location.href = res.data.url;
       } else {
-        alert("Failed to get redirect URL from Paystack");
+        setActionMessage({ tone: "error", text: "Failed to get redirect URL from Paystack." });
       }
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        alert(e.message || "Failed to initialize payment");
-      }
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(e, "Failed to initialize payment."),
+      });
       setActionLoading(false);
     }
   };
 
   const handleManageBilling = async (subscriptionCode: string) => {
     setActionLoading(true);
+    setActionMessage(null);
     try {
-      const res = await authClient.subscription.billingPortal({
+      const res = await subscriptionActions.billingPortal({
         subscriptionCode,
       });
       if (res.data?.link !== undefined && res.data?.link !== null && res.data.link !== "") {
         window.location.href = res.data.link;
       } else {
-        alert("Failed to get management link from Paystack");
+        setActionMessage({
+          tone: "error",
+          text: "Failed to get management link from Paystack.",
+        });
       }
-    } catch (_) {
-      // Silently fail, alert handles it for user
+    } catch (error: unknown) {
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(error, "Failed to get management link from Paystack."),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -351,8 +402,9 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   const handleCancelSubscription = async (subscriptionCode: string) => {
     setActionLoading(true);
+    setActionMessage(null);
     try {
-      await authClient.subscription.cancel({
+      await subscriptionActions.cancel({
         subscriptionCode,
         atPeriodEnd: true,
       });
@@ -364,9 +416,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         ),
       );
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        alert(e.message || "Failed to schedule cancellation");
-      }
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(e, "Failed to schedule cancellation."),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -374,8 +427,9 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   const handleRestoreSubscription = async (subscriptionCode: string) => {
     setActionLoading(true);
+    setActionMessage(null);
     try {
-      await authClient.subscription.restore({
+      await subscriptionActions.restore({
         subscriptionCode,
       });
       setSubscriptions((current) =>
@@ -386,9 +440,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         ),
       );
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        alert(e.message || "Failed to restore subscription");
-      }
+      setActionMessage({
+        tone: "error",
+        text: getErrorMessage(e, "Failed to restore subscription."),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -488,6 +543,20 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           </div>
         </CardHeader>
         <CardContent className="space-y-8">
+          {actionMessage !== null && (
+            <div
+              className={cn(
+                "rounded-lg border px-3 py-2 text-xs",
+                actionMessage.tone === "error" && "border-red-200 bg-red-50 text-red-700",
+                actionMessage.tone === "success" &&
+                  "border-emerald-200 bg-emerald-50 text-emerald-700",
+                actionMessage.tone === "info" && "border-blue-200 bg-blue-50 text-blue-700",
+              )}
+            >
+              {actionMessage.text}
+            </div>
+          )}
+
           {/* Active Subscription Summary */}
           {activeSubscription && (
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between">
@@ -778,6 +847,20 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {actionMessage !== null && (
+          <div
+            className={cn(
+              "rounded-lg border px-3 py-2 text-xs",
+              actionMessage.tone === "error" && "border-red-200 bg-red-50 text-red-700",
+              actionMessage.tone === "success" &&
+                "border-emerald-200 bg-emerald-50 text-emerald-700",
+              actionMessage.tone === "info" && "border-blue-200 bg-blue-50 text-blue-700",
+            )}
+          >
+            {actionMessage.text}
+          </div>
+        )}
+
         <div className="space-y-6">
           <div className="space-y-4">
             <div>
@@ -799,10 +882,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                         <p className="text-xs text-muted-foreground">One-time payment</p>
                       </div>
                       <Badge variant="outline" className="text-primary border-primary/20">
-                        {formatCurrency(
-                          (product as any).price ?? (product as any).amount,
-                          product.currency,
-                        )}
+                        {formatCurrency(getProductPrice(product), product.currency)}
                       </Badge>
                     </div>
                     <Button

@@ -1,19 +1,31 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { CallbackPage } from "@/routes/billing/paystack/callback";
 
-const { mockNavigate, mockUseSearch } = vi.hoisted(() => ({
-  mockNavigate: vi.fn(),
-  mockUseSearch: vi.fn(() => ({ reference: "ref_123" })),
+const { mockNavigate, mockUseSearch, verifyCallbackMock, verifyCallbackServerFnMock } = vi.hoisted(
+  () => ({
+    mockNavigate: vi.fn(),
+    mockUseSearch: vi.fn(() => ({ reference: "ref_123" })),
+    verifyCallbackMock: vi.fn(),
+    verifyCallbackServerFnMock: { __serverFn: "verifyPaystackCallback" },
+  }),
+);
+
+vi.mock("@/lib/paystack-admin", () => ({
+  verifyPaystackCallbackServerFn: verifyCallbackServerFnMock,
 }));
 
-vi.mock("@/lib/auth-client", () => ({
-  authClient: {
-    paystack: {
-      verifyTransaction: vi.fn(),
+vi.mock("@tanstack/react-start", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@tanstack/react-start");
+
+  return {
+    ...actual,
+    useServerFn: (serverFn: { __serverFn?: string }) => {
+      if (serverFn.__serverFn === "verifyPaystackCallback") return verifyCallbackMock;
+      return vi.fn();
     },
-  },
-}));
+  };
+});
 
 vi.mock("@tanstack/react-router", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@tanstack/react-router");
@@ -31,20 +43,12 @@ vi.mock("@tanstack/react-router", async () => {
 
 describe("Paystack callback route", () => {
   afterEach(() => {
-    vi.useRealTimers();
     vi.clearAllMocks();
     mockUseSearch.mockReturnValue({ reference: "ref_123" });
   });
 
-  it("shows an error when verifyTransaction returns a Better Auth error payload", async () => {
-    const { authClient } = await import("@/lib/auth-client");
-
-    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
-      data: null,
-      error: {
-        message: "Verification failed on the server",
-      },
-    } as any);
+  it("shows an error when server-side verification fails", async () => {
+    verifyCallbackMock.mockRejectedValue(new Error("Verification failed on the server"));
 
     render(<CallbackPage />);
 
@@ -56,52 +60,25 @@ describe("Paystack callback route", () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it("retries transient reference-not-found verification failures and accepts trxref", async () => {
-    vi.useFakeTimers();
+  it("accepts trxref and verifies through the server function", async () => {
     mockUseSearch.mockReturnValue({ trxref: "trx_123" } as any);
 
-    const { authClient } = await import("@/lib/auth-client");
-
-    let verifyCount = 0;
-    vi.mocked((authClient as any).paystack.verifyTransaction).mockImplementation(() => {
-      verifyCount++;
-      if (verifyCount === 1) {
-        return Promise.resolve({
-          data: null,
-          error: {
-            message: "Transaction reference not found.",
-          },
-        } as any);
-      }
-      return Promise.resolve({
-        data: {
-          status: "success",
-        },
-        error: null,
-      } as any);
+    verifyCallbackMock.mockResolvedValue({
+      data: {
+        status: "success",
+      },
     });
 
     render(<CallbackPage />);
 
-    // Flush the initial effect and first verification promise.
-    await act(async () => {
-      await Promise.resolve();
+    await waitFor(() => {
+      expect(verifyCallbackMock).toHaveBeenCalledWith({ data: { reference: "trx_123" } });
+      expect(screen.getByText("Payment Successful!")).toBeInTheDocument();
     });
-
-    // Trigger the retry delay and flush the second verification promise.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000);
-      await Promise.resolve();
-    });
-
-    expect((authClient as any).paystack.verifyTransaction).toHaveBeenCalledTimes(2);
-    expect(screen.getByText("Payment Successful!")).toBeInTheDocument();
-  }, 20000);
+  });
 
   it("shows a trial-specific success state when the verified transaction metadata indicates a trial", async () => {
-    const { authClient } = await import("@/lib/auth-client");
-
-    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+    verifyCallbackMock.mockResolvedValue({
       data: {
         status: "success",
         metadata: JSON.stringify({
@@ -109,8 +86,7 @@ describe("Paystack callback route", () => {
           plan: "business",
         }),
       },
-      error: null,
-    } as any);
+    });
 
     render(<CallbackPage />);
 
@@ -123,17 +99,14 @@ describe("Paystack callback route", () => {
   });
 
   it("shows a one-time purchase success state when product metadata is present", async () => {
-    const { authClient } = await import("@/lib/auth-client");
-
-    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+    verifyCallbackMock.mockResolvedValue({
       data: {
         status: "success",
         metadata: JSON.stringify({
           product: "50 credits pack",
         }),
       },
-      error: null,
-    } as any);
+    });
 
     render(<CallbackPage />);
 
@@ -148,17 +121,14 @@ describe("Paystack callback route", () => {
   });
 
   it("shows an upgrade-specific success state for proration payments", async () => {
-    const { authClient } = await import("@/lib/auth-client");
-
-    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+    verifyCallbackMock.mockResolvedValue({
       data: {
         status: "success",
         metadata: JSON.stringify({
           type: "proration",
         }),
       },
-      error: null,
-    } as any);
+    });
 
     render(<CallbackPage />);
 
@@ -171,9 +141,7 @@ describe("Paystack callback route", () => {
   });
 
   it("shows a friendly paid-activation message when a requested trial was already used", async () => {
-    const { authClient } = await import("@/lib/auth-client");
-
-    vi.mocked((authClient as any).paystack.verifyTransaction).mockResolvedValue({
+    verifyCallbackMock.mockResolvedValue({
       data: {
         status: "success",
         metadata: JSON.stringify({
@@ -183,8 +151,7 @@ describe("Paystack callback route", () => {
           trialDeniedReason: "already_used",
         }),
       },
-      error: null,
-    } as any);
+    });
 
     render(<CallbackPage />);
 

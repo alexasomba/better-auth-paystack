@@ -123,6 +123,9 @@ describe("PaymentManager component", () => {
     vi.mocked((authClient as any).paystack.listProducts).mockResolvedValue({
       data: { products: [] },
     } as any);
+    vi.mocked((authClient as any).paystack.listPlans).mockResolvedValue({
+      data: { plans: [] },
+    } as any);
     vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: [] } as any);
     syncProductsMock.mockResolvedValue({ status: "success", count: 2 });
     syncPlansMock.mockResolvedValue({ status: "success", count: 3 });
@@ -625,9 +628,9 @@ describe("PaymentManager component", () => {
           scheduleAtPeriodEnd: true,
         }),
       );
-      expect(window.alert).toHaveBeenCalledWith(
-        "Plan change scheduled for the end of the current billing period.",
-      );
+      expect(
+        screen.getByText("Plan change scheduled for the end of the current billing period."),
+      ).toBeInTheDocument();
     });
   });
 
@@ -675,9 +678,9 @@ describe("PaymentManager component", () => {
           prorateAndCharge: true,
         }),
       );
-      expect(window.alert).toHaveBeenCalledWith(
-        "Subscription successfully upgraded with prorated charge.",
-      );
+      expect(
+        screen.getByText("Subscription successfully upgraded with prorated charge."),
+      ).toBeInTheDocument();
     });
   });
 });
