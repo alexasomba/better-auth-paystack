@@ -1,21 +1,9 @@
-import { defineErrorCodes } from "@better-auth/core/utils/error-codes";
 import type { CustomerCreatePayload } from "@alexasomba/paystack-node";
-import type {
-  AuthContext,
-  BetterAuthPlugin,
-  BetterAuthPluginDBSchema,
-  GenericEndpointContext,
-  MiddlewareInputContext,
-  MiddlewareOptions,
-  RawError,
-  StrictEndpoint,
-  ZodBoolean,
-  ZodNumber,
-  ZodObject,
-  ZodOptional,
-  ZodRecord,
-  ZodString,
-  ZodUnknown,
+import {
+  defineErrorCodes,
+  type AuthContext,
+  type BetterAuthPlugin,
+  type GenericEndpointContext,
 } from "better-auth";
 import { defu } from "defu";
 
@@ -43,20 +31,15 @@ import { getPlanByName, syncSubscriptionSeats } from "./utils";
 import type {
   PaystackClientLike,
   PaystackOptions,
-  PaystackPlan,
-  Subscription,
-  SubscriptionOptions,
-  PaystackProduct,
   PaystackCustomerResponse,
   Member,
   AnyPaystackOptions,
   User,
-  PaystackTransaction,
 } from "./types";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
-import type { $strip } from "zod/v4/core";
+import { PACKAGE_VERSION } from "./version";
 
-declare module "@better-auth/core" {
+declare module "better-auth" {
   interface BetterAuthPluginRegistry<AuthOptions, Options> {
     paystack: {
       creator: typeof paystack;
@@ -64,7 +47,7 @@ declare module "@better-auth/core" {
   }
 }
 
-const INTERNAL_ERROR_CODES = defineErrorCodes(
+const INTERNAL_ERROR_CODES: ReturnType<typeof defineErrorCodes> = defineErrorCodes(
   Object.fromEntries(
     Object.entries(PAYSTACK_ERROR_CODES).map(([key, value]) => [
       key,
@@ -73,589 +56,63 @@ const INTERNAL_ERROR_CODES = defineErrorCodes(
   ),
 );
 
-export const paystack = <
-  TPaystackClient extends PaystackClientLike = PaystackClientLike,
-  O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>,
->(
-  options: O,
-): {
-  id: "paystack";
-  endpoints: {
-    initializeTransaction: StrictEndpoint<
-      "/paystack/initialize-transaction",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            plan: ZodOptional<ZodString>;
-            product: ZodOptional<ZodString>;
-            amount: ZodOptional<ZodNumber>;
-            currency: ZodOptional<ZodString>;
-            email: ZodOptional<ZodString>;
-            metadata: ZodOptional<ZodRecord<ZodString, ZodUnknown>>;
-            referenceId: ZodOptional<ZodString>;
-            callbackURL: ZodOptional<ZodString>;
-            quantity: ZodOptional<ZodNumber>;
-            scheduleAtPeriodEnd: ZodOptional<ZodBoolean>;
-            cancelAtPeriodEnd: ZodOptional<ZodBoolean>;
-            prorateAndCharge: ZodOptional<ZodBoolean>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      | {
-          status: string;
-          message: string;
-          scheduled: boolean;
-        }
-      | {
-          status: string;
-          message: string;
-          prorated: boolean;
-        }
-      | {
-          url: string;
-          reference: string;
-          accessCode: string;
-          redirect: boolean;
-        }
-      | undefined
-    >;
-    verifyTransaction: StrictEndpoint<
-      "/paystack/verify-transaction",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            reference: ZodString;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        status: string;
-        reference: string;
-        data: {
-          id: number;
-          domain: string;
-          status: string;
-          reference: string;
-          receipt_number: string | null;
-          amount: number;
-          message: string | null;
-          gateway_response: string;
-          channel: string;
-          currency: string;
-          ip_address: string | null;
-          metadata: (string | Record<string, never> | number) | null;
-          log: {
-            start_time: number;
-            time_spent: number;
-            attempts: number;
-            errors: number;
-            success: boolean;
-            mobile: boolean;
-            input: unknown[];
-            history: {
-              type: string;
-              message: string;
-              time: number;
-            }[];
-          } | null;
-          fees: number | null;
-          fees_split: unknown;
-          authorization: {
-            authorization_code?: string;
-            bin?: string | null;
-            last4?: string;
-            exp_month?: string;
-            exp_year?: string;
-            channel?: string;
-            card_type?: string;
-            bank?: string;
-            country_code?: string;
-            brand?: string;
-            reusable?: boolean;
-            signature?: string;
-            account_name?: string | null;
-            receiver_bank_account_number?: string | null;
-            receiver_bank?: string | null;
-          };
-          customer: {
-            id: number;
-            first_name: string | null;
-            last_name: string | null;
-            email: string;
-            customer_code: string;
-            phone: string | null;
-            metadata: Record<string, never> | null;
-            risk_action: string;
-            international_format_phone?: string | null;
-          };
-          plan: (string | Record<string, never>) | null;
-          split: Record<string, never> | null;
-          order_id: unknown;
-          paidAt: string | null;
-          createdAt: string;
-          requested_amount: number;
-          pos_transaction_data: unknown;
-          source: unknown;
-          fees_breakdown: unknown;
-          connect: unknown;
-          transaction_date: string;
-          plan_object: {
-            id?: number;
-            name?: string;
-            plan_code?: string;
-            description?: unknown;
-            amount?: number;
-            interval?: string;
-            send_invoices?: boolean;
-            send_sms?: boolean;
-            currency?: string;
-          };
-          subaccount: Record<string, never> | null;
-        };
-      }
-    >;
-    listSubscriptions: StrictEndpoint<
-      "/paystack/list-subscriptions",
-      {
-        method: "GET";
-        query: ZodObject<
-          {
-            referenceId: ZodOptional<ZodString>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        subscriptions: Subscription[];
-      }
-    >;
-    paystackWebhook: StrictEndpoint<
-      "/paystack/webhook",
-      {
-        method: "POST";
-        metadata: {
-          openapi: {
-            operationId: string;
-          };
-          scope: "server";
-        };
-        cloneRequest: true;
-        disableBody: true;
-      },
-      {
-        received: boolean;
-      }
-    >;
-    listTransactions: StrictEndpoint<
-      "/paystack/list-transactions",
-      {
-        method: "GET";
-        query: ZodObject<
-          {
-            referenceId: ZodOptional<ZodString>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        transactions: PaystackTransaction[];
-      }
-    >;
-    getConfig: StrictEndpoint<
-      "/paystack/config",
-      {
-        method: "GET";
-        metadata: {
-          openapi: {
-            operationId: string;
-          };
-        };
-      },
-      {
-        plans: PaystackPlan[];
-        products: PaystackProduct[];
-      }
-    >;
-    disableSubscription: StrictEndpoint<
-      "/paystack/disable-subscription",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            referenceId: ZodOptional<ZodString>;
-            subscriptionCode: ZodString;
-            emailToken: ZodOptional<ZodString>;
-            atPeriodEnd: ZodOptional<ZodBoolean>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        status: string;
-      }
-    >;
-    enableSubscription: StrictEndpoint<
-      "/paystack/enable-subscription",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            referenceId: ZodOptional<ZodString>;
-            subscriptionCode: ZodString;
-            emailToken: ZodOptional<ZodString>;
-            atPeriodEnd: ZodOptional<ZodBoolean>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        status: string;
-      }
-    >;
-    getSubscriptionManageLink: StrictEndpoint<
-      "/paystack/subscription-manage-link",
-      {
-        method: "GET";
-        query: ZodObject<
-          {
-            subscriptionCode: ZodString;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        link: string | null;
-      }
-    >;
-    subscriptionManageLink: StrictEndpoint<
-      "/paystack/subscription/manage-link",
-      {
-        method: "GET";
-        query: ZodObject<
-          {
-            subscriptionCode: ZodString;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        link: string | null;
-      }
-    >;
-    createSubscription: StrictEndpoint<
-      "/paystack/create-subscription",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            plan: ZodOptional<ZodString>;
-            product: ZodOptional<ZodString>;
-            amount: ZodOptional<ZodNumber>;
-            currency: ZodOptional<ZodString>;
-            email: ZodOptional<ZodString>;
-            metadata: ZodOptional<ZodRecord<ZodString, ZodUnknown>>;
-            referenceId: ZodOptional<ZodString>;
-            callbackURL: ZodOptional<ZodString>;
-            quantity: ZodOptional<ZodNumber>;
-            scheduleAtPeriodEnd: ZodOptional<ZodBoolean>;
-            cancelAtPeriodEnd: ZodOptional<ZodBoolean>;
-            prorateAndCharge: ZodOptional<ZodBoolean>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      | {
-          status: string;
-          message: string;
-          scheduled: boolean;
-        }
-      | {
-          status: string;
-          message: string;
-          prorated: boolean;
-        }
-      | {
-          url: string;
-          reference: string;
-          accessCode: string;
-          redirect: boolean;
-        }
-      | undefined
-    >;
-    upgradeSubscription: StrictEndpoint<
-      "/paystack/upgrade-subscription",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            plan: ZodOptional<ZodString>;
-            product: ZodOptional<ZodString>;
-            amount: ZodOptional<ZodNumber>;
-            currency: ZodOptional<ZodString>;
-            email: ZodOptional<ZodString>;
-            metadata: ZodOptional<ZodRecord<ZodString, ZodUnknown>>;
-            referenceId: ZodOptional<ZodString>;
-            callbackURL: ZodOptional<ZodString>;
-            quantity: ZodOptional<ZodNumber>;
-            scheduleAtPeriodEnd: ZodOptional<ZodBoolean>;
-            cancelAtPeriodEnd: ZodOptional<ZodBoolean>;
-            prorateAndCharge: ZodOptional<ZodBoolean>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      | {
-          status: string;
-          message: string;
-          scheduled: boolean;
-        }
-      | {
-          status: string;
-          message: string;
-          prorated: boolean;
-        }
-      | {
-          url: string;
-          reference: string;
-          accessCode: string;
-          redirect: boolean;
-        }
-      | undefined
-    >;
-    cancelSubscription: StrictEndpoint<
-      "/paystack/cancel-subscription",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            referenceId: ZodOptional<ZodString>;
-            subscriptionCode: ZodString;
-            emailToken: ZodOptional<ZodString>;
-            atPeriodEnd: ZodOptional<ZodBoolean>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        status: string;
-      }
-    >;
-    restoreSubscription: StrictEndpoint<
-      "/paystack/restore-subscription",
-      {
-        method: "POST";
-        body: ZodObject<
-          {
-            referenceId: ZodOptional<ZodString>;
-            subscriptionCode: ZodString;
-            emailToken: ZodOptional<ZodString>;
-            atPeriodEnd: ZodOptional<ZodBoolean>;
-          },
-          $strip
-        >;
-        use: (
-          | ((
-              getValue: (ctx: GenericEndpointContext) => string | string[],
-            ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-          | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-        )[];
-      },
-      {
-        status: string;
-      }
-    >;
-    listProducts: StrictEndpoint<
-      "/paystack/list-products",
-      {
-        method: "GET";
-        metadata: {
-          openapi: {
-            operationId: string;
-          };
-        };
-      },
-      {
-        products: PaystackProduct[];
-      }
-    >;
-    listPlans: StrictEndpoint<
-      "/paystack/list-plans",
-      {
-        method: "GET";
-        metadata: {
-          scope: "server";
-        };
-        use: ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<{
-          session: {
-            session: Record<string, unknown> & {
-              id: string;
-              createdAt: Date;
-              updatedAt: Date;
-              userId: string;
-              expiresAt: Date;
-              token: string;
-              ipAddress?: string | null | undefined;
-              userAgent?: string | null | undefined;
-            };
-            user: Record<string, unknown> & {
-              id: string;
-              createdAt: Date;
-              updatedAt: Date;
-              email: string;
-              emailVerified: boolean;
-              name: string;
-              image?: string | null | undefined;
-            };
-          };
-        }>)[];
-      },
-      {
-        plans: PaystackPlan[];
-      }
-    >;
-  };
-  schema: BetterAuthPluginDBSchema;
-  init: (ctx: AuthContext) => {
-    options: {
-      databaseHooks: {
-        user: {
-          create: {
-            after(
-              user: { id: string; email?: string | null; name?: string | null },
-              hookCtx?: GenericEndpointContext | null,
-            ): Promise<void>;
-          };
-        };
-        organization:
-          | {
-              create: {
-                after(
-                  org: { id: string; name: string; email?: string | null },
-                  hookCtx: GenericEndpointContext | null,
-                ): Promise<void>;
-              };
-            }
-          | undefined;
-      };
-      member: {
+type BetterAuthEndpoint = NonNullable<BetterAuthPlugin["endpoints"]>[string];
+
+interface PaystackPluginEndpoints extends Record<string, BetterAuthEndpoint> {
+  initializeTransaction: ReturnType<typeof initializeTransaction>;
+  verifyTransaction: ReturnType<typeof verifyTransaction>;
+  listSubscriptions: ReturnType<typeof listSubscriptions>;
+  paystackWebhook: ReturnType<typeof paystackWebhook>;
+  listTransactions: ReturnType<typeof listTransactions>;
+  getConfig: ReturnType<typeof getConfig>;
+  disableSubscription: ReturnType<typeof disablePaystackSubscription>;
+  enableSubscription: ReturnType<typeof enablePaystackSubscription>;
+  getSubscriptionManageLink: ReturnType<typeof getSubscriptionManageLink>;
+  subscriptionManageLink: ReturnType<typeof getSubscriptionManageLink>;
+  createSubscription: ReturnType<typeof createSubscription>;
+  upgradeSubscription: ReturnType<typeof upgradeSubscription>;
+  cancelSubscription: ReturnType<typeof cancelSubscription>;
+  restoreSubscription: ReturnType<typeof restoreSubscription>;
+  listProducts: ReturnType<typeof listProducts>;
+  listPlans: ReturnType<typeof listPlans>;
+}
+
+type PaystackHookHandler = (...args: unknown[]) => unknown;
+
+interface PaystackPluginInitResult {
+  options: {
+    databaseHooks: Record<string, unknown> & {
+      organization: {
         create: {
-          before: (
-            member: { organizationId: string },
-            ctx: GenericEndpointContext | null | undefined,
-          ) => Promise<void>;
-          after: (
-            member: { organizationId: string | undefined },
-            ctx: GenericEndpointContext | null | undefined,
-          ) => Promise<void>;
-        };
-        delete: {
-          after: (
-            member: { organizationId: string | undefined },
-            ctx: GenericEndpointContext | null | undefined,
-          ) => Promise<void>;
-        };
-      };
-      invitation: {
-        create: {
-          before: (
-            invitation: { organizationId: string },
-            ctx: GenericEndpointContext | null | undefined,
-          ) => Promise<void>;
-          after: (
-            invitation: { organizationId: string | undefined },
-            ctx: GenericEndpointContext | null | undefined,
-          ) => Promise<void>;
-        };
-        delete: {
-          after: (
-            invitation: { organizationId: string | undefined },
-            ctx: GenericEndpointContext | null | undefined,
-          ) => Promise<void>;
-        };
-      };
-      team: {
-        create: {
-          before: (
-            team: { organizationId: string },
-            ctx: GenericEndpointContext | null | undefined,
-          ) => Promise<void>;
+          after: PaystackHookHandler;
         };
       };
     };
   };
-  $ERROR_CODES: Record<string, RawError<string>>;
+}
+
+type PaystackPluginInit = ((ctx: AuthContext) => PaystackPluginInitResult) &
+  NonNullable<BetterAuthPlugin["init"]>;
+
+type PaystackPluginInstance<O extends AnyPaystackOptions> = Omit<
+  BetterAuthPlugin,
+  "id" | "version" | "endpoints" | "schema" | "init" | "$ERROR_CODES" | "options"
+> & {
+  id: "paystack";
+  version: typeof PACKAGE_VERSION;
+  endpoints: PaystackPluginEndpoints;
+  schema: ReturnType<typeof getSchema>;
+  init: PaystackPluginInit;
+  $ERROR_CODES: typeof INTERNAL_ERROR_CODES;
   options: NoInfer<O>;
-} => {
+};
+
+const createPaystackPlugin = <
+  TPaystackClient extends PaystackClientLike = PaystackClientLike,
+  O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>,
+>(
+  options: O,
+): PaystackPluginInstance<O> => {
   const routeOptions = {
     ...(options as unknown as AnyPaystackOptions),
     webhook: {
@@ -665,6 +122,7 @@ export const paystack = <
   } satisfies AnyPaystackOptions;
   return {
     id: "paystack",
+    version: PACKAGE_VERSION as typeof PACKAGE_VERSION,
     endpoints: {
       initializeTransaction: initializeTransaction(
         routeOptions,
@@ -696,7 +154,14 @@ export const paystack = <
       listPlans: listPlans(routeOptions, "/paystack/list-plans"),
     },
     schema: getSchema(options),
-    init: (ctx: AuthContext) => {
+    init: ((ctx: AuthContext) => {
+      const organizationPluginAvailable = ctx.hasPlugin("organization");
+      if (options.organization?.enabled === true && !organizationPluginAvailable) {
+        ctx.logger.error(
+          "Paystack organization billing is enabled, but the Better Auth organization plugin was not found. Organization billing hooks will be skipped.",
+        );
+      }
+
       return {
         options: {
           databaseHooks: {
@@ -767,7 +232,7 @@ export const paystack = <
               },
             },
             organization:
-              options.organization?.enabled === true
+              options.organization?.enabled === true && organizationPluginAvailable
                 ? {
                     create: {
                       async after(
@@ -865,121 +330,132 @@ export const paystack = <
                     },
                   }
                 : undefined,
-          },
-          member: {
-            create: {
-              before: async (
-                member: { organizationId: string },
-                ctx: GenericEndpointContext | null | undefined,
-              ) => {
-                if (
-                  options.subscription?.enabled === true &&
-                  member.organizationId &&
-                  ctx !== null &&
-                  ctx !== undefined
-                ) {
-                  await checkSeatLimit(ctx, member.organizationId);
+            member: organizationPluginAvailable
+              ? {
+                  create: {
+                    before: async (
+                      member: { organizationId: string },
+                      ctx: GenericEndpointContext | null | undefined,
+                    ) => {
+                      if (
+                        options.subscription?.enabled === true &&
+                        member.organizationId &&
+                        ctx !== null &&
+                        ctx !== undefined
+                      ) {
+                        await checkSeatLimit(ctx, member.organizationId);
+                      }
+                    },
+                    after: async (
+                      member: { organizationId: string | undefined },
+                      ctx: GenericEndpointContext | null | undefined,
+                    ) => {
+                      if (
+                        options.subscription?.enabled === true &&
+                        typeof member?.organizationId === "string" &&
+                        ctx
+                      ) {
+                        await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
+                      }
+                    },
+                  },
+                  delete: {
+                    after: async (
+                      member: { organizationId: string | undefined },
+                      ctx: GenericEndpointContext | null | undefined,
+                    ) => {
+                      if (
+                        options.subscription?.enabled === true &&
+                        typeof member?.organizationId === "string" &&
+                        ctx
+                      ) {
+                        await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
+                      }
+                    },
+                  },
                 }
-              },
-              after: async (
-                member: { organizationId: string | undefined },
-                ctx: GenericEndpointContext | null | undefined,
-              ) => {
-                if (
-                  options.subscription?.enabled === true &&
-                  typeof member?.organizationId === "string" &&
-                  ctx
-                ) {
-                  await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
+              : undefined,
+            invitation: organizationPluginAvailable
+              ? {
+                  create: {
+                    before: async (
+                      invitation: { organizationId: string },
+                      ctx: GenericEndpointContext | null | undefined,
+                    ) => {
+                      if (
+                        options.subscription?.enabled === true &&
+                        invitation.organizationId &&
+                        ctx !== null &&
+                        ctx !== undefined
+                      ) {
+                        await checkSeatLimit(ctx, invitation.organizationId);
+                      }
+                    },
+                    after: async (
+                      invitation: { organizationId: string | undefined },
+                      ctx: GenericEndpointContext | null | undefined,
+                    ) => {
+                      if (
+                        options.subscription?.enabled === true &&
+                        typeof invitation?.organizationId === "string" &&
+                        ctx
+                      ) {
+                        await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
+                      }
+                    },
+                  },
+                  delete: {
+                    after: async (
+                      invitation: { organizationId: string | undefined },
+                      ctx: GenericEndpointContext | null | undefined,
+                    ) => {
+                      if (
+                        options.subscription?.enabled === true &&
+                        typeof invitation?.organizationId === "string" &&
+                        ctx
+                      ) {
+                        await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
+                      }
+                    },
+                  },
                 }
-              },
-            },
-            delete: {
-              after: async (
-                member: { organizationId: string | undefined },
-                ctx: GenericEndpointContext | null | undefined,
-              ) => {
-                if (
-                  options.subscription?.enabled === true &&
-                  typeof member?.organizationId === "string" &&
-                  ctx
-                ) {
-                  await syncSubscriptionSeats(ctx, member.organizationId, routeOptions);
-                }
-              },
-            },
-          },
-          invitation: {
-            create: {
-              before: async (
-                invitation: { organizationId: string },
-                ctx: GenericEndpointContext | null | undefined,
-              ) => {
-                if (
-                  options.subscription?.enabled === true &&
-                  invitation.organizationId &&
-                  ctx !== null &&
-                  ctx !== undefined
-                ) {
-                  await checkSeatLimit(ctx, invitation.organizationId);
-                }
-              },
-              after: async (
-                invitation: { organizationId: string | undefined },
-                ctx: GenericEndpointContext | null | undefined,
-              ) => {
-                if (
-                  options.subscription?.enabled === true &&
-                  typeof invitation?.organizationId === "string" &&
-                  ctx
-                ) {
-                  await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
-                }
-              },
-            },
-            delete: {
-              after: async (
-                invitation: { organizationId: string | undefined },
-                ctx: GenericEndpointContext | null | undefined,
-              ) => {
-                if (
-                  options.subscription?.enabled === true &&
-                  typeof invitation?.organizationId === "string" &&
-                  ctx
-                ) {
-                  await syncSubscriptionSeats(ctx, invitation.organizationId, routeOptions);
-                }
-              },
-            },
-          },
-          team: {
-            create: {
-              before: async (
-                team: { organizationId: string },
-                ctx: GenericEndpointContext | null | undefined,
-              ) => {
-                if (options.subscription?.enabled === true && team.organizationId && ctx) {
-                  const subscription = await getOrganizationSubscription(ctx, team.organizationId);
-                  if (subscription !== null && subscription !== undefined) {
-                    const plan = await getPlanByName(routeOptions, subscription.plan);
-                    const limits = plan?.limits;
-                    const maxTeams = limits?.teams as number | undefined;
+              : undefined,
+            team: organizationPluginAvailable
+              ? {
+                  create: {
+                    before: async (
+                      team: { organizationId: string },
+                      ctx: GenericEndpointContext | null | undefined,
+                    ) => {
+                      if (options.subscription?.enabled === true && team.organizationId && ctx) {
+                        const subscription = await getOrganizationSubscription(
+                          ctx,
+                          team.organizationId,
+                        );
+                        if (subscription !== null && subscription !== undefined) {
+                          const plan = await getPlanByName(routeOptions, subscription.plan);
+                          const limits = plan?.limits;
+                          const maxTeams = limits?.teams as number | undefined;
 
-                    if (typeof maxTeams === "number") {
-                      await checkTeamLimit(ctx, team.organizationId, maxTeams);
-                    }
-                  }
+                          if (typeof maxTeams === "number") {
+                            await checkTeamLimit(ctx, team.organizationId, maxTeams);
+                          }
+                        }
+                      }
+                    },
+                  },
                 }
-              },
-            },
+              : undefined,
           },
         },
       };
-    },
+    }) as PaystackPluginInit,
     $ERROR_CODES: INTERNAL_ERROR_CODES,
     options: options as NoInfer<O>,
   } satisfies BetterAuthPlugin;
 };
+
+export const paystack: typeof createPaystackPlugin = createPaystackPlugin;
 
 export type PaystackPlugin<
   TPaystackClient extends PaystackClientLike = PaystackClientLike,

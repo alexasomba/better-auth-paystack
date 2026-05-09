@@ -1,8 +1,22 @@
-import { createAuthMiddleware, type AuthMiddleware } from "@better-auth/core/api";
 import { logger } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware, type AuthMiddleware } from "better-auth/api";
 
 import type { PaystackOptions, Session, User } from "./types";
+
+const BILLING_ORG_ROLES = new Set(["owner", "admin"]);
+
+export function hasBillingRole(role: unknown): boolean {
+  if (Array.isArray(role)) {
+    return role.some((value) => hasBillingRole(value));
+  }
+  if (typeof role !== "string") {
+    return false;
+  }
+  return role
+    .split(",")
+    .map((value) => value.trim())
+    .some((value) => BILLING_ORG_ROLES.has(value));
+}
 
 export const referenceMiddleware = (
   options: PaystackOptions,
@@ -26,16 +40,24 @@ export const referenceMiddleware = (
     }
     const body = (ctx.body ?? {}) as Record<string, unknown>;
     const query = (ctx.query ?? {}) as Record<string, unknown>;
+    const requestQueryReferenceId =
+      typeof ctx.request?.url === "string"
+        ? (new URL(ctx.request.url).searchParams.get("referenceId") ?? undefined)
+        : undefined;
     const referenceId =
       (body.referenceId as string | undefined) ??
       (query.referenceId as string | undefined) ??
+      requestQueryReferenceId ??
       session.user.id;
 
     const subscriptionOptions = options.subscription;
 
     if (referenceId === session.user.id) {
       return {
-        referenceId,
+        context: {
+          ...ctx.context,
+          referenceId,
+        },
       };
     }
 
@@ -56,18 +78,18 @@ export const referenceMiddleware = (
       );
       if (authorized === true) {
         return {
-          referenceId,
+          context: {
+            ...ctx.context,
+            referenceId,
+          },
         };
       }
-      // If explicit authorizeReference returns false, do we fail immediately?
-      // Usually yes, but maybe we fallback to org check?
-      // Let's assume authorizeReference overrides everything.
+      // Explicit authorization is authoritative when provided.
       throw new APIError("UNAUTHORIZED");
     }
 
-    // 2. Fallback: Organization Check
+    // 2. Fallback: Organization owner/admin check
     if (options.organization?.enabled === true) {
-      // Check if referenceId indicates an organization the user is a member of
       const member = await ctx.context.adapter.findOne({
         model: "member",
         where: [
@@ -76,21 +98,25 @@ export const referenceMiddleware = (
         ],
       });
 
-      if (member !== null && member !== undefined) {
-        logger.debug("DEBUG MIDDLEWARE MEMBER FOUND:", member);
-        // User is a member of the organization.
-        // We could check roles here, but for now allow any member.
+      if (
+        member !== null &&
+        member !== undefined &&
+        hasBillingRole((member as { role?: unknown }).role)
+      ) {
         return {
-          referenceId,
+          context: {
+            ...ctx.context,
+            referenceId,
+          },
         };
       }
     }
 
     logger.error(
-      `Passing referenceId into a subscription action isn't allowed if subscription.authorizeReference isn't defined in your paystack plugin config and matches no organization membership.`,
+      `Passing referenceId into a subscription action isn't allowed unless subscription.authorizeReference allows it or the session user is an organization owner/admin.`,
     );
     throw new APIError("BAD_REQUEST", {
       message:
-        "Passing referenceId isn't allowed without subscription.authorizeReference or valid organization membership.",
+        "Passing referenceId isn't allowed without subscription.authorizeReference or organization owner/admin membership.",
     });
   });

@@ -1,7 +1,6 @@
-import { createAuthEndpoint } from "@better-auth/core/api";
-import { defineErrorCodes } from "@better-auth/core/utils/error-codes";
-import { HIDE_METADATA } from "better-auth";
+import { defineErrorCodes, HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
 /* oxlint-disable no-restricted-imports */
 import { z } from "zod";
 import type { components } from "@alexasomba/paystack-node";
@@ -24,6 +23,7 @@ import type {
   PaystackPlan,
   PaystackWebhookPayload,
   PaystackTransactionResponse,
+  Session,
   User,
   PaystackUser,
   PaystackCheckoutChannel,
@@ -41,7 +41,7 @@ import {
   assertLocallyManagedSubscription,
   isLocalSubscriptionCode,
 } from "./utils";
-import { referenceMiddleware } from "./middleware";
+import { hasBillingRole, referenceMiddleware } from "./middleware";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 import { getOrganizationSubscription } from "./limits";
 
@@ -81,6 +81,44 @@ function isAllowedSubscriptionChannel(
 ): boolean {
   if (allowedChannels === undefined) return true;
   return channel !== undefined && channel !== null && allowedChannels.includes(channel as never);
+}
+
+async function assertReferenceAccess(
+  ctx: GenericEndpointContext,
+  options: AnyPaystackOptions,
+  data: { user: User; session: Session; referenceId: string; action: string },
+): Promise<void> {
+  if (data.referenceId === data.user.id) return;
+
+  if (
+    options.subscription?.enabled === true &&
+    typeof options.subscription.authorizeReference === "function"
+  ) {
+    const authorized = await options.subscription.authorizeReference(
+      {
+        user: data.user,
+        session: data.session,
+        referenceId: data.referenceId,
+        action: data.action,
+      },
+      ctx,
+    );
+    if (authorized === true) return;
+    throw new APIError("UNAUTHORIZED");
+  }
+
+  if (options.organization?.enabled === true) {
+    const member = await ctx.context.adapter.findOne<Member>({
+      model: "member",
+      where: [
+        { field: "userId", value: data.user.id },
+        { field: "organizationId", value: data.referenceId },
+      ],
+    });
+    if (member !== null && member !== undefined && hasBillingRole(member.role)) return;
+  }
+
+  throw new APIError("UNAUTHORIZED");
 }
 
 async function hmacSha512Hex(secret: string, message: string): Promise<string> {
@@ -1923,8 +1961,21 @@ export const listSubscriptions = <P extends string = "/list-subscriptions">(
       const referenceIdPart = (ctx.context as Record<string, unknown>).referenceId as
         | string
         | undefined;
-      const queryRefId = ctx.query?.referenceId;
-      const referenceId = referenceIdPart ?? queryRefId ?? (session.user as { id: string }).id;
+      const queryRefId =
+        ctx.query?.referenceId ??
+        (typeof ctx.request?.url === "string"
+          ? (new URL(ctx.request.url).searchParams.get("referenceId") ?? undefined)
+          : undefined);
+      const userId = (session.user as { id: string }).id;
+      if (queryRefId !== undefined && queryRefId !== userId && referenceIdPart !== queryRefId) {
+        await assertReferenceAccess(ctx, options, {
+          user: session.user as User,
+          session: session.session as Session,
+          referenceId: queryRefId,
+          action: "list-subscriptions",
+        });
+      }
+      const referenceId = queryRefId ?? referenceIdPart ?? userId;
       const res = await ctx.context.adapter.findMany<Subscription>({
         model: "subscription",
         where: [{ field: "referenceId", value: referenceId }],
@@ -1981,8 +2032,21 @@ export const listTransactions = <P extends string = "/list-transactions">(
       const referenceIdPart = (ctx.context as Record<string, unknown>).referenceId as
         | string
         | undefined;
-      const queryRefId = ctx.query?.referenceId;
-      const referenceId = referenceIdPart ?? queryRefId ?? (session.user as { id: string }).id;
+      const queryRefId =
+        ctx.query?.referenceId ??
+        (typeof ctx.request?.url === "string"
+          ? (new URL(ctx.request.url).searchParams.get("referenceId") ?? undefined)
+          : undefined);
+      const userId = (session.user as { id: string }).id;
+      if (queryRefId !== undefined && queryRefId !== userId && referenceIdPart !== queryRefId) {
+        await assertReferenceAccess(ctx, options, {
+          user: session.user as User,
+          session: session.session as Session,
+          referenceId: queryRefId,
+          action: "list-transactions",
+        });
+      }
+      const referenceId = queryRefId ?? referenceIdPart ?? userId;
       const res = await ctx.context.adapter.findMany<PaystackTransaction>({
         model: "paystackTransaction",
         where: [{ field: "referenceId", value: referenceId }],

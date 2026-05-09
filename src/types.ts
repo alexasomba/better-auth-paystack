@@ -1,4 +1,4 @@
-import type { GenericEndpointContext, Session, User } from "better-auth";
+import type { GenericEndpointContext, InferOptionSchema, Session, User } from "better-auth";
 import type { Organization, Member } from "better-auth/plugins/organization";
 import type {
   PaystackPaths,
@@ -12,6 +12,7 @@ import type {
   PaystackTransactionClient,
   components,
 } from "@alexasomba/paystack-node";
+import type { PaystackPluginSchema } from "./schema";
 
 /**
  * Valid Paystack currencies
@@ -72,8 +73,8 @@ export interface PaystackProduct {
   paystackId?: string;
   slug?: string;
   metadata?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface InputPaystackProduct {
@@ -263,13 +264,7 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
   /**
    * Custom database schema / model names
    */
-  schema?: Record<
-    string,
-    {
-      modelName?: string;
-      fields?: Record<string, string>;
-    }
-  >;
+  schema?: InferOptionSchema<PaystackPluginSchema>;
 }
 
 export interface Subscription {

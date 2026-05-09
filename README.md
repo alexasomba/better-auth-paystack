@@ -115,10 +115,7 @@ import { paystackClient } from "@alexasomba/better-auth-paystack/client";
 import { adminClient } from "better-auth/client/plugins";
 
 export const client = createAuthClient({
-  plugins: [
-    adminClient(),
-    paystackClient({ subscription: true })
-  ],
+  plugins: [adminClient(), paystackClient({ subscription: true })],
 });
 ```
 
@@ -431,7 +428,16 @@ paystack({
 
 ## Client SDK Reference
 
-The client plugin exposes fully typed methods under `authClient.paystack` and `authClient.subscription`.
+The client plugin exposes fully typed canonical methods under `authClient.paystack`, `authClient.transaction`, and `authClient.subscription`.
+
+- `authClient.transaction.initialize`, `verify`, `list`
+- `authClient.subscription.create`, `upgrade`, `cancel`, `restore`, `list`, `billingPortal`
+- `authClient.paystack.config`, `listProducts`, `listPlans`, plus the transaction/subscription helpers above
+
+Deprecated compatibility aliases remain available in `2.x` and are planned for removal in the clean `3.0.0` release:
+
+- `authClient.subscription.disable(...)` -> use `authClient.subscription.cancel(...)`
+- `authClient.subscription.enable(...)` -> use `authClient.subscription.restore(...)`
 
 ### `authClient.subscription.upgrade` / `create`
 
@@ -504,7 +510,7 @@ type initializeTransaction = {
 
 ### `authClient.subscription.list`
 
-List subscriptions for a user or organization.
+List subscriptions for a user or organization. Organization-scoped billing actions require an owner/admin membership by default. To allow other roles or custom resources, configure `subscription.authorizeReference`.
 
 ```ts
 type listSubscriptions = {

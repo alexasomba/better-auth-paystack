@@ -1,16 +1,18 @@
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
 
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
 
-import { betterAuth } from "better-auth";
+import { betterAuth, type DBAdapter } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
 import { setCookieToHeader } from "better-auth/cookies";
 import { bearer, organization } from "better-auth/plugins";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vite-plus/test";
-import type { DBAdapter } from "@better-auth/core/db/adapter";
 
 import { paystackClient } from "../src/client.ts";
+import { referenceMiddleware } from "../src/middleware.ts";
+import { getSchema } from "../src/schema.ts";
 import type {
   Subscription,
   PaystackOptions,
@@ -61,6 +63,86 @@ describe("paystack type", () => {
     expect(actions.syncProducts).toBeUndefined();
     expect(actions.syncPlans).toBeUndefined();
   });
+
+  it("should use slash-prefixed client paths and expose path method overrides", async () => {
+    const fetch = vi.fn().mockResolvedValue({ data: {}, error: null });
+    const plugin = paystackClient({ subscription: true }) as any;
+    const actions = plugin.getActions(fetch, null, null);
+
+    await actions.paystack.initializeTransaction({ plan: "pro" });
+    await actions.subscription.cancel({ subscriptionCode: "SUB_test" });
+    await actions.subscription.disable({ subscriptionCode: "SUB_test" });
+    await actions.subscription.restore({ subscriptionCode: "SUB_test" });
+    await actions.subscription.enable({ subscriptionCode: "SUB_test" });
+    await actions.paystack.config();
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "/paystack/initialize-transaction",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "/paystack/disable-subscription",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      3,
+      "/paystack/disable-subscription",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      4,
+      "/paystack/enable-subscription",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      5,
+      "/paystack/enable-subscription",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      6,
+      "/paystack/config",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(plugin.pathMethods).toMatchObject({
+      "/paystack/initialize-transaction": "POST",
+      "/paystack/cancel-subscription": "POST",
+      "/paystack/restore-subscription": "POST",
+    });
+  });
+
+  it("should not import Better Auth internals from published source files", () => {
+    for (const file of ["src/index.ts", "src/routes.ts", "src/middleware.ts", "src/schema.ts"]) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toContain('from "@better-auth/core');
+    }
+  });
+
+  it("should keep product and plan tables in the default schema", () => {
+    const schema = getSchema(options);
+    expect(schema.paystackProduct).toBeDefined();
+    expect(schema.paystackPlan).toBeDefined();
+  });
+
+  it("should skip organization hooks when organization billing is enabled without the organization plugin", () => {
+    const logger = { error: vi.fn() };
+    const plugin = paystack({
+      ...options,
+      organization: { enabled: true },
+    });
+    const initResult = plugin.init?.({
+      hasPlugin: () => false,
+      logger,
+    } as any) as any;
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("organization plugin was not found"),
+    );
+    expect(initResult.options.databaseHooks.organization).toBeUndefined();
+    expect(initResult.options.databaseHooks.member).toBeUndefined();
+  });
 });
 
 describe("paystack", () => {
@@ -85,6 +167,8 @@ describe("paystack", () => {
     data.session = [];
     data.verification = [];
     data.account = [];
+    data.member = [];
+    data.organization = [];
     data.subscription = [];
     data.paystackProduct = [];
     data.paystackTransaction = [];
@@ -1123,6 +1207,146 @@ describe("paystack", () => {
       }),
       expect.any(Object),
     );
+  }, 30000);
+
+  it("should allow organization owner/admin billing access without authorizeReference", async () => {
+    const options = {
+      paystackClient: {} as PaystackClientLike,
+      organization: { enabled: true },
+      subscription: {
+        enabled: true,
+        plans: [],
+      },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const auth = betterAuth({
+      baseURL: "http://localhost:3000",
+      trustedOrigins: ["http://localhost:3000"],
+      database: memory,
+      emailAndPassword: { enabled: true },
+      plugins: [organization(), paystack<PaystackClientLike>(options)],
+    });
+
+    const cookieHeaders = new Headers();
+    const authClient = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [bearer(), paystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => {
+          const merged = new Headers(cookieHeaders);
+          const initHeaders = new Headers(init?.headers ?? {});
+          initHeaders.forEach((v, k) => {
+            merged.set(k, v);
+          });
+
+          if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+          return await auth.handler(new Request(url, { ...init, headers: merged }));
+        },
+      },
+    });
+
+    const user = { email: "admin@test.com", password: "password", name: "Admin" };
+    await authClient.signUp.email(user, { throw: true });
+    await authClient.signIn.email(user, {
+      throw: true,
+      onSuccess: setCookieToHeader(cookieHeaders),
+    });
+
+    const userId = (data.user[0] as { id: string }).id;
+    data.member.push({
+      id: "member_admin",
+      organizationId: "org_admin",
+      userId,
+      role: "admin",
+      createdAt: new Date(),
+    });
+
+    const res = await authClient.subscription.list(
+      { query: { referenceId: "org_admin" } },
+      { throw: true },
+    );
+
+    expect(res.subscriptions).toEqual([]);
+  }, 30000);
+
+  it("should reject ordinary organization members by default for billing access", async () => {
+    const options = {
+      paystackClient: {} as PaystackClientLike,
+      organization: { enabled: true },
+      subscription: {
+        enabled: true,
+        plans: [],
+      },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const auth = betterAuth({
+      baseURL: "http://localhost:3000",
+      trustedOrigins: ["http://localhost:3000"],
+      database: memory,
+      emailAndPassword: { enabled: true },
+      plugins: [organization(), paystack<PaystackClientLike>(options)],
+    });
+
+    const cookieHeaders = new Headers();
+    const authClient = createAuthClient({
+      baseURL: "http://localhost:3000",
+      plugins: [bearer(), paystackClient({ subscription: true })],
+      fetchOptions: {
+        customFetchImpl: async (url, init) => {
+          const merged = new Headers(cookieHeaders);
+          const initHeaders = new Headers(init?.headers ?? {});
+          initHeaders.forEach((v, k) => {
+            merged.set(k, v);
+          });
+
+          if (!merged.has("origin")) merged.set("origin", "http://localhost:3000");
+          return await auth.handler(new Request(url, { ...init, headers: merged }));
+        },
+      },
+    });
+
+    const user = { email: "member@test.com", password: "password", name: "Member" };
+    await authClient.signUp.email(user, { throw: true });
+    await authClient.signIn.email(user, {
+      throw: true,
+      onSuccess: setCookieToHeader(cookieHeaders),
+    });
+
+    const userId = (data.user[0] as { id: string }).id;
+    data.member.push({
+      id: "member_regular",
+      organizationId: "org_member",
+      userId,
+      role: "member",
+      createdAt: new Date(),
+    });
+
+    const middleware = referenceMiddleware(options, "list-subscriptions") as any;
+    await expect(
+      middleware({
+        body: {},
+        query: { referenceId: "org_member" },
+        request: new Request("http://localhost:3000/api/auth/paystack/list-subscriptions"),
+        context: {
+          session: {
+            user: { id: userId },
+            session: { id: "session_1" },
+          },
+          adapter: {
+            findOne: vi.fn().mockResolvedValue({
+              id: "member_regular",
+              organizationId: "org_member",
+              userId,
+              role: "member",
+            }),
+          },
+        },
+      }),
+    ).rejects.toBeDefined();
   }, 30000);
 
   it("should update subscription status to canceled via webhook events", async () => {

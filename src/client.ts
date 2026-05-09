@@ -1,5 +1,5 @@
-import type { BetterAuthClientPlugin } from "better-auth";
 import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
+import type { BetterAuthClientPlugin } from "better-auth/client";
 import type {
   PaystackPlan,
   PaystackProduct,
@@ -11,6 +11,7 @@ import type {
 } from "./types";
 
 import type { paystack as paystackServer } from "./index";
+import { PACKAGE_VERSION } from "./version";
 
 /**
  * Helper type to handle the conditional return type based on 'throw' option.
@@ -130,7 +131,13 @@ export interface PaystackClientActions extends PaystackActions {
     list: PaystackActions["listSubscriptions"];
     billingPortal: PaystackActions["getSubscriptionManageLink"];
     manageLink: PaystackActions["getSubscriptionManageLink"];
+    /**
+     * @deprecated Use `subscription.cancel` instead.
+     */
     disable: PaystackClientActions["subscription"]["cancel"];
+    /**
+     * @deprecated Use `subscription.restore` instead.
+     */
     enable: PaystackClientActions["subscription"]["restore"];
   };
   paystack: PaystackClientActions;
@@ -164,10 +171,20 @@ export const paystackClient = <
 } => {
   return {
     id: "paystack",
-    version: "2.1.1",
+    version: PACKAGE_VERSION,
     $InferServerPlugin: {} as ReturnType<
       typeof paystackServer<PaystackClientLike, AnyPaystackOptions>
     >,
+    pathMethods: {
+      "/paystack/initialize-transaction": "POST",
+      "/paystack/verify-transaction": "POST",
+      "/paystack/disable-subscription": "POST",
+      "/paystack/enable-subscription": "POST",
+      "/paystack/create-subscription": "POST",
+      "/paystack/upgrade-subscription": "POST",
+      "/paystack/cancel-subscription": "POST",
+      "/paystack/restore-subscription": "POST",
+    },
     getActions: (
       $fetch: BetterFetch,
       _store: unknown,
@@ -178,27 +195,31 @@ export const paystackClient = <
       const actions = {
         transaction: {
           initialize: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/initialize-transaction", { method: "POST", body: data, ...options }),
+            fetch("/paystack/initialize-transaction", { method: "POST", body: data, ...options }),
           verify: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/verify-transaction", { method: "POST", body: data, ...options }),
+            fetch("/paystack/verify-transaction", { method: "POST", body: data, ...options }),
           list: (data?: { query?: Record<string, unknown> }, options?: BetterFetchOption) =>
-            fetch("paystack/list-transactions", { method: "GET", query: data?.query, ...options }),
+            fetch("/paystack/list-transactions", { method: "GET", query: data?.query, ...options }),
         },
         subscription: {
           upgrade: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/initialize-transaction", { method: "POST", body: data, ...options }),
+            fetch("/paystack/initialize-transaction", { method: "POST", body: data, ...options }),
           create: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/initialize-transaction", { method: "POST", body: data, ...options }),
+            fetch("/paystack/initialize-transaction", { method: "POST", body: data, ...options }),
           cancel: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/disable-subscription", { method: "POST", body: data, ...options }),
+            fetch("/paystack/disable-subscription", { method: "POST", body: data, ...options }),
           restore: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/enable-subscription", { method: "POST", body: data, ...options }),
+            fetch("/paystack/enable-subscription", { method: "POST", body: data, ...options }),
           list: (data?: { query?: Record<string, unknown> }, options?: BetterFetchOption) =>
-            fetch("paystack/list-subscriptions", { method: "GET", query: data?.query, ...options }),
+            fetch("/paystack/list-subscriptions", {
+              method: "GET",
+              query: data?.query,
+              ...options,
+            }),
           billingPortal: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/subscription-manage-link", { method: "GET", query: data, ...options }),
+            fetch("/paystack/subscription-manage-link", { method: "GET", query: data, ...options }),
           manageLink: (data: unknown, options?: BetterFetchOption) =>
-            fetch("paystack/subscription-manage-link", { method: "GET", query: data, ...options }),
+            fetch("/paystack/subscription-manage-link", { method: "GET", query: data, ...options }),
           disable: function (data: unknown, options?: BetterFetchOption) {
             return this.cancel(data, options);
           },
@@ -207,25 +228,26 @@ export const paystackClient = <
           },
         },
         initializeTransaction: (data: unknown, options?: BetterFetchOption) =>
-          fetch("paystack/initialize-transaction", { method: "POST", body: data, ...options }),
+          fetch("/paystack/initialize-transaction", { method: "POST", body: data, ...options }),
         verifyTransaction: (data: unknown, options?: BetterFetchOption) =>
-          fetch("paystack/verify-transaction", { method: "POST", body: data, ...options }),
+          fetch("/paystack/verify-transaction", { method: "POST", body: data, ...options }),
         listTransactions: (
           data?: { query?: Record<string, unknown> },
           options?: BetterFetchOption,
-        ) => fetch("paystack/list-transactions", { method: "GET", query: data?.query, ...options }),
+        ) =>
+          fetch("/paystack/list-transactions", { method: "GET", query: data?.query, ...options }),
         listSubscriptions: (
           data?: { query?: Record<string, unknown> },
           options?: BetterFetchOption,
         ) =>
-          fetch("paystack/list-subscriptions", { method: "GET", query: data?.query, ...options }),
+          fetch("/paystack/list-subscriptions", { method: "GET", query: data?.query, ...options }),
         getSubscriptionManageLink: (data: unknown, options?: BetterFetchOption) =>
-          fetch("paystack/subscription-manage-link", { method: "GET", query: data, ...options }),
+          fetch("/paystack/subscription-manage-link", { method: "GET", query: data, ...options }),
         config: () => fetch("/paystack/config", { method: "GET" }),
         listProducts: (options?: BetterFetchOption) =>
-          fetch("paystack/list-products", { method: "GET", ...options }),
+          fetch("/paystack/list-products", { method: "GET", ...options }),
         listPlans: (options?: BetterFetchOption) =>
-          fetch("paystack/list-plans", { method: "GET", ...options }),
+          fetch("/paystack/list-plans", { method: "GET", ...options }),
         paystack: {} as unknown,
       } as unknown as PaystackClientActions;
 
