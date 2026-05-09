@@ -4,7 +4,7 @@ description: >
   Configure products, Paystack-native plans, local-managed plans, free trials, seat billing, resource limits, and catalog sync in @alexasomba/better-auth-paystack. Use when tasks mention planCode, freeTrial, trial eligibility, seatAmount, seatPlanCode, limits, products, syncPaystackProducts, or syncPaystackPlans.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.4.0"
+library_version: "2.4.1"
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/types.ts"
