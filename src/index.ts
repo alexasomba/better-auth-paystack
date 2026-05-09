@@ -47,7 +47,7 @@ declare module "better-auth" {
   }
 }
 
-const INTERNAL_ERROR_CODES = defineErrorCodes(
+const INTERNAL_ERROR_CODES: ReturnType<typeof defineErrorCodes> = defineErrorCodes(
   Object.fromEntries(
     Object.entries(PAYSTACK_ERROR_CODES).map(([key, value]) => [
       key,
@@ -56,12 +56,63 @@ const INTERNAL_ERROR_CODES = defineErrorCodes(
   ),
 );
 
-export const paystack = <
+type BetterAuthEndpoint = NonNullable<BetterAuthPlugin["endpoints"]>[string];
+
+interface PaystackPluginEndpoints extends Record<string, BetterAuthEndpoint> {
+  initializeTransaction: ReturnType<typeof initializeTransaction>;
+  verifyTransaction: ReturnType<typeof verifyTransaction>;
+  listSubscriptions: ReturnType<typeof listSubscriptions>;
+  paystackWebhook: ReturnType<typeof paystackWebhook>;
+  listTransactions: ReturnType<typeof listTransactions>;
+  getConfig: ReturnType<typeof getConfig>;
+  disableSubscription: ReturnType<typeof disablePaystackSubscription>;
+  enableSubscription: ReturnType<typeof enablePaystackSubscription>;
+  getSubscriptionManageLink: ReturnType<typeof getSubscriptionManageLink>;
+  subscriptionManageLink: ReturnType<typeof getSubscriptionManageLink>;
+  createSubscription: ReturnType<typeof createSubscription>;
+  upgradeSubscription: ReturnType<typeof upgradeSubscription>;
+  cancelSubscription: ReturnType<typeof cancelSubscription>;
+  restoreSubscription: ReturnType<typeof restoreSubscription>;
+  listProducts: ReturnType<typeof listProducts>;
+  listPlans: ReturnType<typeof listPlans>;
+}
+
+type PaystackHookHandler = (...args: unknown[]) => unknown;
+
+interface PaystackPluginInitResult {
+  options: {
+    databaseHooks: Record<string, unknown> & {
+      organization: {
+        create: {
+          after: PaystackHookHandler;
+        };
+      };
+    };
+  };
+}
+
+type PaystackPluginInit = ((ctx: AuthContext) => PaystackPluginInitResult) &
+  NonNullable<BetterAuthPlugin["init"]>;
+
+type PaystackPluginInstance<O extends AnyPaystackOptions> = Omit<
+  BetterAuthPlugin,
+  "id" | "version" | "endpoints" | "schema" | "init" | "$ERROR_CODES" | "options"
+> & {
+  id: "paystack";
+  version: typeof PACKAGE_VERSION;
+  endpoints: PaystackPluginEndpoints;
+  schema: ReturnType<typeof getSchema>;
+  init: PaystackPluginInit;
+  $ERROR_CODES: typeof INTERNAL_ERROR_CODES;
+  options: NoInfer<O>;
+};
+
+const createPaystackPlugin = <
   TPaystackClient extends PaystackClientLike = PaystackClientLike,
   O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>,
 >(
   options: O,
-) => {
+): PaystackPluginInstance<O> => {
   const routeOptions = {
     ...(options as unknown as AnyPaystackOptions),
     webhook: {
@@ -71,7 +122,7 @@ export const paystack = <
   } satisfies AnyPaystackOptions;
   return {
     id: "paystack",
-    version: PACKAGE_VERSION,
+    version: PACKAGE_VERSION as typeof PACKAGE_VERSION,
     endpoints: {
       initializeTransaction: initializeTransaction(
         routeOptions,
@@ -103,7 +154,7 @@ export const paystack = <
       listPlans: listPlans(routeOptions, "/paystack/list-plans"),
     },
     schema: getSchema(options),
-    init: (ctx: AuthContext) => {
+    init: ((ctx: AuthContext) => {
       const organizationPluginAvailable = ctx.hasPlugin("organization");
       if (options.organization?.enabled === true && !organizationPluginAvailable) {
         ctx.logger.error(
@@ -398,11 +449,13 @@ export const paystack = <
           },
         },
       };
-    },
+    }) as PaystackPluginInit,
     $ERROR_CODES: INTERNAL_ERROR_CODES,
     options: options as NoInfer<O>,
   } satisfies BetterAuthPlugin;
 };
+
+export const paystack: typeof createPaystackPlugin = createPaystackPlugin;
 
 export type PaystackPlugin<
   TPaystackClient extends PaystackClientLike = PaystackClientLike,

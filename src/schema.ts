@@ -1,8 +1,93 @@
-import { mergeSchema, type BetterAuthPluginDBSchema } from "better-auth/db";
+import { mergeSchema, type BetterAuthPluginDBSchema, type DBFieldAttribute } from "better-auth/db";
 
 import type { PaystackOptions } from "./types";
 
-export const transactions = {
+type PluginSchemaTable<TableName extends string, FieldName extends string> = Record<
+  TableName,
+  {
+    fields: Record<FieldName, DBFieldAttribute>;
+    disableMigration?: boolean;
+    modelName?: string;
+  }
+>;
+
+type TransactionsSchema = PluginSchemaTable<
+  "paystackTransaction",
+  | "reference"
+  | "paystackId"
+  | "referenceId"
+  | "userId"
+  | "amount"
+  | "currency"
+  | "status"
+  | "plan"
+  | "product"
+  | "metadata"
+  | "createdAt"
+  | "updatedAt"
+>;
+
+type SubscriptionsSchema = PluginSchemaTable<
+  "subscription",
+  | "plan"
+  | "referenceId"
+  | "paystackCustomerCode"
+  | "paystackSubscriptionCode"
+  | "paystackTransactionReference"
+  | "paystackAuthorizationCode"
+  | "paystackEmailToken"
+  | "status"
+  | "periodStart"
+  | "periodEnd"
+  | "trialStart"
+  | "trialEnd"
+  | "cancelAtPeriodEnd"
+  | "groupId"
+  | "seats"
+  | "pendingPlan"
+>;
+
+type UserSchema = PluginSchemaTable<"user", "paystackCustomerCode">;
+
+type OrganizationSchema = PluginSchemaTable<"organization", "paystackCustomerCode" | "email">;
+
+type ProductsSchema = PluginSchemaTable<
+  "paystackProduct",
+  | "name"
+  | "description"
+  | "price"
+  | "currency"
+  | "quantity"
+  | "unlimited"
+  | "paystackId"
+  | "slug"
+  | "metadata"
+  | "createdAt"
+  | "updatedAt"
+>;
+
+type PlansSchema = PluginSchemaTable<
+  "paystackPlan",
+  | "name"
+  | "description"
+  | "amount"
+  | "currency"
+  | "interval"
+  | "planCode"
+  | "paystackId"
+  | "metadata"
+  | "createdAt"
+  | "updatedAt"
+>;
+
+export type PaystackPluginSchema = SubscriptionsSchema &
+  TransactionsSchema &
+  UserSchema &
+  OrganizationSchema &
+  ProductsSchema &
+  PlansSchema;
+
+const transactionsSchema: TransactionsSchema = {
   paystackTransaction: {
     fields: {
       reference: {
@@ -60,7 +145,9 @@ export const transactions = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const subscriptions = {
+export const transactions: typeof transactionsSchema = transactionsSchema;
+
+const subscriptionsSchema: SubscriptionsSchema = {
   subscription: {
     fields: {
       plan: {
@@ -137,7 +224,9 @@ export const subscriptions = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const user = {
+export const subscriptions: typeof subscriptionsSchema = subscriptionsSchema;
+
+const userSchema: UserSchema = {
   user: {
     fields: {
       paystackCustomerCode: {
@@ -149,7 +238,9 @@ export const user = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const organization = {
+export const user: typeof userSchema = userSchema;
+
+const organizationSchema: OrganizationSchema = {
   organization: {
     fields: {
       paystackCustomerCode: {
@@ -165,7 +256,9 @@ export const organization = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const products = {
+export const organization: typeof organizationSchema = organizationSchema;
+
+const productsSchema: ProductsSchema = {
   paystackProduct: {
     fields: {
       name: {
@@ -220,7 +313,9 @@ export const products = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const plans = {
+export const products: typeof productsSchema = productsSchema;
+
+const plansSchema: PlansSchema = {
   paystackPlan: {
     fields: {
       name: {
@@ -269,7 +364,9 @@ export const plans = {
   },
 } satisfies BetterAuthPluginDBSchema;
 
-export const paystackPluginSchema = {
+export const plans: typeof plansSchema = plansSchema;
+
+const paystackPluginSchemaDefinition: PaystackPluginSchema = {
   ...subscriptions,
   ...transactions,
   ...user,
@@ -278,7 +375,8 @@ export const paystackPluginSchema = {
   ...plans,
 } satisfies BetterAuthPluginDBSchema;
 
-export type PaystackPluginSchema = typeof paystackPluginSchema;
+export const paystackPluginSchema: typeof paystackPluginSchemaDefinition =
+  paystackPluginSchemaDefinition;
 
 export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema => {
   let baseSchema: BetterAuthPluginDBSchema;
