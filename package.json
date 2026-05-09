@@ -84,8 +84,8 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@better-fetch/fetch": "catalog:",
-    "@commitlint/cli": "^20.5.0",
-    "@commitlint/config-conventional": "^20.5.0",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
     "@eslint/compat": "catalog:",
     "@eslint/js": "catalog:",
     "@types/node": "catalog:",
@@ -101,10 +101,10 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.18"
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.20"
   },
   "peerDependencies": {
-    "better-auth": "^1.6.5"
+    "better-auth": "^1.6.9"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "catalog:"
@@ -112,5 +112,5 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@11.0.9"
 }
