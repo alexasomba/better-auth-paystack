@@ -1,11 +1,53 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "node",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "include-v-in-release-name": true,
   "packages": {
     ".": {
       "release-type": "node",
       "package-name": "@alexasomba/better-auth-paystack",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "include-v-in-release-name": true,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "src/version.ts"
+        },
+        {
+          "type": "yaml",
+          "path": "_artifacts/domain_map.yaml",
+          "jsonpath": "$.library.version"
+        },
+        {
+          "type": "yaml",
+          "path": "_artifacts/skill_tree.yaml",
+          "jsonpath": "$.library.version"
+        },
+        {
+          "type": "generic",
+          "path": "skills/setup/SKILL.md"
+        },
+        {
+          "type": "generic",
+          "path": "skills/subscriptions-and-transactions/SKILL.md"
+        },
+        {
+          "type": "generic",
+          "path": "skills/organization-billing/SKILL.md"
+        },
+        {
+          "type": "generic",
+          "path": "skills/tanstack-start/SKILL.md"
+        },
+        {
+          "type": "generic",
+          "path": "skills/billing-catalog-and-limits/SKILL.md"
+        }
+      ]
     }
   },
   "changelog-sections": [

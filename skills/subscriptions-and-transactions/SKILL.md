@@ -4,7 +4,7 @@ description: >
   Build Paystack transaction and subscription flows with @alexasomba/better-auth-paystack. Use for initialize/verify transaction, create/upgrade/cancel/restore/list subscriptions, products/plans, billing portal links, webhooks, chargeSubscriptionRenewal, syncPaystackProducts, and syncPaystackPlans.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.4.1"
+library_version: "2.4.1" # x-release-please-version
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/routes.ts"

@@ -1,3 +1,14 @@
+## [2.4.1](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.0...v2.4.1) (2026-05-09)
+
+### Documentation
+
+- add TanStack Intent skills for setup, subscriptions, organization billing, TanStack Start, products, plans, trials, seats, and limits ([#119](https://github.com/alexasomba/better-auth-paystack/issues/119))
+
+### Miscellaneous Chores
+
+- align package runtime version and Intent skill metadata with the 2.4.1 release
+- enforce plain `vX.X.X` release tags for automated releases
+
 # [2.0.0](https://github.com/alexasomba/better-auth-paystack/compare/v1.2.1...v2.0.0) (2026-04-17)
 
 ### Features

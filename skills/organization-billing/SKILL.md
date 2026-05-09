@@ -4,7 +4,7 @@ description: >
   Configure organization billing in @alexasomba/better-auth-paystack. Use for organization.enabled, Better Auth organization plugin setup, owner/admin default billing authorization, subscription.authorizeReference, organization Paystack customers, seats, invitations, members, and team limits.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.4.1"
+library_version: "2.4.1" # x-release-please-version
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/index.ts"
