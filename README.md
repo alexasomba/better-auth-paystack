@@ -15,6 +15,17 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 
 [**Live Demo (Tanstack Start)**](https://better-auth-paystack.gittech.workers.dev) | [**Source Code**](https://github.com/alexasomba/better-auth-paystack/tree/main/examples/tanstack)
 
+## AI Agent Skills
+
+This package publishes [TanStack Intent](https://www.npmjs.com/package/@tanstack/intent) skills so AI coding agents can load package-specific guidance for setup, subscriptions, organization billing, and TanStack Start integration.
+
+```bash
+npx @tanstack/intent@latest list
+npx @tanstack/intent@latest load @alexasomba/better-auth-paystack#setup
+```
+
+If you use an AI agent, run `npx @tanstack/intent@latest install` in your project so the agent knows how to discover package skills.
+
 ## Features
 
 - [x] **Billing Patterns**: Support for Paystack-native plans, local-managed subscriptions, and one-time payments (products/amounts).

@@ -24,6 +24,7 @@
     "saas",
     "south-africa",
     "subscriptions",
+    "tanstack-intent",
     "usd",
     "zar"
   ],
@@ -44,7 +45,8 @@
     }
   ],
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "type": "module",
   "sideEffects": false,
@@ -88,6 +90,7 @@
     "@commitlint/config-conventional": "^21.0.0",
     "@eslint/compat": "catalog:",
     "@eslint/js": "catalog:",
+    "@tanstack/intent": "^0.0.40",
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
