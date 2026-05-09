@@ -1,0 +1,71 @@
+library:
+  name: "@alexasomba/better-auth-paystack"
+  version: "2.4.1"
+  repository: "https://github.com/alexasomba/better-auth-paystack"
+  description: "Paystack billing plugin for Better Auth with subscriptions, transactions, organization billing, and webhooks."
+generated_from:
+  domain_map: "_artifacts/domain_map.yaml"
+  skill_spec: "_artifacts/skill_spec.md"
+generated_at: "2026-05-09T00:00:00Z"
+
+skills:
+  - name: "better-auth-paystack/setup"
+    slug: "setup"
+    type: "core"
+    domain: "setup"
+    path: "skills/setup/SKILL.md"
+    description: "Configure the Better Auth Paystack server and client plugins, schema, products, plans, webhook secret, and canonical client actions."
+    sources:
+      - "alexasomba/better-auth-paystack:README.md"
+      - "alexasomba/better-auth-paystack:src/index.ts"
+      - "alexasomba/better-auth-paystack:src/client.ts"
+      - "alexasomba/better-auth-paystack:src/schema.ts"
+
+  - name: "better-auth-paystack/subscriptions-and-transactions"
+    slug: "subscriptions-and-transactions"
+    type: "core"
+    domain: "subscriptions-and-transactions"
+    path: "skills/subscriptions-and-transactions/SKILL.md"
+    description: "Build Paystack checkout, transaction verification, subscription lifecycle, products/plans, and server-only renewal/sync flows."
+    sources:
+      - "alexasomba/better-auth-paystack:README.md"
+      - "alexasomba/better-auth-paystack:src/routes.ts"
+      - "alexasomba/better-auth-paystack:src/operations.ts"
+      - "alexasomba/better-auth-paystack:src/client.ts"
+
+  - name: "better-auth-paystack/organization-billing"
+    slug: "organization-billing"
+    type: "core"
+    domain: "organization-billing"
+    path: "skills/organization-billing/SKILL.md"
+    description: "Configure organization billing authorization, owner/admin defaults, custom authorizeReference, organization customer creation, and seat/team limits."
+    sources:
+      - "alexasomba/better-auth-paystack:README.md"
+      - "alexasomba/better-auth-paystack:src/index.ts"
+      - "alexasomba/better-auth-paystack:src/utils.ts"
+      - "alexasomba/better-auth-paystack:src/limits.ts"
+
+  - name: "better-auth-paystack/billing-catalog-and-limits"
+    slug: "billing-catalog-and-limits"
+    type: "core"
+    domain: "billing-catalog-and-limits"
+    path: "skills/billing-catalog-and-limits/SKILL.md"
+    description: "Configure products, Paystack-native plans, local plans, free trials, seat billing, plan limits, and catalog sync jobs."
+    sources:
+      - "alexasomba/better-auth-paystack:README.md"
+      - "alexasomba/better-auth-paystack:src/types.ts"
+      - "alexasomba/better-auth-paystack:src/routes.ts"
+      - "alexasomba/better-auth-paystack:src/operations.ts"
+      - "alexasomba/better-auth-paystack:src/utils.ts"
+
+  - name: "better-auth-paystack/tanstack-start"
+    slug: "tanstack-start"
+    type: "composition"
+    domain: "tanstack-start"
+    path: "skills/tanstack-start/SKILL.md"
+    description: "Integrate Better Auth Paystack in TanStack Start with auth routes, tanstackStartCookies, server functions, client actions, and Cloudflare Workers."
+    sources:
+      - "alexasomba/better-auth-paystack:examples/tanstack/README.md"
+      - "alexasomba/better-auth-paystack:examples/tanstack/src/lib/auth.ts"
+      - "alexasomba/better-auth-paystack:examples/tanstack/src/lib/auth-client.ts"
+      - "alexasomba/better-auth-paystack:examples/tanstack/src/routes/api/auth/$.ts"
