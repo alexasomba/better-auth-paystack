@@ -197,6 +197,7 @@ catalogs:
       version: 4.4.3
 
 overrides:
+  '@better-auth/sso': 1.6.9
   esbuild: 0.28.0
   rollup: npm:@rollup/wasm-node@4.60.3
   vite: npm:@voidzero-dev/vite-plus-core@^0.1.20
@@ -297,7 +298,7 @@ importers:
         version: 1.4.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@better-auth/infra':
         specifier: 'catalog:'
-        version: 0.2.6(778cabe71d5544969632f119fa3d0104)
+        version: 0.2.6(24482878c6923b5478310bf3fabec891)
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
         version: 1.36.3(@voidzero-dev/vite-plus-core@0.1.20(@arethetypeswrong/core@0.18.2)(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3))(workerd@1.20260507.1)(wrangler@4.90.0)
@@ -651,7 +652,7 @@ packages:
     resolution: {integrity: sha512-IfNzlr2HML/SKNqQuv8RziUDGfUlg2TBoUJ041MDIrDo8/vv+Ge6D/hDfbtJ7VyRuXl+9bq6mEUEQ/+dKontsg==}
     peerDependencies:
       '@better-auth/core': '>=1.4.0'
-      '@better-auth/sso': '>=1.4.0'
+      '@better-auth/sso': 1.6.9
       '@react-native-async-storage/async-storage': '>=1.21.0'
       better-auth: '>=1.4.0'
       expo-constants: '>=16.0.0'
@@ -710,13 +711,13 @@ packages:
       prisma:
         optional: true
 
-  '@better-auth/sso@1.7.0-beta.1':
-    resolution: {integrity: sha512-MaVEc9XLKdtUaotqgmzH+wKttEqBbfzpF2CNLNPwsd+ggPjrqSI8Q7wLdzyFh8kze3i36DP1HlySvfOkySPOxA==}
+  '@better-auth/sso@1.6.9':
+    resolution: {integrity: sha512-sIpnW1144jQes1pBeqL4oxtNjKri0S1rff5tZTn/J9IwN22EGARyFyInYdOQk/jllbZJBimT/CFhyDZlwASgdw==}
     peerDependencies:
-      '@better-auth/core': ^1.7.0-beta.1
+      '@better-auth/core': ^1.6.9
       '@better-auth/utils': 0.4.0
       '@better-fetch/fetch': 1.1.21
-      better-auth: ^1.7.0-beta.1
+      better-auth: ^1.6.9
       better-call: 1.3.5
 
   '@better-auth/telemetry@1.6.9':
@@ -2926,6 +2927,10 @@ packages:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
 
+  camelcase@6.3.0:
+    resolution: {integrity: sha512-Gmy6FhYlCY7uOElZUSbxo2UCDH8owEk996gkbrpsgGtrJLM3J7jGxl9Ic7Qwwj4ivOE5AWZWRMecDdF7hqGjFA==}
+    engines: {node: '>=10'}
+
   caniuse-lite@1.0.30001792:
     resolution: {integrity: sha512-hVLMUZFgR4JJ6ACt1uEESvQN1/dBVqPAKY0hgrV70eN3391K6juAfTjKZLKvOMsx8PxA7gsY1/tLMMTcfFLLpw==}
 
@@ -3881,6 +3886,10 @@ packages:
     resolution: {integrity: sha512-Z3lTE9pLaJF47NyMhd4ww1yFTAP8YhYI8SleJiHzM46Fgpm5cnNzSl9XfzFNqbaz+VlJrIj3fXQ4DeN1Rjm6cw==}
     engines: {node: '>=18'}
 
+  node-forge@1.4.0:
+    resolution: {integrity: sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==}
+    engines: {node: '>= 6.13.0'}
+
   node-releases@2.0.38:
     resolution: {integrity: sha512-3qT/88Y3FbH/Kx4szpQQ4HzUbVrHPKTLVpVocKiLfoYvw9XSGOX2FmD2d6DrXbVYyAQTF2HeF6My8jmzx7/CRw==}
 
@@ -3943,6 +3952,9 @@ packages:
 
   package-manager-detector@1.6.0:
     resolution: {integrity: sha512-61A5ThoTiDG/C8s8UMZwSorAGwMJ0ERVGj2OjoW5pAalsNOg15+iQiPzrLJ4jhZ1HJzmC2PIHT2oEiH3R5fzNA==}
+
+  pako@1.0.11:
+    resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -4142,8 +4154,8 @@ packages:
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
 
-  samlify@2.12.0:
-    resolution: {integrity: sha512-ewGsHyY4kInDH0BfprlAZ1rHpH1jBmbqYiXDbuI3t1Y8h71gqEt4Z7jdCFyPHFR8jItJkbdckTijUZGg14CDlg==}
+  samlify@2.10.2:
+    resolution: {integrity: sha512-y5s1cHwclqwP8h7K2Wj9SfP1q+1S9+jrs5OAegYTLAiuFi7nDvuKqbiXLmUTvYPMpzHcX94wTY2+D604jgTKvA==}
 
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
@@ -4464,6 +4476,11 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  uuid@8.3.2:
+    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+    hasBin: true
+
   validate-npm-package-name@5.0.1:
     resolution: {integrity: sha512-OljLrQ9SQdOUqTaQxqL5dEfZWrXExyyWsozYlAWFawPVNuD83igl7uJD2RTkNMbniIYgt8l81eCJGIdQF7avLQ==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
@@ -4647,10 +4664,6 @@ packages:
 
   xpath@0.0.33:
     resolution: {integrity: sha512-NNXnzrkDrAzalLhIUc01jO2mOzXGXh1JwPgkihcLLzw98c0WgYDmmjSh1Kl3wzaxSVWMuA+fe0WTWOBDWCBmNA==}
-    engines: {node: '>=0.6.0'}
-
-  xpath@0.0.34:
-    resolution: {integrity: sha512-FxF6+rkr1rNSQrhUNYrAFJpRXNzlDoMxeXN5qI84939ylEv3qqPFKa85Oxr6tDaJKqwW6KKyo2v26TSv3k6LeA==}
     engines: {node: '>=0.6.0'}
 
   y18n@5.0.8:
@@ -4936,10 +4949,10 @@ snapshots:
       '@better-auth/core': 1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0)
       '@better-auth/utils': 0.4.0
 
-  '@better-auth/infra@0.2.6(778cabe71d5544969632f119fa3d0104)':
+  '@better-auth/infra@0.2.6(24482878c6923b5478310bf3fabec891)':
     dependencies:
       '@better-auth/core': 1.7.0-beta.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0)
-      '@better-auth/sso': 1.7.0-beta.1(@better-auth/core@1.7.0-beta.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.9(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.167.65(@voidzero-dev/vite-plus-core@0.1.20(@arethetypeswrong/core@0.18.2)(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@voidzero-dev/vite-plus-test@0.1.20)(better-sqlite3@12.9.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.10))(better-call@1.3.5(zod@4.4.3))
+      '@better-auth/sso': 1.6.9(@better-auth/core@1.7.0-beta.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.9(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.167.65(@voidzero-dev/vite-plus-core@0.1.20(@arethetypeswrong/core@0.18.2)(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@voidzero-dev/vite-plus-test@0.1.20)(better-sqlite3@12.9.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.10))(better-call@1.3.5(zod@4.4.3))
       '@better-fetch/fetch': 1.1.21
       better-auth: 1.6.9(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.167.65(@voidzero-dev/vite-plus-core@0.1.20(@arethetypeswrong/core@0.18.2)(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@voidzero-dev/vite-plus-test@0.1.20)(better-sqlite3@12.9.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.10)
       better-call: 1.3.5(zod@4.4.3)
@@ -4969,7 +4982,7 @@ snapshots:
       '@better-auth/core': 1.6.9(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0)
       '@better-auth/utils': 0.4.0
 
-  '@better-auth/sso@1.7.0-beta.1(@better-auth/core@1.7.0-beta.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.9(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.167.65(@voidzero-dev/vite-plus-core@0.1.20(@arethetypeswrong/core@0.18.2)(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@voidzero-dev/vite-plus-test@0.1.20)(better-sqlite3@12.9.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.10))(better-call@1.3.5(zod@4.4.3))':
+  '@better-auth/sso@1.6.9(@better-auth/core@1.7.0-beta.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.9(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.167.65(@voidzero-dev/vite-plus-core@0.1.20(@arethetypeswrong/core@0.18.2)(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@voidzero-dev/vite-plus-test@0.1.20)(better-sqlite3@12.9.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.10))(better-call@1.3.5(zod@4.4.3))':
     dependencies:
       '@better-auth/core': 1.7.0-beta.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0)
       '@better-auth/utils': 0.4.0
@@ -4978,7 +4991,7 @@ snapshots:
       better-call: 1.3.5(zod@4.4.3)
       fast-xml-parser: 5.7.3
       jose: 6.2.3
-      samlify: 2.12.0
+      samlify: 2.10.2
       tldts: 6.1.86
       zod: 4.4.3
 
@@ -7046,6 +7059,8 @@ snapshots:
 
   callsites@3.1.0: {}
 
+  camelcase@6.3.0: {}
+
   caniuse-lite@1.0.30001792: {}
 
   chalk@4.1.2:
@@ -7967,6 +7982,8 @@ snapshots:
       emojilib: 2.4.0
       skin-tone: 2.0.0
 
+  node-forge@1.4.0: {}
+
   node-releases@2.0.38: {}
 
   node-rsa@1.1.1:
@@ -8067,6 +8084,8 @@ snapshots:
       p-limit: 3.1.0
 
   package-manager-detector@1.6.0: {}
+
+  pako@1.0.11: {}
 
   parent-module@1.0.1:
     dependencies:
@@ -8269,15 +8288,19 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
-  samlify@2.12.0:
+  samlify@2.10.2:
     dependencies:
       '@authenio/xml-encryption': 2.0.2
       '@xmldom/xmldom': 0.8.13
+      camelcase: 6.3.0
+      node-forge: 1.4.0
       node-rsa: 1.1.1
+      pako: 1.0.11
+      uuid: 8.3.2
       xml: 1.0.1
       xml-crypto: 6.1.2
       xml-escape: 1.1.0
-      xpath: 0.0.34
+      xpath: 0.0.32
 
   saxes@6.0.0:
     dependencies:
@@ -8610,6 +8633,8 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
+  uuid@8.3.2: {}
+
   validate-npm-package-name@5.0.1: {}
 
   vite-plus@0.1.20(@arethetypeswrong/core@0.18.2)(@opentelemetry/api@1.9.1)(@types/node@24.12.3)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(@voidzero-dev/vite-plus-core@0.1.20(@arethetypeswrong/core@0.18.2)(@types/node@24.12.3)(esbuild@0.28.0)(jiti@2.7.0)(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3))(esbuild@0.28.0)(jiti@2.7.0)(jsdom@29.1.1(@noble/hashes@2.2.0))(publint@0.3.20)(tsx@4.21.0)(typescript@6.0.3):
@@ -8839,8 +8864,6 @@ snapshots:
   xpath@0.0.32: {}
 
   xpath@0.0.33: {}
-
-  xpath@0.0.34: {}
 
   y18n@5.0.8: {}
 

@@ -78,6 +78,7 @@ catalog:
 # See: https://github.com/orgs/pnpm/discussions/9322
 dangerouslyAllowAllBuilds: true
 overrides:
+  "@better-auth/sso": 1.6.9
   esbuild: 0.28.0
   rollup: npm:@rollup/wasm-node@4.60.3
   vite: "catalog:"
