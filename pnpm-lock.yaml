@@ -13,7 +13,7 @@ catalogs:
       specifier: ^0.18.2
       version: 0.18.2
     '@base-ui/react':
-      specifier: latest
+      specifier: ^1.4.1
       version: 1.4.1
     '@better-auth/infra':
       specifier: ^0.2.6
@@ -121,7 +121,7 @@ catalogs:
       specifier: ^1.6.9
       version: 1.6.9
     better-call:
-      specifier: ^1.3.5
+      specifier: ~1.3.5
       version: 1.3.5
     better-sqlite3:
       specifier: ^12.9.0
