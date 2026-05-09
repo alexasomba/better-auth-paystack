@@ -1,73 +1,94 @@
 library:
-  name: "@alexasomba/better-auth-paystack"
-  version: "2.4.1"
-  repository: "https://github.com/alexasomba/better-auth-paystack"
-  description: "Paystack billing plugin for Better Auth with subscriptions, transactions, organization billing, and webhooks."
-
+  name: '@alexasomba/better-auth-paystack'
+  version: 2.5.0
+  repository: https://github.com/alexasomba/better-auth-paystack
+  description: >-
+    Paystack billing plugin for Better Auth with subscriptions, transactions,
+    organization billing, and webhooks.
 domains:
   - slug: setup
-    name: "Plugin Setup"
-    summary: "Install and configure the Better Auth server/client plugins, schema, environment secrets, and public API surface."
+    name: Plugin Setup
+    summary: >-
+      Install and configure the Better Auth server/client plugins, schema,
+      environment secrets, and public API surface.
     tasks:
-      - "Add the server plugin to betterAuth()"
-      - "Add the client plugin to createAuthClient()"
-      - "Configure Paystack keys, webhook secret, products, plans, and schema overrides"
-      - "Avoid relying on private Better Auth internals"
+      - Add the server plugin to betterAuth()
+      - Add the client plugin to createAuthClient()
+      - >-
+        Configure Paystack keys, webhook secret, products, plans, and schema
+        overrides
+      - Avoid relying on private Better Auth internals
     failure_modes:
-      - "Putting server-only Paystack operations in browser code"
-      - "Using legacy client aliases instead of canonical cancel/restore methods"
-      - "Forgetting tanstackStartCookies() order in TanStack Start apps"
-
+      - Putting server-only Paystack operations in browser code
+      - Using legacy client aliases instead of canonical cancel/restore methods
+      - Forgetting tanstackStartCookies() order in TanStack Start apps
   - slug: subscriptions-and-transactions
-    name: "Subscriptions and Transactions"
-    summary: "Create checkout flows, verify transactions, manage subscriptions, and use server-only renewal/catalog sync operations."
+    name: Subscriptions and Transactions
+    summary: >-
+      Create checkout flows, verify transactions, manage subscriptions, and use
+      server-only renewal/catalog sync operations.
     tasks:
-      - "Initialize and verify one-time transactions"
-      - "Create, upgrade, cancel, restore, and list subscriptions"
-      - "List Paystack products and plans"
-      - "Run server-side recurring renewal and catalog sync jobs"
+      - Initialize and verify one-time transactions
+      - Create, upgrade, cancel, restore, and list subscriptions
+      - List Paystack products and plans
+      - Run server-side recurring renewal and catalog sync jobs
     failure_modes:
-      - "Treating Paystack-managed subscriptions as locally mutable seat subscriptions"
-      - "Calling server-only operations through authClient"
-      - "Skipping webhook verification or transaction verification before trusting payment state"
-
+      - >-
+        Treating Paystack-managed subscriptions as locally mutable seat
+        subscriptions
+      - Calling server-only operations through authClient
+      - >-
+        Skipping webhook verification or transaction verification before
+        trusting payment state
   - slug: billing-catalog-and-limits
-    name: "Billing Catalog and Limits"
-    summary: "Configure products, Paystack-native plans, local plans, free trials, seat billing, and plan limits."
+    name: Billing Catalog and Limits
+    summary: >-
+      Configure products, Paystack-native plans, local plans, free trials, seat
+      billing, and plan limits.
     tasks:
-      - "Define products and plans in plugin options"
-      - "Choose between Paystack-native plans with planCode and local-managed plans without planCode"
-      - "Configure freeTrial days and onTrialStart hooks"
-      - "Configure seatAmount, seatPlanCode, and resource limits"
-      - "Sync Paystack products and plans from trusted server jobs"
+      - Define products and plans in plugin options
+      - >-
+        Choose between Paystack-native plans with planCode and local-managed
+        plans without planCode
+      - Configure freeTrial days and onTrialStart hooks
+      - Configure seatAmount, seatPlanCode, and resource limits
+      - Sync Paystack products and plans from trusted server jobs
     failure_modes:
-      - "Using planCode on plans that need local seat/proration behavior"
-      - "Expecting a trial to be granted more than once for the same reference"
-      - "Using deprecated seatPriceId instead of seatAmount"
-      - "Assuming products/plans sync endpoints are public browser APIs"
-
+      - Using planCode on plans that need local seat/proration behavior
+      - Expecting a trial to be granted more than once for the same reference
+      - Using deprecated seatPriceId instead of seatAmount
+      - Assuming products/plans sync endpoints are public browser APIs
   - slug: organization-billing
-    name: "Organization Billing"
-    summary: "Configure organization billing, default owner/admin authorization, custom authorizeReference rules, and seat/team limits."
+    name: Organization Billing
+    summary: >-
+      Configure organization billing, default owner/admin authorization, custom
+      authorizeReference rules, and seat/team limits.
     tasks:
-      - "Enable organization billing with the Better Auth organization plugin"
-      - "Authorize billing actions for organization references"
-      - "Create organization Paystack customers"
-      - "Sync seats and enforce invitation/member/team limits"
+      - Enable organization billing with the Better Auth organization plugin
+      - Authorize billing actions for organization references
+      - Create organization Paystack customers
+      - Sync seats and enforce invitation/member/team limits
     failure_modes:
-      - "Assuming every organization member can manage billing by default"
-      - "Enabling organization billing without installing Better Auth organization plugin"
-      - "Forgetting to override authorizeReference for non-owner/admin billing workflows"
-
+      - Assuming every organization member can manage billing by default
+      - >-
+        Enabling organization billing without installing Better Auth
+        organization plugin
+      - >-
+        Forgetting to override authorizeReference for non-owner/admin billing
+        workflows
   - slug: tanstack-start
-    name: "TanStack Start Integration"
-    summary: "Use the package in TanStack Start with Better Auth, server routes, server functions, client actions, and Cloudflare Workers."
+    name: TanStack Start Integration
+    summary: >-
+      Use the package in TanStack Start with Better Auth, server routes, server
+      functions, client actions, and Cloudflare Workers.
     tasks:
-      - "Wire the Better Auth API route"
-      - "Use tanstackStartCookies() after Paystack and other plugins"
-      - "Call Paystack client actions from React components"
-      - "Keep admin/renewal/sync operations in server functions or jobs"
+      - Wire the Better Auth API route
+      - Use tanstackStartCookies() after Paystack and other plugins
+      - Call Paystack client actions from React components
+      - Keep admin/renewal/sync operations in server functions or jobs
     failure_modes:
-      - "Importing server Paystack helpers into client components"
-      - "Omitting request headers when Better Auth session context is required"
-      - "Letting Better Auth companion packages resolve to incompatible beta versions"
+      - Importing server Paystack helpers into client components
+      - Omitting request headers when Better Auth session context is required
+      - >-
+        Letting Better Auth companion packages resolve to incompatible beta
+        versions
