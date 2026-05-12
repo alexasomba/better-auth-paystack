@@ -5,6 +5,8 @@ description: >
 type: core
 library: "@alexasomba/better-auth-paystack"
 library_version: "2.4.2" # x-release-please-version
+license: "MIT"
+compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/index.ts"
