@@ -1,5 +1,10 @@
 import { APIError } from "better-auth/api";
-import { PaystackError, PaystackResponse } from "@alexasomba/paystack-node";
+import {
+  PaystackError,
+  PaystackResponse,
+  type CustomerCreatePayload,
+} from "@alexasomba/paystack-node";
+import type { components } from "@alexasomba/paystack-node";
 import type { PaystackClientLike } from "./types";
 
 /**
@@ -72,4 +77,98 @@ export function unwrapSdkResult<T = unknown>(result: unknown): T {
  */
 export function getPaystackOps(client?: PaystackClientLike): PaystackClientLike | undefined {
   return client;
+}
+
+interface ChargeAuthorizationPayload {
+  email: string;
+  amount: number;
+  authorization_code: string;
+  reference: string;
+  metadata?: string;
+}
+
+interface CreateSubscriptionPayload {
+  customer: string;
+  plan: string;
+  authorization?: string;
+  start_date?: string;
+}
+
+export interface PaystackAdapter {
+  initializeTransaction(
+    body: components["schemas"]["TransactionInitialize"],
+  ): Promise<components["schemas"]["TransactionInitializeResponse"]["data"]>;
+  verifyTransaction(reference: string): Promise<unknown>;
+  chargeAuthorization(body: ChargeAuthorizationPayload): Promise<unknown>;
+  createCustomer(body: CustomerCreatePayload): Promise<unknown>;
+  listProducts(): Promise<components["schemas"]["ProductListsResponseArray"][]>;
+  fetchProduct(productId: number): Promise<unknown>;
+  listPlans(): Promise<components["schemas"]["PlanListResponseArray"][]>;
+  createSubscription(body: CreateSubscriptionPayload): Promise<unknown>;
+  fetchSubscription(subscriptionCode: string): Promise<unknown>;
+  disableSubscription(body: { code: string; token: string }): Promise<unknown>;
+  enableSubscription(body: { code: string; token: string }): Promise<unknown>;
+  manageSubscriptionLink(subscriptionCode: string): Promise<{ link: string }>;
+}
+
+export function createPaystackAdapter(client?: PaystackClientLike): PaystackAdapter {
+  const requireClient = (): PaystackClientLike => {
+    if (client === undefined || client === null) {
+      throw new APIError("BAD_REQUEST", { message: "Paystack client is not configured" });
+    }
+    return client;
+  };
+
+  return {
+    async initializeTransaction(
+      body: components["schemas"]["TransactionInitialize"],
+    ): Promise<components["schemas"]["TransactionInitializeResponse"]["data"]> {
+      const raw = await requireClient().transaction?.initialize({ body });
+      return unwrapSdkResult<components["schemas"]["TransactionInitializeResponse"]["data"]>(raw);
+    },
+    async verifyTransaction(reference: string): Promise<unknown> {
+      const raw = await requireClient().transaction?.verify(reference);
+      return unwrapSdkResult(raw);
+    },
+    async chargeAuthorization(body: ChargeAuthorizationPayload): Promise<unknown> {
+      const raw = await requireClient().transaction?.chargeAuthorization({ body });
+      return unwrapSdkResult(raw);
+    },
+    async createCustomer(body: CustomerCreatePayload): Promise<unknown> {
+      const raw = await requireClient().customer?.create({ body });
+      return unwrapSdkResult(raw);
+    },
+    async listProducts(): Promise<components["schemas"]["ProductListsResponseArray"][]> {
+      const raw = await requireClient().product?.list({});
+      return unwrapSdkResult<components["schemas"]["ProductListsResponseArray"][]>(raw);
+    },
+    async fetchProduct(productId: number): Promise<unknown> {
+      const raw = await requireClient().product?.fetch(productId);
+      return unwrapSdkResult(raw);
+    },
+    async listPlans(): Promise<components["schemas"]["PlanListResponseArray"][]> {
+      const raw = await requireClient().plan?.list();
+      return unwrapSdkResult<components["schemas"]["PlanListResponseArray"][]>(raw);
+    },
+    async createSubscription(body: CreateSubscriptionPayload): Promise<unknown> {
+      const raw = await requireClient().subscription?.create({ body });
+      return unwrapSdkResult(raw);
+    },
+    async fetchSubscription(subscriptionCode: string): Promise<unknown> {
+      const raw = await requireClient().subscription?.fetch(subscriptionCode);
+      return unwrapSdkResult(raw);
+    },
+    async disableSubscription(body: { code: string; token: string }): Promise<unknown> {
+      const raw = await requireClient().subscription?.disable({ body });
+      return unwrapSdkResult(raw);
+    },
+    async enableSubscription(body: { code: string; token: string }): Promise<unknown> {
+      const raw = await requireClient().subscription?.enable({ body });
+      return unwrapSdkResult(raw);
+    },
+    async manageSubscriptionLink(subscriptionCode: string): Promise<{ link: string }> {
+      const raw = await requireClient().subscription?.manageLink(subscriptionCode);
+      return unwrapSdkResult<{ link: string }>(raw);
+    },
+  };
 }

@@ -32,12 +32,12 @@ import type {
   PaystackClientLike,
   PaystackOptions,
   PaystackCustomerResponse,
-  Member,
   AnyPaystackOptions,
   User,
 } from "./types";
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { createPaystackAdapter } from "./paystack-sdk";
 import { PACKAGE_VERSION } from "./version";
+import { createBillingStoreFromAdapter } from "./billing-store";
 
 declare module "better-auth" {
   interface BetterAuthPluginRegistry<AuthOptions, Options> {
@@ -181,22 +181,15 @@ const createPaystackPlugin = <
                     return;
 
                   try {
-                    const paystackOps = getPaystackOps(
+                    const sdkRes = (await createPaystackAdapter(
                       options.paystackClient as PaystackClientLike,
-                    );
-                    if (!paystackOps) return;
-                    const raw =
-                      (await paystackOps.customer?.create({
-                        body: {
-                          email: user.email,
-                          first_name: user.name ?? undefined,
-                          metadata: JSON.stringify({
-                            userId: user.id,
-                          }),
-                        },
-                      })) ??
-                      (await Promise.reject(new Error("Paystack client missing customer ops")));
-                    const sdkRes = unwrapSdkResult<PaystackCustomerResponse>(raw);
+                    ).createCustomer({
+                      email: user.email,
+                      first_name: user.name ?? undefined,
+                      metadata: JSON.stringify({
+                        userId: user.id,
+                      }),
+                    })) as PaystackCustomerResponse;
                     const customerCode = sdkRes?.customer_code;
 
                     if (
@@ -204,13 +197,11 @@ const createPaystackPlugin = <
                       customerCode !== null &&
                       customerCode !== ""
                     ) {
-                      await ctx.adapter.update({
-                        model: "user",
-                        where: [{ field: "id", value: user.id }],
-                        update: {
-                          paystackCustomerCode: customerCode,
-                        },
-                      });
+                      await createBillingStoreFromAdapter(ctx.adapter).saveCustomerCode(
+                        user.id,
+                        customerCode,
+                        false,
+                      );
 
                       if (typeof options.onCustomerCreate === "function") {
                         await options.onCustomerCreate(
@@ -252,18 +243,10 @@ const createPaystackPlugin = <
 
                           let targetEmail = org.email;
                           if (targetEmail === undefined || targetEmail === null) {
-                            const ownerMember = await ctx.adapter.findOne<Member>({
-                              model: "member",
-                              where: [
-                                { field: "organizationId", value: org.id },
-                                { field: "role", value: "owner" },
-                              ],
-                            });
+                            const store = createBillingStoreFromAdapter(ctx.adapter);
+                            const ownerMember = await store.findOrganizationOwner(org.id);
                             if (ownerMember !== null && ownerMember !== undefined) {
-                              const ownerUser = await ctx.adapter.findOne<User>({
-                                model: "user",
-                                where: [{ field: "id", value: ownerMember.userId }],
-                              });
+                              const ownerUser = await store.findUser(ownerMember.userId);
                               targetEmail = ownerUser?.email;
                             }
                           }
@@ -278,18 +261,11 @@ const createPaystackPlugin = <
                             },
                             extraCreateParams,
                           );
-                          const paystackOps = getPaystackOps(
+                          const sdkRes = (await createPaystackAdapter(
                             options.paystackClient as PaystackClientLike,
-                          );
-                          if (!paystackOps) return;
-                          const raw =
-                            (await paystackOps.customer?.create({
-                              body: params as CustomerCreatePayload,
-                            })) ??
-                            (await Promise.reject(
-                              new Error("Paystack client missing customer ops"),
-                            ));
-                          const sdkRes = unwrapSdkResult<PaystackCustomerResponse>(raw);
+                          ).createCustomer(
+                            params as CustomerCreatePayload,
+                          )) as PaystackCustomerResponse;
                           const customerCode = sdkRes?.customer_code as string | undefined;
 
                           if (
@@ -299,13 +275,11 @@ const createPaystackPlugin = <
                             sdkRes !== undefined &&
                             sdkRes !== null
                           ) {
-                            await ctx.adapter.update({
-                              model: "organization",
-                              where: [{ field: "id", value: org.id }],
-                              update: {
-                                paystackCustomerCode: customerCode,
-                              },
-                            });
+                            await createBillingStoreFromAdapter(ctx.adapter).saveCustomerCode(
+                              org.id,
+                              customerCode,
+                              true,
+                            );
 
                             if (typeof options.organization?.onCustomerCreate === "function") {
                               await options.organization.onCustomerCreate(
