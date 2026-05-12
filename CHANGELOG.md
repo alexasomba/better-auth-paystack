@@ -62,10 +62,9 @@
 
 ## [2.4.4](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.3...v2.4.4) (2026-05-12)
 
-
 ### Documentation
 
-* add maintenance-focused tanstack intent skills ([#130](https://github.com/alexasomba/better-auth-paystack/issues/130)) ([5f5c2d2](https://github.com/alexasomba/better-auth-paystack/commit/5f5c2d26860ccb62f4fabde4a759cf6d5aa4ce0f))
+- add maintenance-focused tanstack intent skills ([#130](https://github.com/alexasomba/better-auth-paystack/issues/130)) ([5f5c2d2](https://github.com/alexasomba/better-auth-paystack/commit/5f5c2d26860ccb62f4fabde4a759cf6d5aa4ce0f))
 
 ## [2.4.3](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.2...v2.4.3) (2026-05-12)
 
