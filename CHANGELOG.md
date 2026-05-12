@@ -60,6 +60,13 @@
 - integrate `@better-auth/infra` dash plugin. ([fd48fbb](https://github.com/alexasomba/better-auth-paystack/commit/fd48fbb6b03867604ece434a96875dad412c8af3))
 - **paystack:** implement prorateAndCharge for mid-cycle seat increases ([b7c061d](https://github.com/alexasomba/better-auth-paystack/commit/b7c061dc2b44fa88e6b1c9b8bcb51ac8cac892b0))
 
+## [2.4.4](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.3...v2.4.4) (2026-05-12)
+
+
+### Documentation
+
+* add maintenance-focused tanstack intent skills ([#130](https://github.com/alexasomba/better-auth-paystack/issues/130)) ([5f5c2d2](https://github.com/alexasomba/better-auth-paystack/commit/5f5c2d26860ccb62f4fabde4a759cf6d5aa4ce0f))
+
 ## [2.4.3](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.2...v2.4.3) (2026-05-12)
 
 ### Refactors
