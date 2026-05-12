@@ -4,7 +4,7 @@ description: >
   Integrate @alexasomba/better-auth-paystack in TanStack Start. Use for Better Auth API routes, tanstackStartCookies(), server functions, getRequestHeaders(), authClient Paystack actions, admin billing server functions, and Cloudflare Workers deployment.
 type: composition
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.4.3" # x-release-please-version
+library_version: "2.4.4" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
 sources:
