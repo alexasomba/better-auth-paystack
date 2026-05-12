@@ -1,0 +1,94 @@
+---
+name: webhooks-and-event-processing
+description: >
+  Implement, debug, or test @alexasomba/better-auth-paystack webhook handling. Use for Paystack webhook signatures, trusted IP checks, webhook.secret/paystackWebhookSecret behavior, charge.success, subscription.create, subscription.disable, subscription.enable, product quantity updates, subscription status changes, metadata parsing, and event hooks.
+type: core
+library: "@alexasomba/better-auth-paystack"
+library_version: "2.4.3" # x-release-please-version
+license: "MIT"
+compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
+sources:
+  - "alexasomba/better-auth-paystack:src/routes.ts"
+  - "alexasomba/better-auth-paystack:src/types.ts"
+  - "alexasomba/better-auth-paystack:src/utils.ts"
+  - "alexasomba/better-auth-paystack:test/paystack.test.ts"
+  - "alexasomba/better-auth-paystack:test/seat_billing.test.ts"
+---
+
+## Webhook Contract
+
+The Better Auth endpoint is registered as `auth.api.paystackWebhook` and mounted under
+`/api/auth/paystack/webhook` by the plugin. Always send the raw JSON body that Paystack signed.
+
+Signature verification uses HMAC SHA-512 over the raw request body. Secret precedence is:
+
+1. `webhook.secret`
+2. `paystackWebhookSecret`
+3. `secretKey`
+
+Prefer `webhook.secret` in new code. Keep `paystackWebhookSecret` only for compatibility.
+
+## Core Patterns
+
+### Verify before processing
+
+Webhook code must reject invalid signatures before parsing business effects:
+
+```ts
+const signature = createHmac("sha512", webhookSecret).update(payload).digest("hex");
+```
+
+If `webhook.verifyIP` is true, the request must come from `webhook.trustedIPs` or the built-in
+Paystack IP allowlist. Preserve support for common forwarded IP headers when changing this path.
+
+### Treat `charge.success` as reconciliation
+
+`charge.success` can update multiple local records:
+
+- mark a pending transaction as `success`
+- finalize local subscription checkout when metadata identifies a plan
+- apply checkout-based proration metadata with `type: "proration"`
+- capture `authorization.authorization_code` for local renewals
+- decrement one-time product quantity when product metadata is present
+
+Do not grant paid access from a redirect alone. The callback should verify the transaction and
+webhooks should reconcile persisted state.
+
+### Handle subscription events idempotently
+
+Paystack subscription events should update matching subscriptions without assuming one delivery:
+
+- `subscription.create`: activate or update the subscription and call creation hooks
+- `subscription.disable`: mark cancellation/non-renewal and call cancel hooks
+- `subscription.enable`: restore active state when Paystack re-enables a subscription
+
+Match by known Paystack identifiers first, then metadata such as `referenceId` and plan when needed.
+Avoid creating duplicate subscriptions on repeated webhook delivery.
+
+## Common Mistakes
+
+### Parsing body before signature verification
+
+Do not route Paystack webhooks through a generic JSON handler that loses the exact signed payload.
+The signature must be checked against the same raw string Paystack sent.
+
+### Assuming all metadata is an object
+
+Paystack metadata may arrive as an object or a JSON string. Existing route code handles both forms.
+Keep that tolerance when changing metadata handling.
+
+### Forgetting product side effects
+
+Webhook work is not subscription-only. Successful product purchases must update transaction state and
+respect product quantity/unlimited settings.
+
+## Verification
+
+Run focused tests after webhook changes:
+
+```bash
+vp test test/paystack.test.ts
+vp test test/seat_billing.test.ts
+```
+
+Also run `vp check` before landing broad route or type changes.

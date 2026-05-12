@@ -22,7 +22,9 @@ This example demonstrates Better Auth anonymous sessions with Paystack billing f
 
 export const paystackSkillMarkdown = `# better-auth-paystack-demo
 
-Use this site to inspect the Better Auth Paystack TanStack Start demo.
+Use this site to inspect and exercise the Better Auth Paystack TanStack Start demo. The app uses
+anonymous Better Auth sessions, organization billing, Paystack checkout, transaction verification,
+local subscriptions, Paystack-managed subscriptions, catalog sync, and trusted server operations.
 
 ## Resources
 
@@ -30,11 +32,45 @@ Use this site to inspect the Better Auth Paystack TanStack Start demo.
 - OpenAPI description: /openapi.json
 - Health endpoint: /api/health
 - Sitemap: /sitemap.xml
+- Auth route: /api/auth/$
+- Callback route: /billing/paystack/callback
 
-## Actions
+## Primary Flow
 
-- Visit / to start an anonymous Better Auth session.
-- Visit /dashboard after signing in to manage demo billing workflows.
+1. Visit / and click the anonymous login action.
+2. After sign-in, use /dashboard as the main billing workbench.
+3. Use the Organizations panel to create an organization and make it active.
+4. In the subscriptions view, select personal billing or an organization billing target.
+5. Start checkout for a Paystack-native plan, a local plan, or a one-time product.
+6. Return through /billing/paystack/callback?reference=... so the app verifies the transaction.
+7. Inspect subscriptions and transactions after verification.
+
+## Billing Workflows
+
+- Personal checkout: initialize a transaction without referenceId.
+- Organization checkout: initialize with referenceId set to the organization id.
+- Organization seat billing: pass quantity for local/custom plans when the selected billing target is
+  an organization.
+- Product purchase: use one-time products from the dashboard products view.
+- Subscription create/upgrade: use plan names from the displayed catalog, not Paystack plan codes.
+- Subscription cancel/restore: use the active subscription controls.
+- Billing portal: available only for Paystack-managed subscriptions with a Paystack subscription code.
+- Local renewal: use the trusted server operation only for local subscriptions with LOC_ or
+  sub_local_ codes.
+
+## Agent Notes
+
+- Do not treat the callback redirect as proof of payment. The callback verifies the Paystack
+  reference with the Better Auth Paystack API.
+- Server operations such as catalog sync and local renewal run through TanStack server functions and
+  require an authenticated session.
+- Organization billing requires the signed-in user to be an owner or admin of the organization.
+- If a checkout opens an external Paystack URL in tests, assert the generated URL/reference instead of
+  attempting to complete a live card payment.
+- Use the package TanStack Intent skills for implementation guidance:
+  setup, tanstack-start, client-api-contract, organization-billing,
+  subscriptions-and-transactions, local-subscription-lifecycle, webhooks-and-event-processing,
+  schema-and-migrations, and testing-and-fixtures.
 `;
 
 export function getOrigin(request: Request) {
