@@ -1,30 +1,25 @@
 import { APIError } from "better-auth/api";
 import type { GenericEndpointContext } from "better-auth";
-import type { components } from "@alexasomba/paystack-node";
 
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { createBillingStore } from "./billing-store";
+import { createPaystackAdapter } from "./paystack-sdk";
 import { getNextPeriodEnd, getPlans, validateMinAmount } from "./utils";
 import type {
   AnyPaystackOptions,
   ChargeRecurringSubscriptionInput,
   ChargeRecurringSubscriptionResult,
-  Member,
-  PaystackPlan,
-  PaystackProduct,
   PaystackSyncResult,
   PaystackChargeAuthorizationResponse,
-  Subscription,
-  User,
 } from "./types";
 
 export async function syncPaystackProducts(
   ctx: GenericEndpointContext,
   options: AnyPaystackOptions,
 ): Promise<PaystackSyncResult> {
-  const paystack = getPaystackOps(options.paystackClient);
+  const paystack = createPaystackAdapter(options.paystackClient);
+  const store = createBillingStore(ctx);
   try {
-    const raw = await paystack?.product?.list({});
-    const productsData = unwrapSdkResult<components["schemas"]["ProductListsResponseArray"][]>(raw);
+    const productsData = await paystack.listProducts();
 
     if (!Array.isArray(productsData)) {
       return { status: "success", count: 0 };
@@ -32,11 +27,6 @@ export async function syncPaystackProducts(
 
     for (const product of productsData) {
       const paystackId = String(product.id);
-      const existing = await ctx.context.adapter.findOne<PaystackProduct>({
-        model: "paystackProduct",
-        where: [{ field: "paystackId", value: paystackId }],
-      });
-
       const productFields = {
         name: product.name ?? "",
         description: product.description ?? "",
@@ -60,18 +50,10 @@ export async function syncPaystackProducts(
         updatedAt: new Date(),
       };
 
-      if (existing !== undefined && existing !== null) {
-        await ctx.context.adapter.update({
-          model: "paystackProduct",
-          update: productFields,
-          where: [{ field: "id", value: String(existing.id) }],
-        });
-      } else {
-        await ctx.context.adapter.create({
-          model: "paystackProduct",
-          data: { ...productFields, createdAt: new Date() },
-        });
-      }
+      await store.upsertProductByPaystackId(paystackId, {
+        ...productFields,
+        createdAt: new Date(),
+      });
     }
 
     return { status: "success", count: productsData.length };
@@ -88,10 +70,10 @@ export async function syncPaystackPlans(
   ctx: GenericEndpointContext,
   options: AnyPaystackOptions,
 ): Promise<PaystackSyncResult> {
-  const paystack = getPaystackOps(options.paystackClient);
+  const paystack = createPaystackAdapter(options.paystackClient);
+  const store = createBillingStore(ctx);
   try {
-    const raw = await paystack?.plan?.list();
-    const plansData = unwrapSdkResult<components["schemas"]["PlanListResponseArray"][]>(raw);
+    const plansData = await paystack.listPlans();
 
     if (!Array.isArray(plansData)) {
       return { status: "success", count: 0 };
@@ -99,14 +81,9 @@ export async function syncPaystackPlans(
 
     for (const plan of plansData) {
       const paystackId = String(plan.id);
-      const existing = await ctx.context.adapter.findOne<PaystackPlan>({
-        model: "paystackPlan",
-        where: [{ field: "paystackId", value: paystackId }],
-      });
-
       const planData = {
         name: plan.name ?? "",
-        description: plan.description ?? "",
+        description: typeof plan.description === "string" ? plan.description : "",
         amount: plan.amount ?? 0,
         currency: plan.currency ?? "",
         interval: plan.interval ?? "",
@@ -120,18 +97,10 @@ export async function syncPaystackPlans(
         updatedAt: new Date(),
       };
 
-      if (existing !== undefined && existing !== null) {
-        await ctx.context.adapter.update({
-          model: "paystackPlan",
-          update: planData,
-          where: [{ field: "id", value: existing.id! }],
-        });
-      } else {
-        await ctx.context.adapter.create({
-          model: "paystackPlan",
-          data: { ...planData, createdAt: new Date() },
-        });
-      }
+      await store.upsertPlanByPaystackId(paystackId, {
+        ...planData,
+        createdAt: new Date(),
+      });
     }
 
     return { status: "success", count: plansData.length };
@@ -150,10 +119,8 @@ export async function chargeSubscriptionRenewal(
   input: ChargeRecurringSubscriptionInput,
 ): Promise<ChargeRecurringSubscriptionResult> {
   const { subscriptionId, amount: bodyAmount } = input;
-  const subscription = await ctx.context.adapter.findOne<Subscription>({
-    model: "subscription",
-    where: [{ field: "id", value: subscriptionId }],
-  });
+  const store = createBillingStore(ctx);
+  const subscription = await store.findSubscriptionById(subscriptionId);
 
   if (subscription === undefined || subscription === null) {
     throw new APIError("NOT_FOUND", { message: "Subscription not found" });
@@ -187,26 +154,14 @@ export async function chargeSubscriptionRenewal(
   let billingUserId = subscription.userId;
   const referenceId = subscription.referenceId;
   if (referenceId !== undefined && referenceId !== null && referenceId !== "") {
-    const user = await ctx.context.adapter.findOne<User>({
-      model: "user",
-      where: [{ field: "id", value: referenceId }],
-    });
+    const user = await store.findUser(referenceId);
     if (user !== undefined && user !== null) {
       email = user.email;
       billingUserId = user.id;
     } else if (options.organization?.enabled === true) {
-      const ownerMember = await ctx.context.adapter.findOne<Member>({
-        model: "member",
-        where: [
-          { field: "organizationId", value: referenceId },
-          { field: "role", value: "owner" },
-        ],
-      });
+      const ownerMember = await store.findOrganizationOwner(referenceId);
       if (ownerMember !== undefined && ownerMember !== null) {
-        const ownerUser = await ctx.context.adapter.findOne<User>({
-          model: "user",
-          where: [{ field: "id", value: ownerMember.userId }],
-        });
+        const ownerUser = await store.findUser(ownerMember.userId);
         email = ownerUser?.email;
         billingUserId = ownerUser?.id ?? ownerMember.userId;
       }
@@ -225,60 +180,53 @@ export async function chargeSubscriptionRenewal(
     });
   }
 
-  const paystack = getPaystackOps(options.paystackClient);
-  const chargeResRaw = await paystack?.transaction?.chargeAuthorization({
-    body: {
-      email,
-      amount,
-      authorization_code: subscription.paystackAuthorizationCode,
-      reference: `rec_${subscription.id}_${Date.now()}`,
-      metadata: JSON.stringify({
-        subscriptionId,
-        referenceId,
-      }),
-    },
+  const paystack = createPaystackAdapter(options.paystackClient);
+  const chargeData = await paystack.chargeAuthorization({
+    email,
+    amount,
+    authorization_code: subscription.paystackAuthorizationCode,
+    reference: `rec_${subscription.id}_${Date.now()}`,
+    metadata: JSON.stringify({
+      subscriptionId,
+      referenceId,
+    }),
   });
 
-  const chargeData = unwrapSdkResult<PaystackChargeAuthorizationResponse>(chargeResRaw);
-  if (chargeData?.status === "success" && chargeData.reference !== undefined) {
+  const typedChargeData = chargeData as PaystackChargeAuthorizationResponse;
+  if (typedChargeData?.status === "success" && typedChargeData.reference !== undefined) {
     const now = new Date();
     const nextPeriodEnd = getNextPeriodEnd(now, plan.interval ?? "monthly");
 
-    await ctx.context.adapter.create({
-      model: "paystackTransaction",
-      data: {
-        reference: chargeData.reference,
-        paystackId:
-          chargeData.id !== undefined && chargeData.id !== null ? String(chargeData.id) : undefined,
+    await store.createTransaction({
+      reference: typedChargeData.reference,
+      paystackId:
+        typedChargeData.id !== undefined && typedChargeData.id !== null
+          ? String(typedChargeData.id)
+          : undefined,
+      referenceId,
+      userId: billingUserId,
+      amount: typedChargeData.amount,
+      currency: typedChargeData.currency,
+      status: "success",
+      plan: plan.name.toLowerCase(),
+      metadata: JSON.stringify({
+        type: "renewal",
+        subscriptionId,
         referenceId,
-        userId: billingUserId,
-        amount: chargeData.amount,
-        currency: chargeData.currency,
-        status: "success",
-        plan: plan.name.toLowerCase(),
-        metadata: JSON.stringify({
-          type: "renewal",
-          subscriptionId,
-          referenceId,
-        }),
-        createdAt: now,
-        updatedAt: now,
-      },
+      }),
+      createdAt: now,
+      updatedAt: now,
     });
 
-    await ctx.context.adapter.update({
-      model: "subscription",
-      update: {
-        periodStart: now,
-        periodEnd: nextPeriodEnd,
-        updatedAt: now,
-        paystackTransactionReference: chargeData.reference,
-      },
-      where: [{ field: "id", value: subscription.id }],
+    await store.updateSubscription(subscription.id, {
+      periodStart: now,
+      periodEnd: nextPeriodEnd,
+      updatedAt: now,
+      paystackTransactionReference: typedChargeData.reference,
     });
 
-    return { status: "success", data: chargeData };
+    return { status: "success", data: typedChargeData };
   }
 
-  return { status: "failed", data: chargeData };
+  return { status: "failed", data: typedChargeData };
 }

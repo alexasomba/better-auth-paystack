@@ -2,16 +2,13 @@ import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
 
 import type { Subscription } from "./types";
+import { createBillingStore } from "./billing-store";
 
 export const getOrganizationSubscription = async (
   ctx: GenericEndpointContext,
   organizationId: string,
 ): Promise<Subscription | null> => {
-  const subscription = await ctx.context.adapter.findOne<Subscription>({
-    model: "subscription",
-    where: [{ field: "referenceId", value: organizationId }],
-  });
-  return subscription;
+  return createBillingStore(ctx).findCurrentSubscription(organizationId);
 };
 
 export const checkSeatLimit = async (
@@ -25,10 +22,7 @@ export const checkSeatLimit = async (
     return true; // No explicit seat limit found
   }
 
-  const members = await ctx.context.adapter.findMany({
-    model: "member",
-    where: [{ field: "organizationId", value: organizationId }],
-  });
+  const members = await createBillingStore(ctx).listMembers(organizationId);
 
   if (!subscription) {
     return true; // No subscription, no specific limit enforcement here (or maybe allow depending on config)
@@ -48,10 +42,7 @@ export const checkTeamLimit = async (
   organizationId: string,
   maxTeams: number,
 ): Promise<boolean> => {
-  const teams = await ctx.context.adapter.findMany({
-    model: "team",
-    where: [{ field: "organizationId", value: organizationId }],
-  });
+  const teams = await createBillingStore(ctx).listTeams(organizationId);
 
   if (teams.length >= maxTeams) {
     throw new APIError("FORBIDDEN", {

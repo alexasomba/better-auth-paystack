@@ -8,7 +8,8 @@ import type {
   Subscription,
   PaystackProductResponse,
 } from "./types";
-import { unwrapSdkResult } from "./paystack-sdk";
+import { createBillingStore } from "./billing-store";
+import { createPaystackAdapter } from "./paystack-sdk";
 
 export function getPlanSeatAmount(plan: PaystackPlan): number | undefined {
   if (plan.seatAmount !== undefined) {
@@ -199,16 +200,11 @@ export async function syncProductQuantityFromPaystack(
   productName: string,
   paystackClient: PaystackClientLike,
 ): Promise<void> {
+  const store = createBillingStore(ctx);
   // Find the local product record (by name or slug)
-  let localProduct = await ctx.context.adapter.findOne<PaystackProduct>({
-    model: "paystackProduct",
-    where: [{ field: "name", value: productName }],
-  });
+  let localProduct = await store.findProductByName(productName);
 
-  localProduct ??= await ctx.context.adapter.findOne<PaystackProduct>({
-    model: "paystackProduct",
-    where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
-  });
+  localProduct ??= await store.findProductBySlug(productName.toLowerCase().replace(/\s+/g, "-"));
 
   if (
     localProduct?.paystackId === undefined ||
@@ -222,10 +218,9 @@ export async function syncProductQuantityFromPaystack(
       typeof localProduct.quantity === "number" &&
       localProduct.quantity > 0
     ) {
-      await ctx.context.adapter.update({
-        model: "paystackProduct",
-        update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
-        where: [{ field: "id", value: localProduct.id }],
+      await store.updateProduct(localProduct.id, {
+        quantity: localProduct.quantity - 1,
+        updatedAt: new Date(),
       });
     }
     return;
@@ -237,15 +232,15 @@ export async function syncProductQuantityFromPaystack(
     if (!Number.isFinite(paystackProductId)) {
       return;
     }
-    const raw = await paystackClient.product?.fetch(paystackProductId);
-    const sdkRes = unwrapSdkResult<PaystackProductResponse>(raw);
+    const sdkRes = (await createPaystackAdapter(paystackClient).fetchProduct(
+      paystackProductId,
+    )) as PaystackProductResponse;
     const remoteQuantity = sdkRes?.quantity;
 
     if (remoteQuantity !== undefined && localProduct.id !== undefined) {
-      await ctx.context.adapter.update({
-        model: "paystackProduct",
-        update: { quantity: remoteQuantity, updatedAt: new Date() },
-        where: [{ field: "id", value: localProduct.id }],
+      await store.updateProduct(localProduct.id, {
+        quantity: remoteQuantity,
+        updatedAt: new Date(),
       });
     }
   } catch {
@@ -256,10 +251,9 @@ export async function syncProductQuantityFromPaystack(
       typeof localProduct.quantity === "number" &&
       localProduct.quantity > 0
     ) {
-      await ctx.context.adapter.update({
-        model: "paystackProduct",
-        update: { quantity: localProduct.quantity - 1, updatedAt: new Date() },
-        where: [{ field: "id", value: localProduct.id }],
+      await store.updateProduct(localProduct.id, {
+        quantity: localProduct.quantity - 1,
+        updatedAt: new Date(),
       });
     }
   }
@@ -269,15 +263,10 @@ export async function decrementProductQuantity(
   ctx: GenericEndpointContext,
   productName: string,
 ): Promise<void> {
-  let product = await ctx.context.adapter.findOne<PaystackProduct>({
-    model: "paystackProduct",
-    where: [{ field: "name", value: productName }],
-  });
+  const store = createBillingStore(ctx);
+  let product = await store.findProductByName(productName);
 
-  product ??= await ctx.context.adapter.findOne<PaystackProduct>({
-    model: "paystackProduct",
-    where: [{ field: "slug", value: productName.toLowerCase().replace(/\s+/g, "-") }],
-  });
+  product ??= await store.findProductBySlug(productName.toLowerCase().replace(/\s+/g, "-"));
 
   if (product !== undefined && product !== null) {
     if (
@@ -286,13 +275,9 @@ export async function decrementProductQuantity(
       product.quantity > 0 &&
       product.id !== undefined
     ) {
-      await ctx.context.adapter.update({
-        model: "paystackProduct",
-        update: {
-          quantity: product.quantity - 1,
-          updatedAt: new Date(),
-        },
-        where: [{ field: "id", value: product.id }],
+      await store.updateProduct(product.id, {
+        quantity: product.quantity - 1,
+        updatedAt: new Date(),
       });
     }
   }
@@ -305,11 +290,8 @@ export async function syncSubscriptionSeats(
 ): Promise<void> {
   if (options.subscription?.enabled !== true) return;
 
-  const adapter = ctx.context.adapter;
-  const subscription = await adapter.findOne<Subscription>({
-    model: "subscription",
-    where: [{ field: "referenceId", value: organizationId }],
-  });
+  const store = createBillingStore(ctx);
+  const subscription = await store.findCurrentSubscription(organizationId);
 
   if (
     subscription?.paystackSubscriptionCode === undefined ||
@@ -323,10 +305,7 @@ export async function syncSubscriptionSeats(
   const seatAmount = getPlanSeatAmount(plan);
   if (seatAmount === undefined) return;
 
-  const members = await adapter.findMany({
-    model: "member",
-    where: [{ field: "organizationId", value: organizationId }],
-  });
+  const members = await store.listMembers(organizationId);
 
   const quantity = members.length;
 
@@ -334,13 +313,9 @@ export async function syncSubscriptionSeats(
     assertLocallyManagedSubscription(subscription, "automatic seat sync");
 
     // Locally managed subscriptions renew via saved authorizations, so seat count lives in our DB.
-    await adapter.update({
-      model: "subscription",
-      where: [{ field: "id", value: subscription.id }],
-      update: {
-        seats: quantity,
-        updatedAt: new Date(),
-      },
+    await store.updateSubscription(subscription.id, {
+      seats: quantity,
+      updatedAt: new Date(),
     });
   } catch (e: unknown) {
     const log = ctx.context.logger;
