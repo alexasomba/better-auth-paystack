@@ -12,3 +12,6 @@ count.txt
 .vinxi
 todos.json
 .dev.vars
+
+# Agent skills from npm packages (managed by skills-npm)
+**/skills/npm-*
