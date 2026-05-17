@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Catalog"
+  short_description: "Products, plans, trials, seats, and limits"
+  default_prompt: "Use $paystack-catalog-limits to configure Paystack products, subscription plans, free trials, seat billing, and resource limits."
+policy:
+  allow_implicit_invocation: true

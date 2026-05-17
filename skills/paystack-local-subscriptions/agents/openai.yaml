@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Local Subs"
+  short_description: "Local subscriptions, renewals, and proration"
+  default_prompt: "Use $paystack-local-subscriptions to implement or debug local-managed Paystack subscription lifecycle behavior."
+policy:
+  allow_implicit_invocation: true

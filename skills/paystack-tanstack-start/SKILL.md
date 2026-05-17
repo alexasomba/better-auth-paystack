@@ -1,5 +1,5 @@
 ---
-name: tanstack-start
+name: paystack-tanstack-start
 description: >
   Integrate @alexasomba/better-auth-paystack in TanStack Start. Use for Better Auth API routes, tanstackStartCookies(), server functions, getRequestHeaders(), authClient Paystack actions, admin billing server functions, and Cloudflare Workers deployment.
 type: composition

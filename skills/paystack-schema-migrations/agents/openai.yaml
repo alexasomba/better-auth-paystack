@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Schema"
+  short_description: "Database schema and migration guidance"
+  default_prompt: "Use $paystack-schema-migrations to review or change Better Auth Paystack schema and migration behavior."
+policy:
+  allow_implicit_invocation: true

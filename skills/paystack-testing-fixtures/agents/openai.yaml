@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Tests"
+  short_description: "Focused tests, mocks, and verification"
+  default_prompt: "Use $paystack-testing-fixtures to choose tests, fixtures, and verification commands for Better Auth Paystack changes."
+policy:
+  allow_implicit_invocation: true

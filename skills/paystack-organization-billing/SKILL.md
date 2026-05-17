@@ -1,5 +1,5 @@
 ---
-name: organization-billing
+name: paystack-organization-billing
 description: >
   Configure organization billing in @alexasomba/better-auth-paystack. Use for organization.enabled, Better Auth organization plugin setup, owner/admin default billing authorization, subscription.authorizeReference, organization Paystack customers, seats, invitations, members, and team limits.
 type: core

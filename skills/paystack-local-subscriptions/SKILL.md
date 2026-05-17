@@ -1,5 +1,5 @@
 ---
-name: local-subscription-lifecycle
+name: paystack-local-subscriptions
 description: >
   Implement, debug, or test local-managed subscription behavior in @alexasomba/better-auth-paystack. Use for local plans without planCode, saved authorization renewal, chargeSubscriptionRenewal, seat billing, prorateAndCharge, pendingPlan, LOC_ subscription codes, trial transitions, schedule-at-period-end upgrades, and Paystack-managed vs local-managed behavior.
 type: core

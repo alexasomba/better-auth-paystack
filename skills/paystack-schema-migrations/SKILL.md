@@ -1,5 +1,5 @@
 ---
-name: schema-and-migrations
+name: paystack-schema-migrations
 description: >
   Modify or review @alexasomba/better-auth-paystack database schema behavior. Use for paystackProduct, paystackPlan, paystackTransaction, subscription, user.paystackCustomerCode, organization.paystackCustomerCode/email, Better Auth schema overrides, mergeSchema behavior, migrations, indexes, unique fields, and backward-compatible table or field changes.
 type: core

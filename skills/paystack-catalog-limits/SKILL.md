@@ -1,5 +1,5 @@
 ---
-name: billing-catalog-and-limits
+name: paystack-catalog-limits
 description: >
   Configure products, Paystack-native plans, local-managed plans, free trials, seat billing, resource limits, and catalog sync in @alexasomba/better-auth-paystack. Use when tasks mention planCode, freeTrial, trial eligibility, seatAmount, seatPlanCode, limits, products, syncPaystackProducts, or syncPaystackPlans.
 type: core

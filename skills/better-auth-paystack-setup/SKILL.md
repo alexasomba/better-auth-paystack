@@ -1,5 +1,5 @@
 ---
-name: setup
+name: better-auth-paystack-setup
 description: >
   Configure @alexasomba/better-auth-paystack with Better Auth. Use when adding the paystack() server plugin, paystackClient() client plugin, schema overrides, products/plans, webhook secrets, or canonical authClient.paystack/subscription/transaction actions.
 type: core

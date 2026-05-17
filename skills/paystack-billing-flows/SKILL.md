@@ -1,5 +1,5 @@
 ---
-name: subscriptions-and-transactions
+name: paystack-billing-flows
 description: >
   Build Paystack transaction and subscription flows with @alexasomba/better-auth-paystack. Use for initialize/verify transaction, create/upgrade/cancel/restore/list subscriptions, products/plans, billing portal links, webhooks, chargeSubscriptionRenewal, syncPaystackProducts, and syncPaystackPlans.
 type: core

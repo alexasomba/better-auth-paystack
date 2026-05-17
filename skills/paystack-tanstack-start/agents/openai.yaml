@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack TanStack Start"
+  short_description: "TanStack Start integration patterns"
+  default_prompt: "Use $paystack-tanstack-start to integrate Better Auth Paystack in a TanStack Start application."
+policy:
+  allow_implicit_invocation: true
