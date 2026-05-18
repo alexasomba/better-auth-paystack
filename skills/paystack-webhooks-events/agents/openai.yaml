@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Webhooks"
+  short_description: "Webhook signatures, events, and reconciliation"
+  default_prompt: "Use $paystack-webhooks-events to implement, debug, or test Paystack webhook event processing."
+policy:
+  allow_implicit_invocation: true

@@ -44,3 +44,6 @@ test_output*
 
 typecheck_output*
 GEMINI.md
+
+# Agent skills from npm packages (managed by skills-npm)
+**/skills/npm-*

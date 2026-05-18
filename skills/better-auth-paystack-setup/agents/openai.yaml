@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Setup"
+  short_description: "Server and client plugin setup guidance"
+  default_prompt: "Use $better-auth-paystack-setup to configure the Better Auth Paystack server and client plugins."
+policy:
+  allow_implicit_invocation: true

@@ -1,5 +1,5 @@
 ---
-name: testing-and-fixtures
+name: paystack-testing-fixtures
 description: >
   Test @alexasomba/better-auth-paystack changes. Use for choosing focused vp test commands, Better Auth test clients, in-memory adapters, mocked Paystack SDK responses, webhook signatures, TanStack example tests, integration tests, type-safety tests, and verification before landing changes.
 type: core

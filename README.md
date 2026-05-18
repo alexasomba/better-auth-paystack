@@ -17,15 +17,26 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 
 ## AI Agent Skills
 
-This package publishes [TanStack Intent](https://www.npmjs.com/package/@tanstack/intent) skills so AI coding agents can load package-specific guidance for setup, subscriptions, organization billing, TanStack Start integration, client APIs, webhooks, local subscription lifecycle, schema changes, and testing.
+This package publishes agent skills so AI coding agents can load package-specific guidance for setup, subscriptions, organization billing, TanStack Start integration, client APIs, webhooks, local subscription lifecycle, schema changes, and testing.
+
+Use [TanStack Intent](https://www.npmjs.com/package/@tanstack/intent) when you want to explicitly list or load individual skills:
 
 ```bash
 npx @tanstack/intent@latest list
-npx @tanstack/intent@latest load @alexasomba/better-auth-paystack#setup
-npx @tanstack/intent@latest load @alexasomba/better-auth-paystack#testing-and-fixtures
+npx @tanstack/intent@latest load @alexasomba/better-auth-paystack#better-auth-paystack-setup
+npx @tanstack/intent@latest load @alexasomba/better-auth-paystack#paystack-testing-fixtures
 ```
 
 If you use an AI agent, run `npx @tanstack/intent@latest install` in your project so the agent knows how to discover package skills.
+
+This package also ships skills in the npm package under `skills/*/SKILL.md`, so projects can use [skills-npm](https://www.npmjs.com/package/skills-npm) to symlink installed package skills for compatible agents:
+
+```bash
+npm install @alexasomba/better-auth-paystack
+npx skills-npm --yes
+```
+
+For this repository, maintainers can run `pnpm run skills:dry-run` to preview discovery through the TanStack example fixture or `pnpm run skills:install` to create local agent skill symlinks from that fixture.
 
 ## Features
 

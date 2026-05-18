@@ -1,5 +1,5 @@
 ---
-name: webhooks-and-event-processing
+name: paystack-webhooks-events
 description: >
   Implement, debug, or test @alexasomba/better-auth-paystack webhook handling. Use for Paystack webhook signatures, trusted IP checks, webhook.secret/paystackWebhookSecret behavior, charge.success, subscription.create, subscription.disable, subscription.enable, product quantity updates, subscription status changes, metadata parsing, and event hooks.
 type: core

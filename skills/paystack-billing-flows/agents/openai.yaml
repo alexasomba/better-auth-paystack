@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Billing Flows"
+  short_description: "Transactions, subscriptions, and billing flows"
+  default_prompt: "Use $paystack-billing-flows to build Paystack transaction, subscription, product, and billing portal flows."
+policy:
+  allow_implicit_invocation: true

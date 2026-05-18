@@ -1,5 +1,5 @@
 ---
-name: client-api-contract
+name: paystack-client-api
 description: >
   Modify or use the @alexasomba/better-auth-paystack browser client API. Use for paystackClient(), authClient.paystack, authClient.transaction, authClient.subscription, initializeTransaction, verifyTransaction, listTransactions, listSubscriptions, listProducts, listPlans, subscription billingPortal/manageLink, cancel/restore aliases, BetterFetch throw option return types, and deprecated disable/enable behavior.
 type: core

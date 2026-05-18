@@ -75,7 +75,9 @@
     "lint": "vp lint src",
     "lint:package": "publint run --strict",
     "lint:types": "attw --profile esm-only --pack .",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "skills:install": "skills-npm --cwd examples/tanstack --yes --force",
+    "skills:dry-run": "skills-npm --cwd examples/tanstack --dry-run --yes --agents universal --force"
   },
   "dependencies": {
     "@alexasomba/paystack-node": "catalog:",
@@ -101,6 +103,7 @@
     "eslint-plugin-react-hooks": "catalog:",
     "eslint-plugin-unicorn": "catalog:",
     "publint": "catalog:",
+    "skills-npm": "^1.1.1",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vite-plus": "catalog:",

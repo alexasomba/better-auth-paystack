@@ -1,0 +1,6 @@
+interface:
+  display_name: "Better Auth Paystack Org Billing"
+  short_description: "Organization billing, seats, and access"
+  default_prompt: "Use $paystack-organization-billing to configure Paystack billing for Better Auth organizations, seats, and admin access."
+policy:
+  allow_implicit_invocation: true
