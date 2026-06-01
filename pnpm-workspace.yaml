@@ -99,6 +99,8 @@ overrides:
   rollup: npm:@rollup/wasm-node@4.60.3
   vite: "catalog:"
   vitest: "catalog:"
+patchedDependencies:
+  "@better-auth/kysely-adapter@1.6.13": patches/@better-auth__kysely-adapter@1.6.13.patch
 peerDependencyRules:
   allowAny:
     - vite
