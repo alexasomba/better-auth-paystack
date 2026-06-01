@@ -1,1 +1,2 @@
 - 2026-06-01: Keep the published package engine floor at Node.js `>=22.0.0`; do not restore it to `>=24.0.0` during release cleanup unless explicitly requested.
+- 2026-06-01: npmjs publish is not complete unless the latest package page shows provenance and installs cleanly; for pnpm catalog workspaces, publish the `pnpm pack` tarball with `npm publish --provenance` so catalog specifiers are rewritten before npm signs the package.

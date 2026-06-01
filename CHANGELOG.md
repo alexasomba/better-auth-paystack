@@ -1,3 +1,9 @@
+## [2.5.1](https://github.com/alexasomba/better-auth-paystack/compare/v2.5.0...v2.5.1) (2026-06-01)
+
+### Miscellaneous Chores
+
+- publish the npmjs package through the official npm provenance path
+
 ## [2.5.0](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.5...v2.5.0) (2026-06-01)
 
 ### Features

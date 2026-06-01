@@ -1,6 +1,6 @@
 {
   "name": "@alexasomba/better-auth-paystack",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "keywords": [
     "africa",
@@ -88,11 +88,11 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "catalog:",
     "@better-fetch/fetch": "catalog:",
-    "@commitlint/cli": "^21.0.0",
-    "@commitlint/config-conventional": "^21.0.0",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
     "@eslint/compat": "catalog:",
     "@eslint/js": "catalog:",
-    "@tanstack/intent": "^0.0.40",
+    "@tanstack/intent": "^0.0.41",
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
@@ -107,10 +107,10 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.20"
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.23"
   },
   "peerDependencies": {
-    "better-auth": "^1.6.9"
+    "better-auth": "catalog:"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "catalog:"
@@ -118,5 +118,5 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "packageManager": "pnpm@11.0.9"
+  "packageManager": "pnpm@11.5.0"
 }
