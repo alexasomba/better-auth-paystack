@@ -53,6 +53,21 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Pack release tarball
+        id: pack_release
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/npm-pack"
+          VERSION="${release_tag#v}"
+          TARBALL="$RUNNER_TEMP/npm-pack/alexasomba-better-auth-paystack-$VERSION.tgz"
+          pnpm pack --out "$TARBALL"
+          tar -xOf "$TARBALL" package/package.json > "$RUNNER_TEMP/npm-pack/package.json"
+          if grep -q "catalog:" "$RUNNER_TEMP/npm-pack/package.json"; then
+            echo "::error ::Packed package.json still contains catalog: specifiers."
+            exit 1
+          fi
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
       - name: Determine npm tag
         id: determine_npm_tag
         shell: bash
@@ -85,7 +100,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish to npmjs
-        run: pnpm publish --access public --provenance --no-git-checks --tag ${{ steps.determine_npm_tag.outputs.npm_tag }}
+        run: npm publish "${{ steps.pack_release.outputs.tarball }}" --access public --provenance --tag ${{ steps.determine_npm_tag.outputs.npm_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
@@ -98,7 +113,7 @@ jobs:
           scope: "@alexasomba"
 
       - name: Publish to GitHub Packages
-        run: pnpm publish --no-git-checks --tag ${{ steps.determine_npm_tag.outputs.npm_tag }}
+        run: npm publish "${{ steps.pack_release.outputs.tarball }}" --tag ${{ steps.determine_npm_tag.outputs.npm_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
