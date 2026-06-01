@@ -4,7 +4,7 @@ description: >
   Configure @alexasomba/better-auth-paystack with Better Auth. Use when adding the paystack() server plugin, paystackClient() client plugin, schema overrides, products/plans, webhook secrets, or canonical authClient.paystack/subscription/transaction actions.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.5.1" # x-release-please-version
+library_version: "2.6.0" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
 sources:

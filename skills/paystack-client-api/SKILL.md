@@ -4,7 +4,7 @@ description: >
   Modify or use the @alexasomba/better-auth-paystack browser client API. Use for paystackClient(), authClient.paystack, authClient.transaction, authClient.subscription, initializeTransaction, verifyTransaction, listTransactions, listSubscriptions, listProducts, listPlans, subscription billingPortal/manageLink, cancel/restore aliases, BetterFetch throw option return types, and deprecated disable/enable behavior.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.5.1" # x-release-please-version
+library_version: "2.6.0" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
 sources:

@@ -1,6 +1,6 @@
 library:
-  name: "@alexasomba/better-auth-paystack"
-  version: 2.5.1
+  name: '@alexasomba/better-auth-paystack'
+  version: 2.6.0
   repository: https://github.com/alexasomba/better-auth-paystack
   description: >-
     Paystack billing plugin for Better Auth with subscriptions, transactions,
