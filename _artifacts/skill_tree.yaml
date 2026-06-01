@@ -1,6 +1,6 @@
 library:
   name: "@alexasomba/better-auth-paystack"
-  version: 2.4.4
+  version: 2.5.0
   repository: https://github.com/alexasomba/better-auth-paystack
   license: MIT
   compatibility: >-
@@ -18,7 +18,7 @@ skills:
     slug: setup
     type: core
     domain: setup
-    path: skills/setup/SKILL.md
+    path: skills/better-auth-paystack-setup/SKILL.md
     license: MIT
     compatibility: >-
       Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
@@ -35,7 +35,7 @@ skills:
     slug: subscriptions-and-transactions
     type: core
     domain: subscriptions-and-transactions
-    path: skills/subscriptions-and-transactions/SKILL.md
+    path: skills/paystack-billing-flows/SKILL.md
     license: MIT
     compatibility: >-
       Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
@@ -52,7 +52,7 @@ skills:
     slug: organization-billing
     type: core
     domain: organization-billing
-    path: skills/organization-billing/SKILL.md
+    path: skills/paystack-organization-billing/SKILL.md
     license: MIT
     compatibility: >-
       Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
@@ -69,7 +69,7 @@ skills:
     slug: billing-catalog-and-limits
     type: core
     domain: billing-catalog-and-limits
-    path: skills/billing-catalog-and-limits/SKILL.md
+    path: skills/paystack-catalog-limits/SKILL.md
     license: MIT
     compatibility: >-
       Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
@@ -87,7 +87,7 @@ skills:
     slug: tanstack-start
     type: composition
     domain: tanstack-start
-    path: skills/tanstack-start/SKILL.md
+    path: skills/paystack-tanstack-start/SKILL.md
     license: MIT
     compatibility: >-
       Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
