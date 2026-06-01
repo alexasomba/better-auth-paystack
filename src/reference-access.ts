@@ -12,11 +12,23 @@ export type BillingReferenceAction =
   | "enable-subscription"
   | "get-subscription-manage-link";
 
-const BILLING_ORG_ROLES = new Set(["owner", "admin"]);
+const DEFAULT_BILLING_ORG_ROLES = ["owner", "admin"] as const;
 
-export function hasBillingRole(role: unknown): boolean {
+function normalizeBillingRoles(roles: readonly string[]): Set<string> {
+  return new Set(roles.map((value) => value.trim()).filter((value) => value !== ""));
+}
+
+export function getBillingRoles(options: AnyPaystackOptions): readonly string[] {
+  return options.organization?.billingRoles ?? DEFAULT_BILLING_ORG_ROLES;
+}
+
+export function hasBillingRole(
+  role: unknown,
+  billingRoles: readonly string[] = DEFAULT_BILLING_ORG_ROLES,
+): boolean {
+  const allowedRoles = normalizeBillingRoles(billingRoles);
   if (Array.isArray(role)) {
-    return role.some((value) => hasBillingRole(value));
+    return role.some((value) => hasBillingRole(value, billingRoles));
   }
   if (typeof role !== "string") {
     return false;
@@ -24,7 +36,7 @@ export function hasBillingRole(role: unknown): boolean {
   return role
     .split(",")
     .map((value) => value.trim())
-    .some((value) => BILLING_ORG_ROLES.has(value));
+    .some((value) => allowedRoles.has(value));
 }
 
 export function resolveBillingReferenceId(input: {
@@ -89,7 +101,7 @@ export async function authorizeBillingReference(
     if (
       member !== null &&
       member !== undefined &&
-      hasBillingRole((member as { role?: unknown }).role)
+      hasBillingRole((member as { role?: unknown }).role, getBillingRoles(options))
     ) {
       return;
     }

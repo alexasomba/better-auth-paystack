@@ -247,6 +247,13 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    */
   organization?: {
     enabled?: boolean;
+    /**
+     * Organization member roles allowed to manage billing when `subscription.authorizeReference`
+     * is not provided.
+     *
+     * @default ["owner", "admin"]
+     */
+    billingRoles?: string[];
     getCustomerCreateParams?: (
       org: { id: string; name: string; email?: string | null },
       ctx: GenericEndpointContext,

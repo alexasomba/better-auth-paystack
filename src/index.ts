@@ -437,6 +437,16 @@ export type PaystackPlugin<
 > = ReturnType<typeof paystack<TPaystackClient, O>>;
 
 export { chargeSubscriptionRenewal, syncPaystackPlans, syncPaystackProducts } from "./operations";
+export { reconcilePaystackTransaction } from "./reconciliation";
+export type {
+  PaystackReconciliationError,
+  PaystackReconciliationSource,
+  PaystackReconciliationSummary,
+  ReconcilePaystackTransactionFailure,
+  ReconcilePaystackTransactionInput,
+  ReconcilePaystackTransactionResult,
+  ReconcilePaystackTransactionSuccess,
+} from "./reconciliation";
 export type {
   Subscription,
   SubscriptionOptions,
