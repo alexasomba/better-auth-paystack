@@ -92,7 +92,7 @@
     "@commitlint/config-conventional": "^21.0.0",
     "@eslint/compat": "catalog:",
     "@eslint/js": "catalog:",
-    "@tanstack/intent": "^0.0.40",
+    "@tanstack/intent": "^0.0.41",
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
