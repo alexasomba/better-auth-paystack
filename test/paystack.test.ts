@@ -1349,6 +1349,126 @@ describe("paystack", () => {
     ).rejects.toBeDefined();
   }, 30000);
 
+  it("should allow configurable organization billing roles", async () => {
+    const options = {
+      paystackClient: {} as PaystackClientLike,
+      organization: { enabled: true, billingRoles: ["owner", "admin", "billing"] },
+      subscription: {
+        enabled: true,
+        plans: [],
+      },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const middleware = referenceMiddleware(options, "list-subscriptions") as any;
+
+    for (const role of ["billing", ["member", "billing"], "member,billing"]) {
+      await expect(
+        middleware({
+          body: {},
+          query: { referenceId: "org_billing" },
+          request: new Request("http://localhost:3000/api/auth/paystack/list-subscriptions"),
+          context: {
+            session: {
+              user: { id: "user_billing" },
+              session: { id: "session_billing" },
+            },
+            adapter: {
+              findOne: vi.fn().mockResolvedValue({
+                id: "member_billing",
+                organizationId: "org_billing",
+                userId: "user_billing",
+                role,
+              }),
+            },
+          },
+        }),
+      ).resolves.toBeDefined();
+    }
+  });
+
+  it("should reject unconfigured organization billing roles", async () => {
+    const options = {
+      paystackClient: {} as PaystackClientLike,
+      organization: { enabled: true },
+      subscription: {
+        enabled: true,
+        plans: [],
+      },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const middleware = referenceMiddleware(options, "list-subscriptions") as any;
+    await expect(
+      middleware({
+        body: {},
+        query: { referenceId: "org_unconfigured_billing" },
+        request: new Request("http://localhost:3000/api/auth/paystack/list-subscriptions"),
+        context: {
+          session: {
+            user: { id: "user_unconfigured_billing" },
+            session: { id: "session_unconfigured_billing" },
+          },
+          adapter: {
+            findOne: vi.fn().mockResolvedValue({
+              id: "member_unconfigured_billing",
+              organizationId: "org_unconfigured_billing",
+              userId: "user_unconfigured_billing",
+              role: "billing",
+            }),
+          },
+        },
+      }),
+    ).rejects.toBeDefined();
+  });
+
+  it("should keep authorizeReference authoritative over organization billing roles", async () => {
+    const authorizeReference = vi.fn().mockResolvedValue(false);
+    const options = {
+      paystackClient: {} as PaystackClientLike,
+      organization: { enabled: true, billingRoles: ["owner", "admin", "billing"] },
+      subscription: {
+        enabled: true,
+        plans: [],
+        authorizeReference,
+      },
+      secretKey: "sk_test_123",
+      webhook: { secret: "whsec_test" },
+    } satisfies PaystackOptions<PaystackClientLike>;
+
+    const middleware = referenceMiddleware(options, "list-subscriptions") as any;
+    await expect(
+      middleware({
+        body: {},
+        query: { referenceId: "org_authorize_reference" },
+        request: new Request("http://localhost:3000/api/auth/paystack/list-subscriptions"),
+        context: {
+          session: {
+            user: { id: "user_authorize_reference" },
+            session: { id: "session_authorize_reference" },
+          },
+          adapter: {
+            findOne: vi.fn().mockResolvedValue({
+              id: "member_authorize_reference",
+              organizationId: "org_authorize_reference",
+              userId: "user_authorize_reference",
+              role: "billing",
+            }),
+          },
+        },
+      }),
+    ).rejects.toBeDefined();
+    expect(authorizeReference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceId: "org_authorize_reference",
+        action: "list-subscriptions",
+      }),
+      expect.any(Object),
+    );
+  });
+
   it("should update subscription status to canceled via webhook events", async () => {
     const options = {
       paystackClient: {} as PaystackClientLike,

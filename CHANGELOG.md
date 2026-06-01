@@ -1,3 +1,15 @@
+## [2.5.0](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.5...v2.5.0) (2026-06-01)
+
+### Features
+
+- expose `reconcilePaystackTransaction` for trusted server-side Paystack reference reconciliation
+- allow configurable organization billing roles with `organization.billingRoles`
+
+### Documentation
+
+- document trusted reconciliation usage for webhook handlers, queues, cron jobs, and admin actions
+- document configurable organization billing roles versus `subscription.authorizeReference`
+
 ## [2.4.1](https://github.com/alexasomba/better-auth-paystack/compare/v2.4.0...v2.4.1) (2026-05-09)
 
 ### Documentation

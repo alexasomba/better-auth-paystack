@@ -1,10 +1,10 @@
 ---
 name: paystack-organization-billing
 description: >
-  Configure organization billing in @alexasomba/better-auth-paystack. Use for organization.enabled, Better Auth organization plugin setup, owner/admin default billing authorization, subscription.authorizeReference, organization Paystack customers, seats, invitations, members, and team limits.
+  Configure organization billing in @alexasomba/better-auth-paystack. Use for organization.enabled, Better Auth organization plugin setup, owner/admin default billing authorization, organization.billingRoles, subscription.authorizeReference, organization Paystack customers, seats, invitations, members, and team limits.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.4.4" # x-release-please-version
+library_version: "2.5.0" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
 sources:
@@ -50,6 +50,7 @@ export const auth = betterAuth({
       },
       organization: {
         enabled: true,
+        billingRoles: ["owner", "admin", "billing"],
       },
     }),
   ],
@@ -64,9 +65,29 @@ When `subscription.authorizeReference` is not supplied, organization billing act
 
 Ordinary members are rejected by default. Do not write UI or tests that assume any member can create, upgrade, cancel, or restore organization subscriptions.
 
+### Add trusted billing roles without replacing the default
+
+Use `organization.billingRoles` when a product needs a role such as `billing`, `finance`, or `accounting` to manage organization billing while preserving the built-in user self-access, organization membership lookup, and action scoping.
+
+```ts
+paystack({
+  secretKey: process.env.PAYSTACK_SECRET_KEY!,
+  subscription: {
+    enabled: true,
+    plans: [],
+  },
+  organization: {
+    enabled: true,
+    billingRoles: ["owner", "admin", "billing"],
+  },
+});
+```
+
+Role matching supports Better Auth string roles, comma-separated role strings like `"member,billing"`, and array roles like `["member", "billing"]`.
+
 ### Override authorization explicitly for custom workflows
 
-Use `subscription.authorizeReference` when a product intentionally allows non-owner/admin billing access:
+Use `subscription.authorizeReference` when a product needs lower-level policy checks that cannot be represented as organization roles:
 
 ```ts
 paystack({

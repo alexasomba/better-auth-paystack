@@ -1,10 +1,10 @@
 ---
 name: paystack-webhooks-events
 description: >
-  Implement, debug, or test @alexasomba/better-auth-paystack webhook handling. Use for Paystack webhook signatures, trusted IP checks, webhook.secret/paystackWebhookSecret behavior, charge.success, subscription.create, subscription.disable, subscription.enable, product quantity updates, subscription status changes, metadata parsing, and event hooks.
+  Implement, debug, or test @alexasomba/better-auth-paystack webhook handling. Use for Paystack webhook signatures, trusted IP checks, webhook.secret/paystackWebhookSecret behavior, charge.success, reconcilePaystackTransaction, subscription.create, subscription.disable, subscription.enable, product quantity updates, subscription status changes, metadata parsing, and event hooks.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.4.3" # x-release-please-version
+library_version: "2.5.0" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
 sources:
@@ -53,6 +53,20 @@ Paystack IP allowlist. Preserve support for common forwarded IP headers when cha
 
 Do not grant paid access from a redirect alone. The callback should verify the transaction and
 webhooks should reconcile persisted state.
+
+For trusted server paths that need to re-verify and apply the plugin's local side effects outside a browser session, call `reconcilePaystackTransaction`:
+
+```ts
+import { reconcilePaystackTransaction } from "@alexasomba/better-auth-paystack";
+
+await reconcilePaystackTransaction(ctx, paystackOptions, {
+  reference,
+  source: "webhook",
+  referenceId,
+});
+```
+
+The helper is suitable for webhook handlers, queue retries, cron jobs, and admin repair actions.
 
 ### Handle subscription events idempotently
 

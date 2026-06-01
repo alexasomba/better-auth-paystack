@@ -294,7 +294,20 @@ Transactions below these thresholds will be rejected with a `BAD_REQUEST` error.
 Enable `organization.enabled` to bill organizations instead of users.
 
 - **Auto Customer**: Organizations get their own `paystackCustomerCode`.
-- **Authorization**: Use `authorizeReference` to control who can manage billing (e.g., Owners/Admins).
+- **Authorization**: Organization owners and admins can manage billing by default. Use `organization.billingRoles` to extend the trusted role list, or `subscription.authorizeReference` when you need fully custom authorization.
+
+```ts
+paystack({
+  subscription: {
+    enabled: true,
+    plans: [],
+  },
+  organization: {
+    enabled: true,
+    billingRoles: ["owner", "admin", "billing"],
+  },
+});
+```
 
 ### Inline Popup Modal
 
@@ -406,6 +419,7 @@ Invoke them from trusted backend code only:
 ```ts
 import {
   chargeSubscriptionRenewal,
+  reconcilePaystackTransaction,
   syncPaystackPlans,
   syncPaystackProducts,
 } from "@alexasomba/better-auth-paystack";
@@ -416,9 +430,21 @@ await chargeSubscriptionRenewal(ctx, paystackOptions, {
   subscriptionId: "sub_123",
 });
 
+const settlement = await reconcilePaystackTransaction(ctx, paystackOptions, {
+  reference: "PAYSTACK_REFERENCE",
+  source: "queue",
+  referenceId: "user_or_org_id",
+});
+
+if (settlement.ok) {
+  console.log(settlement.transaction.status, settlement.subscription.updated);
+}
+
 await syncPaystackProducts(ctx, paystackOptions);
 await syncPaystackPlans(ctx, paystackOptions);
 ```
+
+Use `reconcilePaystackTransaction` from webhook handlers, queue retries, cron jobs, or admin actions when trusted server code needs the same verification and local transaction/subscription side effects as the browser verify endpoint.
 
 ### Authorization & Security
 
@@ -533,7 +559,7 @@ type initializeTransaction = {
 
 ### `authClient.subscription.list`
 
-List subscriptions for a user or organization. Organization-scoped billing actions require an owner/admin membership by default. To allow other roles or custom resources, configure `subscription.authorizeReference`.
+List subscriptions for a user or organization. Organization-scoped billing actions require an owner/admin membership by default. To allow roles such as `billing`, configure `organization.billingRoles`. For custom resources or deeper policy checks, configure `subscription.authorizeReference`.
 
 ```ts
 type listSubscriptions = {
