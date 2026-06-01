@@ -110,6 +110,8 @@ jobs:
       - name: Publish to npmjs with provenance
         if: ${{ steps.npmjs.outputs.exists != 'true' }}
         run: npm publish "${{ steps.pack.outputs.tarball }}" --access public --provenance --tag latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Configure GitHub Packages registry
         uses: actions/setup-node@v4
