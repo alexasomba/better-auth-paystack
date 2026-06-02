@@ -144,6 +144,27 @@ export type PaystackCustomerResponse = CustomerCreateResponseData;
 export type PaystackSubscriptionResponse = SubscriptionListResponseData;
 export type PaystackProductResponse = ProductFetchResponseData;
 
+export type PaystackInitializeResult =
+  | {
+      kind: "checkout";
+      url: string;
+      reference: string;
+      accessCode: string;
+      redirect: true;
+    }
+  | {
+      kind: "scheduled";
+      status: "success";
+      message: string;
+      scheduled: true;
+    }
+  | {
+      kind: "prorated";
+      status: "success";
+      message: string;
+      prorated: true;
+    };
+
 export interface SubscriptionOptions {
   /**
    * Enable subscriptions

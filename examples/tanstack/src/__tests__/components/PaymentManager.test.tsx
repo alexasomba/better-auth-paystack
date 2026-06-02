@@ -213,7 +213,7 @@ describe("PaymentManager component", () => {
       data: { products: mockProducts },
     } as any);
     vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
-      data: { url: "https://paystack.com/pay/mock" },
+      data: { kind: "checkout", url: "https://paystack.com/pay/mock", redirect: true },
     } as any);
 
     // Mock window.location.href
@@ -291,7 +291,7 @@ describe("PaymentManager component", () => {
       },
     } as any);
     vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
-      data: { url: "https://paystack.com/pay/mock" },
+      data: { kind: "checkout", url: "https://paystack.com/pay/mock", redirect: true },
     } as any);
 
     render(<PaymentManager activeTab="subscriptions" />);
@@ -692,6 +692,8 @@ describe("PaymentManager component", () => {
     } as any);
     vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
       data: {
+        kind: "prorated",
+        status: "success",
         prorated: true,
         message: "Subscription successfully upgraded with prorated charge.",
       },

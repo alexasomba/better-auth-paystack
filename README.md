@@ -58,8 +58,8 @@ For this repository, maintainers can run `pnpm run skills:dry-run` to preview di
 
 ### Prerequisites
 
-- **Node.js**: `v24.0.0` or higher.
-- **Better Auth**: `v1.6.5` or higher.
+- **Node.js**: `v22.0.0` or higher.
+- **Better Auth**: `v1.6.9` or higher.
 
 ### 1. Install Plugin & SDKs
 
@@ -315,7 +315,7 @@ Use `@alexasomba/paystack-inline` for a seamless UI.
 
 ```ts
 const { data } = await authClient.subscription.upgrade({ plan: "pro" });
-if (data?.accessCode) {
+if (data?.kind === "checkout") {
   const paystack = createPaystack({ publicKey: "pk_test_..." });
   paystack.checkout({
     accessCode: data.accessCode,
@@ -341,11 +341,19 @@ For locally managed plans:
 - If the prorated amount is below Paystack's minimum charge for the currency, the request is rejected so you can schedule the change for period end instead of undercharging.
 
 ```ts
-await authClient.paystack.transaction.initialize({
+const { data } = await authClient.paystack.transaction.initialize({
   plan: "pro",
   quantity: 5, // Upgrading seats
   prorateAndCharge: true, // Charges saved authorization or returns a checkout redirect for the delta
 });
+
+if (data?.kind === "checkout") {
+  window.location.href = data.url;
+}
+
+if (data?.kind === "prorated") {
+  console.log(data.message);
+}
 ```
 
 When the flow falls back to checkout, verify the returned transaction reference after payment. The plugin uses the stored proration metadata to apply the pending plan/seat change only after successful verification.
@@ -483,7 +491,7 @@ The client plugin exposes fully typed canonical methods under `authClient.paysta
 - `authClient.subscription.create`, `upgrade`, `cancel`, `restore`, `list`, `billingPortal`
 - `authClient.paystack.config`, `listProducts`, `listPlans`, plus the transaction/subscription helpers above
 
-Deprecated compatibility aliases remain available in `2.x` and are planned for removal in the clean `3.0.0` release:
+Legacy compatibility aliases remain available for migration, but new code should use the canonical methods:
 
 - `authClient.subscription.disable(...)` -> use `authClient.subscription.cancel(...)`
 - `authClient.subscription.enable(...)` -> use `authClient.subscription.restore(...)`
@@ -555,6 +563,17 @@ type initializeTransaction = {
   prorateAndCharge?: boolean;
   // ... same as upgradeSubscription
 };
+
+type initializeTransactionResult =
+  | {
+      kind: "checkout";
+      url: string;
+      reference: string;
+      accessCode: string;
+      redirect: true;
+    }
+  | { kind: "scheduled"; status: "success"; message: string; scheduled: true }
+  | { kind: "prorated"; status: "success"; message: string; prorated: true };
 ```
 
 ### `authClient.subscription.list`

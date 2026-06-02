@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
-  Buildings,
   CheckCircle,
   Clock,
   Coins,
@@ -10,7 +9,6 @@ import {
   Package,
   ShieldCheck,
   Sparkle,
-  User,
 } from "@phosphor-icons/react";
 import { authClient } from "@/lib/auth-client";
 import { paystackActions, subscriptionActions } from "@/lib/paystack-client";
@@ -24,25 +22,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
+  type PaystackInitializeResult,
   type PaystackPlan,
   type PaystackProduct,
   type Subscription,
 } from "@alexasomba/better-auth-paystack";
+import { parsePaystackMetadata } from "@alexasomba/better-auth-paystack/client";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  ActionMessageBanner,
+  type OperationMessage,
+} from "@/components/dashboard/payment/ActionMessageBanner";
+import {
+  BillingTargetSelector,
+  type BillingOrganization,
+} from "@/components/dashboard/payment/BillingTargetSelector";
+import { TrustedServerOperations } from "@/components/dashboard/payment/TrustedServerOperations";
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-}
+type Organization = BillingOrganization;
 
 interface SyncResult {
   status: "success";
@@ -54,11 +50,6 @@ interface RenewalResult {
   reference: string | null;
 }
 
-interface OperationMessage {
-  tone: "success" | "error" | "info";
-  text: string;
-}
-
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message !== "" ? error.message : fallback;
 }
@@ -67,49 +58,20 @@ function getProductPrice(product: PaystackProduct & { amount?: number }) {
   return product.price ?? product.amount;
 }
 
-type InitializeTransactionData =
-  | {
-      url: string;
-      reference: string;
-      accessCode: string;
-      redirect: boolean;
-    }
-  | {
-      status: string;
-      message: string;
-      scheduled: boolean;
-    }
-  | {
-      status: string;
-      message: string;
-      prorated: boolean;
-    };
-
 function hasRedirectUrl(
-  data: InitializeTransactionData | null | undefined,
-): data is Extract<InitializeTransactionData, { url: string }> {
-  return data !== null && data !== undefined && "url" in data && typeof data.url === "string";
+  data: PaystackInitializeResult | null | undefined,
+): data is Extract<PaystackInitializeResult, { kind: "checkout" }> {
+  return data?.kind === "checkout" && data.url !== "";
 }
 
-function isProratedResult(data: InitializeTransactionData | null | undefined): data is Extract<
-  InitializeTransactionData,
-  { prorated: boolean }
-> & {
-  prorated: true;
-} {
-  return data !== null && data !== undefined && "prorated" in data && data.prorated === true;
+function isProratedResult(
+  data: PaystackInitializeResult | null | undefined,
+): data is Extract<PaystackInitializeResult, { kind: "prorated" }> {
+  return data?.kind === "prorated";
 }
 
-function getInitializeMessage(
-  data: InitializeTransactionData | null | undefined,
-  fallback: string,
-) {
-  return data !== null &&
-    data !== undefined &&
-    "message" in data &&
-    typeof data.message === "string"
-    ? data.message
-    : fallback;
+function getInitializeMessage(data: PaystackInitializeResult | null | undefined, fallback: string) {
+  return data?.kind === "scheduled" || data?.kind === "prorated" ? data.message : fallback;
 }
 
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
@@ -284,7 +246,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         }
       }
       const res = await paystackActions.initializeTransaction(initPayload);
-      const data = res.data as InitializeTransactionData | null | undefined;
+      const data = res.data as PaystackInitializeResult | null | undefined;
       if (hasRedirectUrl(data)) {
         window.location.href = data.url;
       } else {
@@ -321,10 +283,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         payload.referenceId = selectedBillingTarget;
       }
 
-      await paystackActions.initializeTransaction(payload);
+      const res = await paystackActions.initializeTransaction(payload);
+      const data = res.data as PaystackInitializeResult | null | undefined;
       setActionMessage({
         tone: "success",
-        text: "Plan change scheduled for the end of the current billing period.",
+        text: getInitializeMessage(
+          data,
+          "Plan change scheduled for the end of the current billing period.",
+        ),
       });
     } catch (e: unknown) {
       setActionMessage({
@@ -360,7 +326,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       }
 
       const res = await paystackActions.initializeTransaction(payload);
-      const data = res.data as InitializeTransactionData | null | undefined;
+      const data = res.data as PaystackInitializeResult | null | undefined;
       if (hasRedirectUrl(data)) {
         window.location.href = data.url;
       } else if (isProratedResult(data)) {
@@ -402,8 +368,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     setActionLoading(true);
     setActionMessage(null);
     try {
-      const metadata =
-        typeof product.metadata === "string" ? JSON.parse(product.metadata) : product.metadata;
+      const metadata = parsePaystackMetadata(product.metadata);
       const res = await paystackActions.initializeTransaction({
         product: product.name,
         amount: product.price ?? 0,
@@ -411,7 +376,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         metadata: metadata as Record<string, unknown>,
         callbackURL: `${window.location.origin}/billing/paystack/callback`,
       });
-      const data = res.data as InitializeTransactionData | null | undefined;
+      const data = res.data as PaystackInitializeResult | null | undefined;
       if (hasRedirectUrl(data)) {
         window.location.href = data.url;
       } else {
@@ -597,19 +562,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           </div>
         </CardHeader>
         <CardContent className="space-y-8">
-          {actionMessage !== null && (
-            <div
-              className={cn(
-                "rounded-lg border px-3 py-2 text-xs",
-                actionMessage.tone === "error" && "border-red-200 bg-red-50 text-red-700",
-                actionMessage.tone === "success" &&
-                  "border-emerald-200 bg-emerald-50 text-emerald-700",
-                actionMessage.tone === "info" && "border-blue-200 bg-blue-50 text-blue-700",
-              )}
-            >
-              {actionMessage.text}
-            </div>
-          )}
+          <ActionMessageBanner message={actionMessage} />
 
           {/* Active Subscription Summary */}
           {activeSubscription && (
@@ -698,69 +651,13 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             </div>
           )}
 
-          {/* Billing Target Selector */}
-          {organizations.length > 0 && (
-            <div className="p-4 bg-muted/30 border border-dashed rounded-lg">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Buildings weight="duotone" size={20} className="text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Bill To</p>
-                  <p className="text-xs text-muted-foreground">
-                    Choose who will be charged for this subscription
-                  </p>
-                </div>
-              </div>
-              <Select
-                data-testid="billing-target-select"
-                value={selectedBillingTarget}
-                onValueChange={(val) => val !== null && val !== "" && setSelectedBillingTarget(val)}
-              >
-                <SelectTrigger className="w-full max-w-xs">
-                  <SelectValue placeholder="Select billing target" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="personal">
-                    <div className="flex items-center gap-2">
-                      <User size={16} />
-                      <span>Personal Account</span>
-                    </div>
-                  </SelectItem>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      <div className="flex items-center gap-2">
-                        <Buildings size={16} />
-                        <span>{org.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {selectedBillingTarget !== "personal" && (
-                <div className="mt-4 pt-4 border-t border-dashed">
-                  <Label htmlFor="seats" className="text-xs font-medium mb-1.5 block">
-                    Number of Seats
-                  </Label>
-                  <div className="flex items-center gap-3">
-                    <Input
-                      id="seats"
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={quantity}
-                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-24 h-9"
-                    />
-                    <p className="text-[10px] text-muted-foreground italic">
-                      Pricing scales linearly based on seat count.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <BillingTargetSelector
+            organizations={organizations}
+            selectedBillingTarget={selectedBillingTarget}
+            quantity={quantity}
+            onBillingTargetChange={setSelectedBillingTarget}
+            onQuantityChange={setQuantity}
+          />
 
           {/* Local Plans Section */}
           <div className="space-y-4">
@@ -780,91 +677,18 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             </div>
           </div>
 
-          <div className="rounded-2xl border border-dashed p-5 space-y-4 bg-muted/20">
-            <div>
-              <h3 className="text-lg font-semibold">Trusted Server Operations</h3>
-              <p className="text-xs text-muted-foreground">
-                These actions stay server-owned in the real plugin. This example exposes a small
-                authenticated dashboard for inspection and manual triggering.
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border bg-background p-4 space-y-3">
-                <p className="text-sm font-medium">Catalog Sync</p>
-                <p className="text-xs text-muted-foreground">
-                  Local cache: {nativeProducts.length} synced products, {nativePlans.length} synced
-                  plans.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleSyncProducts}
-                    disabled={serverOpsLoading !== null}
-                    className="h-9"
-                  >
-                    {serverOpsLoading === "products" ? "Syncing Products..." : "Sync Products"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleSyncPlans}
-                    disabled={serverOpsLoading !== null}
-                    className="h-9"
-                  >
-                    {serverOpsLoading === "plans" ? "Syncing Plans..." : "Sync Plans"}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-xl border bg-background p-4 space-y-3">
-                <p className="text-sm font-medium">Manual Renewal Charge</p>
-                <p className="text-xs text-muted-foreground">
-                  Demonstrates the trusted renewal helper for locally managed subscriptions with a
-                  saved authorization code.
-                </p>
-                <Select
-                  value={selectedRenewalSubscriptionId}
-                  onValueChange={(value) =>
-                    value !== null && setSelectedRenewalSubscriptionId(value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a local subscription" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {localRenewalCandidates.map((subscription) => (
-                      <SelectItem key={subscription.id} value={subscription.id}>
-                        {subscription.plan} · {subscription.referenceId}
-                      </SelectItem>
-                    ))}
-                    {localRenewalCandidates.length === 0 && (
-                      <SelectItem value="none" disabled>
-                        No local renewal candidates
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  onClick={handleChargeRenewal}
-                  disabled={
-                    serverOpsLoading !== null ||
-                    selectedRenewalSubscriptionId === "" ||
-                    localRenewalCandidates.length === 0
-                  }
-                  className="h-9"
-                >
-                  {serverOpsLoading === "renewal" ? "Charging Renewal..." : "Charge Renewal"}
-                </Button>
-              </div>
-            </div>
-
-            {serverOpsMessage !== null && serverOpsMessage !== "" && (
-              <p className="text-xs text-muted-foreground">{serverOpsMessage}</p>
-            )}
-          </div>
+          <TrustedServerOperations
+            nativeProducts={nativeProducts}
+            nativePlans={nativePlans}
+            localRenewalCandidates={localRenewalCandidates}
+            selectedRenewalSubscriptionId={selectedRenewalSubscriptionId}
+            serverOpsLoading={serverOpsLoading}
+            serverOpsMessage={serverOpsMessage}
+            onRenewalSubscriptionChange={setSelectedRenewalSubscriptionId}
+            onSyncProducts={handleSyncProducts}
+            onSyncPlans={handleSyncPlans}
+            onChargeRenewal={handleChargeRenewal}
+          />
 
           {/* Native Plans Section */}
           <div className="space-y-4 border-t pt-8 border-dashed">
@@ -901,19 +725,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {actionMessage !== null && (
-          <div
-            className={cn(
-              "rounded-lg border px-3 py-2 text-xs",
-              actionMessage.tone === "error" && "border-red-200 bg-red-50 text-red-700",
-              actionMessage.tone === "success" &&
-                "border-emerald-200 bg-emerald-50 text-emerald-700",
-              actionMessage.tone === "info" && "border-blue-200 bg-blue-50 text-blue-700",
-            )}
-          >
-            {actionMessage.text}
-          </div>
-        )}
+        <ActionMessageBanner message={actionMessage} />
 
         <div className="space-y-6">
           <div className="space-y-4">

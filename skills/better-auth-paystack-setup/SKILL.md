@@ -4,9 +4,9 @@ description: >
   Configure @alexasomba/better-auth-paystack with Better Auth. Use when adding the paystack() server plugin, paystackClient() client plugin, schema overrides, products/plans, webhook secrets, or canonical authClient.paystack/subscription/transaction actions.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.5.1" # x-release-please-version
+library_version: "3.0.0" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/index.ts"
@@ -75,8 +75,11 @@ export const authClient = createAuthClient({
 The client plugin exposes these namespaces:
 
 ```ts
-await authClient.paystack.getConfig();
-await authClient.transaction.initialize({ amount: 500_000, email: "user@example.com" });
+await authClient.paystack.config();
+await authClient.transaction.initialize({
+  amount: 500_000,
+  email: "user@example.com",
+});
 await authClient.transaction.verify({ reference: "trx_ref" });
 await authClient.transaction.list();
 await authClient.subscription.create({ plan: "pro" });
@@ -87,7 +90,7 @@ await authClient.subscription.list();
 await authClient.subscription.billingPortal();
 ```
 
-`subscription.disable` and `subscription.enable` still exist as deprecated aliases in the 2.x line. Prefer `cancel` and `restore` in new code.
+`subscription.disable` and `subscription.enable` are legacy compatibility aliases. Prefer `cancel` and `restore` in new code.
 
 ### Keep schema behavior stable
 

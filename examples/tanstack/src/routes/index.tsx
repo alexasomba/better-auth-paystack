@@ -19,8 +19,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { linkHeader } from "@/lib/agent-discovery";
+import { createHomeStructuredData, createSeoHead, defaultSeoDescription } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
+  head: () =>
+    createSeoHead({
+      title: "TanStack Start Billing Demo",
+      description: defaultSeoDescription,
+      path: "/",
+      structuredData: createHomeStructuredData(),
+    }),
   headers: () => ({
     Link: linkHeader,
   }),

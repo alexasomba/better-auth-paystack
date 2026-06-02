@@ -1,6 +1,6 @@
 {
   "name": "@alexasomba/better-auth-paystack",
-  "version": "2.5.1",
+  "version": "3.0.0",
   "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "keywords": [
     "africa",
@@ -74,7 +74,7 @@
     "coverage": "vp test run --coverage",
     "lint": "vp lint src",
     "lint:package": "publint run --strict",
-    "lint:types": "attw --profile esm-only --pack .",
+    "lint:types": "node scripts/lint-types-packed.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "skills:install": "skills-npm --cwd examples/tanstack --yes --force",
     "skills:dry-run": "skills-npm --cwd examples/tanstack --dry-run --yes --agents universal --force"
@@ -107,7 +107,7 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.23"
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.24"
   },
   "peerDependencies": {
     "better-auth": "catalog:"

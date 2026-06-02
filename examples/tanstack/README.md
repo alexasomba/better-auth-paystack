@@ -15,6 +15,7 @@ A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin w
 - [x] **Plan Code subscriptions** - Use Paystack-managed plans (`planCode`)
 - [x] **Admin Plugin** - Native Better Auth administrative capabilities
 - [x] Dynamic plan configuration via `/paystack/config`
+- [x] Route-level SEO metadata, sitemap, and robots.txt
 
 ## Tech Stack
 
@@ -40,8 +41,8 @@ Create a `.dev.vars` file:
 PAYSTACK_SECRET_KEY=sk_test_...
 PAYSTACK_WEBHOOK_SECRET=sk_test_...
 BETTER_AUTH_SECRET=your-secret-key
-BETTER_AUTH_URL=http://localhost:8787
-VITE_BETTER_AUTH_URL=http://localhost:8787
+BETTER_AUTH_URL=http://localhost:3000
+VITE_BETTER_AUTH_URL=http://localhost:3000
 ```
 
 ### 3. Run development server
@@ -50,7 +51,7 @@ VITE_BETTER_AUTH_URL=http://localhost:8787
 pnpm dev
 ```
 
-Open [http://localhost:8787](http://localhost:8787) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### 4. Build for production
 
@@ -154,7 +155,7 @@ const result = await authClient.paystack.initializeTransaction({
   referenceId: "org_123", // Organization ID
 });
 
-if (result.data?.url) {
+if (result.data?.kind === "checkout") {
   window.location.href = result.data.url;
 }
 ```

@@ -44,8 +44,41 @@ jobs:
       - name: Build package
         run: pnpm exec vp pack
 
+      - name: Inspect packed package manifest
+        shell: bash
+        run: |
+          PACK_DIR="$RUNNER_TEMP/npm-pack"
+          mkdir -p "$PACK_DIR"
+          pnpm pack --pack-destination "$PACK_DIR"
+
+          TARBALL="$(find "$PACK_DIR" -maxdepth 1 -name '*.tgz' -print -quit)"
+          if [[ -z "$TARBALL" ]]; then
+            echo "::error ::pnpm pack did not produce a tarball."
+            exit 1
+          fi
+
+          tar -xOf "$TARBALL" package/package.json > "$PACK_DIR/package.json"
+          if grep -q "catalog:" "$PACK_DIR/package.json"; then
+            echo "::error ::Packed package.json still contains catalog: specifiers."
+            exit 1
+          fi
+
+          node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (pkg.pnpm?.patchedDependencies || pkg.patchedDependencies) { console.error("::error ::Packed package.json contains publish-time patch metadata."); process.exit(1); }' "$PACK_DIR/package.json"
+
       - name: Lint package metadata
         run: pnpm run lint:package
 
       - name: Lint package types
         run: pnpm run lint:types
+
+      - name: TanStack example check
+        run: pnpm --dir examples/tanstack run check:ci
+
+      - name: TanStack example test
+        run: pnpm --dir examples/tanstack run test
+
+      - name: TanStack example build
+        run: pnpm --dir examples/tanstack run build
+
+      - name: TanStack example Wrangler dry-run
+        run: pnpm --dir examples/tanstack run wrangler:dry-run

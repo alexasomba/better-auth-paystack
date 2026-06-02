@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { paystack } from "../src/index.ts";
 import { paystackClient } from "../src/client.ts";
+import { expectCheckoutResult } from "./helpers/paystack-results";
 
 describe("examples/nextjs integration - paystack flow", () => {
   beforeEach(() => {
@@ -106,6 +107,7 @@ describe("examples/nextjs integration - paystack flow", () => {
 
     const init = await authClient.paystack.initializeTransaction({ plan: "starter" });
     if (init.error) throw new Error("Initialization failed");
+    expectCheckoutResult(init.data);
     expect(init.data.url).toBe("https://paystack/checkout");
     const reference = init.data.reference;
     expect(reference).toBe("ref_123");
