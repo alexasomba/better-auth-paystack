@@ -24,6 +24,12 @@ catalogs:
     '@cloudflare/vite-plugin':
       specifier: ^1.39.0
       version: 1.39.0
+    '@commitlint/cli':
+      specifier: ^21.0.2
+      version: 21.0.2
+    '@commitlint/config-conventional':
+      specifier: ^21.0.2
+      version: 21.0.2
     '@eslint/compat':
       specifier: ^2.1.0
       version: 2.1.0
@@ -54,6 +60,9 @@ catalogs:
     '@tanstack/eslint-plugin-router':
       specifier: ^1.161.6
       version: 1.161.6
+    '@tanstack/intent':
+      specifier: ^0.0.41
+      version: 0.0.41
     '@tanstack/react-devtools':
       specifier: ^0.10.5
       version: 0.10.5
@@ -165,6 +174,9 @@ catalogs:
     react-dom:
       specifier: ^19.2.6
       version: 19.2.6
+    skills-npm:
+      specifier: ^1.1.1
+      version: 1.1.1
     tailwind-merge:
       specifier: ^3.6.0
       version: 3.6.0
@@ -230,10 +242,10 @@ importers:
         specifier: 'catalog:'
         version: 1.1.21
       '@commitlint/cli':
-        specifier: ^21.0.2
+        specifier: 'catalog:'
         version: 21.0.2(@types/node@24.12.4)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
       '@commitlint/config-conventional':
-        specifier: ^21.0.2
+        specifier: 'catalog:'
         version: 21.0.2
       '@eslint/compat':
         specifier: 'catalog:'
@@ -242,7 +254,7 @@ importers:
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.2.0(jiti@2.7.0))
       '@tanstack/intent':
-        specifier: ^0.0.41
+        specifier: 'catalog:'
         version: 0.0.41
       '@types/node':
         specifier: 'catalog:'
@@ -275,7 +287,7 @@ importers:
         specifier: 'catalog:'
         version: 0.3.21
       skills-npm:
-        specifier: ^1.1.1
+        specifier: 'catalog:'
         version: 1.1.1
       typescript:
         specifier: 'catalog:'

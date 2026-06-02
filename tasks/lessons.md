@@ -1,3 +1,4 @@
 - 2026-06-01: Keep the published package engine floor at Node.js `>=22.0.0`; do not restore it to `>=24.0.0` during release cleanup unless explicitly requested.
 - 2026-06-01: npmjs publish is not complete unless the latest package page shows provenance and installs cleanly; for pnpm catalog workspaces, publish the `pnpm pack` tarball with `npm publish --provenance` so catalog specifiers are rewritten before npm signs the package.
 - 2026-06-01: Keep `catalog:` specifiers in workspace/source manifests where pnpm supports them; verify the packed npm tarball has concrete versions instead of replacing valid source catalogs by hand.
+- 2026-06-02: When adding or reviewing package versions, check every workspace manifest for remaining direct semver specs; add them to `pnpm-workspace.yaml` catalog and use `catalog:` when pnpm can resolve them.
