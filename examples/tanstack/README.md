@@ -154,7 +154,7 @@ const result = await authClient.paystack.initializeTransaction({
   referenceId: "org_123", // Organization ID
 });
 
-if (result.data?.url) {
+if (result.data?.kind === "checkout") {
   window.location.href = result.data.url;
 }
 ```

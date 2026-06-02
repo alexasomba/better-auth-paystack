@@ -38,6 +38,21 @@ import type {
 import { createPaystackAdapter } from "./paystack-sdk";
 import { PACKAGE_VERSION } from "./version";
 import { createBillingStoreFromAdapter } from "./billing-store";
+import { stringifyPaystackMetadata } from "./metadata";
+
+export {
+  createCheckoutMetadata,
+  createProrationMetadata,
+  createRenewalMetadata,
+  getMetadataBoolean,
+  getMetadataNumber,
+  getMetadataString,
+  hasPaystackMetadata,
+  parsePaystackMetadata,
+  stringifyPaystackMetadata,
+} from "./metadata";
+export type { PaystackMetadata } from "./metadata";
+export type { PaystackInitializeResult } from "./types";
 
 declare module "better-auth" {
   interface BetterAuthPluginRegistry<AuthOptions, Options> {
@@ -186,9 +201,7 @@ const createPaystackPlugin = <
                     ).createCustomer({
                       email: user.email,
                       first_name: user.name ?? undefined,
-                      metadata: JSON.stringify({
-                        userId: user.id,
-                      }),
+                      metadata: stringifyPaystackMetadata({ userId: user.id }),
                     })) as PaystackCustomerResponse;
                     const customerCode = sdkRes?.customer_code;
 
@@ -257,7 +270,7 @@ const createPaystackPlugin = <
                             {
                               email: targetEmail,
                               first_name: org.name,
-                              metadata: JSON.stringify({ organizationId: org.id }),
+                              metadata: stringifyPaystackMetadata({ organizationId: org.id }),
                             },
                             extraCreateParams,
                           );

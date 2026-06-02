@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vite-plus/te
 import { paystackClient } from "../src/client.ts";
 import { referenceMiddleware } from "../src/middleware.ts";
 import { getSchema } from "../src/schema.ts";
+import { expectCheckoutResult } from "./helpers/paystack-results";
 import type {
   Subscription,
   PaystackOptions,
@@ -1137,11 +1138,8 @@ describe("paystack", () => {
       { throw: true },
     );
 
-    if (res && "url" in res) {
-      expect(res.url).toBe("https://paystack.test/buy");
-    } else {
-      throw new Error("Expected success response with url");
-    }
+    expectCheckoutResult(res);
+    expect(res.url).toBe("https://paystack.test/buy");
     expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
@@ -1729,6 +1727,7 @@ describe("paystack", () => {
       { throw: true },
     );
 
+    expectCheckoutResult(res);
     expect(res.url).toBe("https://paystack.test/trial");
 
     // Check the subscription was created without trial dates
@@ -2170,6 +2169,7 @@ describe("paystack", () => {
       callbackURL: "http://localhost:3000/callback",
     });
 
+    expectCheckoutResult(data);
     expect(data?.url).toBeDefined();
 
     expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith(

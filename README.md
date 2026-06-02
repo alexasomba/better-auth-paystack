@@ -315,7 +315,7 @@ Use `@alexasomba/paystack-inline` for a seamless UI.
 
 ```ts
 const { data } = await authClient.subscription.upgrade({ plan: "pro" });
-if (data?.accessCode) {
+if (data?.kind === "checkout") {
   const paystack = createPaystack({ publicKey: "pk_test_..." });
   paystack.checkout({
     accessCode: data.accessCode,
@@ -341,11 +341,19 @@ For locally managed plans:
 - If the prorated amount is below Paystack's minimum charge for the currency, the request is rejected so you can schedule the change for period end instead of undercharging.
 
 ```ts
-await authClient.paystack.transaction.initialize({
+const { data } = await authClient.paystack.transaction.initialize({
   plan: "pro",
   quantity: 5, // Upgrading seats
   prorateAndCharge: true, // Charges saved authorization or returns a checkout redirect for the delta
 });
+
+if (data?.kind === "checkout") {
+  window.location.href = data.url;
+}
+
+if (data?.kind === "prorated") {
+  console.log(data.message);
+}
 ```
 
 When the flow falls back to checkout, verify the returned transaction reference after payment. The plugin uses the stored proration metadata to apply the pending plan/seat change only after successful verification.
@@ -555,6 +563,11 @@ type initializeTransaction = {
   prorateAndCharge?: boolean;
   // ... same as upgradeSubscription
 };
+
+type initializeTransactionResult =
+  | { kind: "checkout"; url: string; reference: string; accessCode: string; redirect: true }
+  | { kind: "scheduled"; status: "success"; message: string; scheduled: true }
+  | { kind: "prorated"; status: "success"; message: string; prorated: true };
 ```
 
 ### `authClient.subscription.list`

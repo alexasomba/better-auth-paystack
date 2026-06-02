@@ -86,6 +86,8 @@ jobs:
             exit 1
           fi
 
+          node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (pkg.pnpm?.patchedDependencies || pkg.patchedDependencies) { console.error("::error ::Packed package.json contains publish-time patch metadata."); process.exit(1); }' "$PACK_DIR/package.json"
+
           PACKED_NAME="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); console.log(pkg.name);' "$PACK_DIR/package.json")"
           PACKED_VERSION="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); console.log(pkg.version);' "$PACK_DIR/package.json")"
           if [[ "$PACKED_VERSION" != "$release_version" ]]; then

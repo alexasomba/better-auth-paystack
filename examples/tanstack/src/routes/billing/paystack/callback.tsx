@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { verifyPaystackCallbackServerFn, type VerifyCallbackResult } from "@/lib/paystack-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { parsePaystackMetadata } from "@alexasomba/better-auth-paystack/client";
 
 export const Route = createFileRoute("/billing/paystack/callback")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -37,17 +38,7 @@ export function CallbackPage() {
           throw new Error("Verification did not complete successfully");
         }
 
-        const metadataRaw = (result.data as { metadata?: unknown }).metadata;
-        const metadata = (() => {
-          if (typeof metadataRaw === "string") {
-            try {
-              return JSON.parse(metadataRaw) as Record<string, unknown>;
-            } catch {
-              return {};
-            }
-          }
-          return (metadataRaw as Record<string, unknown> | null | undefined) ?? {};
-        })();
+        const metadata = parsePaystackMetadata((result.data as { metadata?: unknown }).metadata);
 
         const isTrial = metadata.isTrial === true || metadata.isTrial === "true";
         const trialRequested =

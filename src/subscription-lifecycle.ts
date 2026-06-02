@@ -3,6 +3,7 @@ import { APIError } from "better-auth/api";
 import type { components } from "@alexasomba/paystack-node";
 
 import { createBillingStore } from "./billing-store";
+import { getOrganizationSubscription } from "./limits";
 import { createPaystackAdapter } from "./paystack-sdk";
 import {
   assertLocallyManagedSubscription,
@@ -14,16 +15,15 @@ import type {
   AnyPaystackOptions,
   PaystackChargeAuthorizationResponse,
   PaystackCheckoutChannel,
+  PaystackInitializeResult,
   PaystackPlan,
+  Subscription,
+  User,
 } from "./types";
+import { createProrationMetadata, stringifyPaystackMetadata } from "./metadata";
 
 export type ProratedUpgradeOutcome =
-  | {
-      kind: "completed";
-      status: "success";
-      message: string;
-      prorated: true;
-    }
+  | Extract<PaystackInitializeResult, { kind: "prorated" }>
   | {
       kind: "checkout";
       url: string | undefined;
@@ -31,6 +31,177 @@ export type ProratedUpgradeOutcome =
       accessCode: string | undefined;
       redirect: true;
     };
+
+export interface TrialLifecycleDecision {
+  trialStart?: Date;
+  trialEnd?: Date;
+  requestedDays: number;
+  requested: boolean;
+  granted: boolean;
+  deniedReason?: "already_used";
+}
+
+export async function scheduleSubscriptionLifecycleChange(
+  ctx: GenericEndpointContext,
+  input: {
+    referenceId: string;
+    plan?: PaystackPlan;
+    scheduleAtPeriodEnd?: boolean;
+    cancelAtPeriodEnd?: boolean;
+  },
+): Promise<Extract<PaystackInitializeResult, { kind: "scheduled" }> | null> {
+  if (input.plan !== undefined && input.scheduleAtPeriodEnd === true) {
+    const existingSub = await getOrganizationSubscription(ctx, input.referenceId);
+    if (existingSub?.status === "active") {
+      await ctx.context.adapter.update({
+        model: "subscription",
+        where: [{ field: "id", value: existingSub.id }],
+        update: {
+          pendingPlan: input.plan.name,
+          updatedAt: new Date(),
+        },
+      });
+      return {
+        kind: "scheduled",
+        status: "success",
+        message: "Plan change scheduled at period end.",
+        scheduled: true,
+      };
+    }
+  }
+
+  if (input.cancelAtPeriodEnd === true) {
+    const existingSub = await getOrganizationSubscription(ctx, input.referenceId);
+    if (existingSub?.status === "active") {
+      await ctx.context.adapter.update({
+        model: "subscription",
+        where: [{ field: "id", value: existingSub.id }],
+        update: {
+          cancelAtPeriodEnd: true,
+          updatedAt: new Date(),
+        },
+      });
+
+      return {
+        kind: "scheduled",
+        status: "success",
+        message: "Subscription cancellation scheduled at period end.",
+        scheduled: true,
+      };
+    }
+  }
+
+  return null;
+}
+
+export async function resolveTrialLifecycle(
+  ctx: GenericEndpointContext,
+  input: {
+    referenceId: string;
+    plan?: PaystackPlan;
+  },
+): Promise<TrialLifecycleDecision> {
+  const requestedDays =
+    input.plan?.freeTrial?.days !== undefined && input.plan.freeTrial.days > 0
+      ? input.plan.freeTrial.days
+      : 0;
+  const requested = requestedDays > 0;
+  if (!requested) {
+    return {
+      requestedDays,
+      requested: false,
+      granted: false,
+    };
+  }
+
+  const previousTrials = await ctx.context.adapter.findMany<Subscription>({
+    model: "subscription",
+    where: [{ field: "referenceId", value: input.referenceId }],
+  });
+  const hadTrial = previousTrials?.some(
+    (subscription) =>
+      (subscription.trialStart !== undefined && subscription.trialStart !== null) ||
+      (subscription.trialEnd !== undefined && subscription.trialEnd !== null) ||
+      subscription.status === "trialing",
+  );
+
+  if (hadTrial === true) {
+    return {
+      requestedDays,
+      requested,
+      granted: false,
+      deniedReason: "already_used",
+    };
+  }
+
+  const trialStart = new Date();
+  const trialEnd = new Date();
+  trialEnd.setDate(trialEnd.getDate() + requestedDays);
+
+  return {
+    trialStart,
+    trialEnd,
+    requestedDays,
+    requested,
+    granted: true,
+  };
+}
+
+export async function resolveCheckoutTargetEmail(
+  ctx: GenericEndpointContext,
+  options: AnyPaystackOptions,
+  input: {
+    email?: string;
+    referenceId: string;
+    user: User;
+  },
+): Promise<string> {
+  const targetEmail = input.email ?? input.user.email;
+
+  if (
+    options.organization?.enabled !== true ||
+    input.referenceId === input.user.id ||
+    input.referenceId === ""
+  ) {
+    return targetEmail;
+  }
+
+  const org = await ctx.context.adapter.findOne({
+    model: "organization",
+    where: [{ field: "id", value: input.referenceId }],
+  });
+  if (org === undefined || org === null) {
+    return targetEmail;
+  }
+
+  const orgWithEmail = org as { email?: string | null };
+  if (
+    orgWithEmail.email !== undefined &&
+    orgWithEmail.email !== null &&
+    orgWithEmail.email !== ""
+  ) {
+    return orgWithEmail.email;
+  }
+
+  const ownerMember = await ctx.context.adapter.findOne({
+    model: "member",
+    where: [
+      { field: "organizationId", value: input.referenceId },
+      { field: "role", value: "owner" },
+    ],
+  });
+
+  if (ownerMember === undefined || ownerMember === null) {
+    return targetEmail;
+  }
+
+  const ownerUser = (await ctx.context.adapter.findOne({
+    model: "user",
+    where: [{ field: "id", value: (ownerMember as { userId: string }).userId }],
+  })) as User | null;
+
+  return ownerUser?.email !== undefined && ownerUser.email !== "" ? ownerUser.email : targetEmail;
+}
 
 export async function handleProratedUpgrade(
   ctx: GenericEndpointContext,
@@ -102,15 +273,15 @@ export async function handleProratedUpgrade(
   }
 
   const costDifference = newAmount - oldAmount;
-  const prorationMetadata = {
-    type: "proration",
+  const prorationMetadata = createProrationMetadata({
     subscriptionId: existingSub.id,
     referenceId: input.referenceId,
     newPlan: input.plan.name.toLowerCase(),
     oldPlan: existingSub.plan,
     newSeatCount,
     remainingDays,
-  };
+  });
+  const serializedProrationMetadata = stringifyPaystackMetadata(prorationMetadata);
   let completedProrationReference: string | undefined;
 
   if (costDifference > 0 && remainingDays > 0) {
@@ -134,7 +305,7 @@ export async function handleProratedUpgrade(
         amount: proratedAmount,
         authorization_code: existingSub.paystackAuthorizationCode,
         reference: `upg_${existingSub.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-        metadata: JSON.stringify(prorationMetadata),
+        metadata: serializedProrationMetadata,
       })) as PaystackChargeAuthorizationResponse;
 
       if (sdkRes?.status !== "success") {
@@ -152,7 +323,7 @@ export async function handleProratedUpgrade(
         currency: sdkRes.currency ?? input.finalCurrency,
         status: "success",
         plan: input.plan.name.toLowerCase(),
-        metadata: JSON.stringify(prorationMetadata),
+        metadata: serializedProrationMetadata,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -163,7 +334,7 @@ export async function handleProratedUpgrade(
         amount: proratedAmount,
         currency: input.finalCurrency,
         callback_url: input.callbackURL ?? undefined,
-        metadata: JSON.stringify(prorationMetadata),
+        metadata: serializedProrationMetadata,
         ...(input.allowedSubscriptionChannels !== undefined
           ? { channels: input.allowedSubscriptionChannels }
           : {}),
@@ -177,7 +348,7 @@ export async function handleProratedUpgrade(
         currency: input.finalCurrency,
         status: "pending",
         plan: input.plan.name.toLowerCase(),
-        metadata: JSON.stringify(prorationMetadata),
+        metadata: serializedProrationMetadata,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -202,7 +373,7 @@ export async function handleProratedUpgrade(
   });
 
   return {
-    kind: "completed",
+    kind: "prorated",
     status: "success",
     message: "Subscription successfully upgraded with prorated charge.",
     prorated: true,
