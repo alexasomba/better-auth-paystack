@@ -4,8 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { verifyPaystackCallbackServerFn, type VerifyCallbackResult } from "@/lib/paystack-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parsePaystackMetadata } from "@alexasomba/better-auth-paystack/client";
+import { createSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/billing/paystack/callback")({
+  head: () =>
+    createSeoHead({
+      title: "Paystack Checkout Callback",
+      description:
+        "Payment verification return page for the Better Auth Paystack TanStack Start example.",
+      path: "/billing/paystack/callback",
+      noIndex: true,
+    }),
   validateSearch: (search: Record<string, unknown>) => ({
     reference: typeof search.reference === "string" ? search.reference : undefined,
     trxref: typeof search.trxref === "string" ? search.trxref : undefined,

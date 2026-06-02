@@ -1,4 +1,10 @@
-const publicPages = ["/", "/billing/paystack/callback"] as const;
+const publicPages = [
+  {
+    path: "/",
+    changefreq: "weekly",
+    priority: "1.0",
+  },
+] as const;
 
 export const linkHeader =
   '</.well-known/api-catalog>; rel="api-catalog", </openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json", </api/health>; rel="status", <https://github.com/alexasomba/better-auth-paystack#readme>; rel="service-doc"';
@@ -7,10 +13,13 @@ export const homeMarkdown = `# Better Auth Paystack TanStack Start Example
 
 This example demonstrates Better Auth anonymous sessions with Paystack billing flows.
 
-## Public Pages
+## Crawlable Pages
 
 - Home: anonymous sign-in entry point.
-- Paystack callback: payment verification return path.
+
+## Transaction Routes
+
+- Paystack callback: payment verification return path, intentionally excluded from the sitemap.
 
 ## Agent Resources
 
@@ -83,9 +92,11 @@ export function absoluteUrl(origin: string, path: string) {
 
 export function getSitemapXml(origin: string) {
   const urls = publicPages
-    .map((path) => {
+    .map((page) => {
       return `  <url>
-    <loc>${absoluteUrl(origin, path)}</loc>
+    <loc>${absoluteUrl(origin, page.path)}</loc>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
   </url>`;
     })
     .join("\n");
