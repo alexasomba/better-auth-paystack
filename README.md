@@ -58,8 +58,8 @@ For this repository, maintainers can run `pnpm run skills:dry-run` to preview di
 
 ### Prerequisites
 
-- **Node.js**: `v24.0.0` or higher.
-- **Better Auth**: `v1.6.5` or higher.
+- **Node.js**: `v22.0.0` or higher.
+- **Better Auth**: `v1.6.9` or higher.
 
 ### 1. Install Plugin & SDKs
 
@@ -491,7 +491,7 @@ The client plugin exposes fully typed canonical methods under `authClient.paysta
 - `authClient.subscription.create`, `upgrade`, `cancel`, `restore`, `list`, `billingPortal`
 - `authClient.paystack.config`, `listProducts`, `listPlans`, plus the transaction/subscription helpers above
 
-Deprecated compatibility aliases remain available in `2.x` and are planned for removal in the clean `3.0.0` release:
+Legacy compatibility aliases remain available for migration, but new code should use the canonical methods:
 
 - `authClient.subscription.disable(...)` -> use `authClient.subscription.cancel(...)`
 - `authClient.subscription.enable(...)` -> use `authClient.subscription.restore(...)`
@@ -565,7 +565,13 @@ type initializeTransaction = {
 };
 
 type initializeTransactionResult =
-  | { kind: "checkout"; url: string; reference: string; accessCode: string; redirect: true }
+  | {
+      kind: "checkout";
+      url: string;
+      reference: string;
+      accessCode: string;
+      redirect: true;
+    }
   | { kind: "scheduled"; status: "success"; message: string; scheduled: true }
   | { kind: "prorated"; status: "success"; message: string; prorated: true };
 ```
