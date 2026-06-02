@@ -67,6 +67,51 @@ function getProductPrice(product: PaystackProduct & { amount?: number }) {
   return product.price ?? product.amount;
 }
 
+type InitializeTransactionData =
+  | {
+      url: string;
+      reference: string;
+      accessCode: string;
+      redirect: boolean;
+    }
+  | {
+      status: string;
+      message: string;
+      scheduled: boolean;
+    }
+  | {
+      status: string;
+      message: string;
+      prorated: boolean;
+    };
+
+function hasRedirectUrl(
+  data: InitializeTransactionData | null | undefined,
+): data is Extract<InitializeTransactionData, { url: string }> {
+  return data !== null && data !== undefined && "url" in data && typeof data.url === "string";
+}
+
+function isProratedResult(data: InitializeTransactionData | null | undefined): data is Extract<
+  InitializeTransactionData,
+  { prorated: boolean }
+> & {
+  prorated: true;
+} {
+  return data !== null && data !== undefined && "prorated" in data && data.prorated === true;
+}
+
+function getInitializeMessage(
+  data: InitializeTransactionData | null | undefined,
+  fallback: string,
+) {
+  return data !== null &&
+    data !== undefined &&
+    "message" in data &&
+    typeof data.message === "string"
+    ? data.message
+    : fallback;
+}
+
 export default function PaymentManager({ activeTab }: { activeTab: "subscriptions" | "one-time" }) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [config, setConfig] = useState<{
@@ -136,7 +181,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     try {
       const res = await paystackActions.listPlans();
       if (res.data?.plans !== undefined && res.data?.plans !== null) {
-        setNativePlans(res.data.plans as PaystackPlan[]);
+        setNativePlans(res.data.plans);
       }
     } catch (error: unknown) {
       setActionMessage({
@@ -239,10 +284,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         }
       }
       const res = await paystackActions.initializeTransaction(initPayload);
-      if (typeof res.data?.url === "string") {
-        window.location.href = res.data.url;
+      const data = res.data as InitializeTransactionData | null | undefined;
+      if (hasRedirectUrl(data)) {
+        window.location.href = data.url;
       } else {
-        setActionMessage({ tone: "error", text: "Failed to get redirect URL from Paystack." });
+        setActionMessage({
+          tone: "error",
+          text: "Failed to get redirect URL from Paystack.",
+        });
       }
     } catch (e: unknown) {
       setActionMessage({
@@ -311,9 +360,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       }
 
       const res = await paystackActions.initializeTransaction(payload);
-      if (typeof res.data?.url === "string") {
-        window.location.href = res.data.url;
-      } else if (res.data?.prorated === true) {
+      const data = res.data as InitializeTransactionData | null | undefined;
+      if (hasRedirectUrl(data)) {
+        window.location.href = data.url;
+      } else if (isProratedResult(data)) {
         setSubscriptions((current) =>
           current.map((subscription) =>
             subscription === activeSubscription
@@ -330,12 +380,12 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         );
         setActionMessage({
           tone: "success",
-          text: res.data?.message ?? "Subscription upgraded with proration.",
+          text: data.message,
         });
       } else {
         setActionMessage({
           tone: "success",
-          text: res.data?.message ?? "Upgrade processed successfully.",
+          text: getInitializeMessage(data, "Upgrade processed successfully."),
         });
       }
     } catch (e: unknown) {
@@ -361,10 +411,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         metadata: metadata as Record<string, unknown>,
         callbackURL: `${window.location.origin}/billing/paystack/callback`,
       });
-      if (typeof res.data?.url === "string") {
-        window.location.href = res.data.url;
+      const data = res.data as InitializeTransactionData | null | undefined;
+      if (hasRedirectUrl(data)) {
+        window.location.href = data.url;
       } else {
-        setActionMessage({ tone: "error", text: "Failed to get redirect URL from Paystack." });
+        setActionMessage({
+          tone: "error",
+          text: "Failed to get redirect URL from Paystack.",
+        });
       }
     } catch (e: unknown) {
       setActionMessage({

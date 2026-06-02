@@ -1,14 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { z } from "zod";
+import * as z from "zod/v4";
 import type { GenericEndpointContext } from "better-auth";
 import {
   chargeSubscriptionRenewal,
   syncPaystackPlans,
   syncPaystackProducts,
-  type PaystackTransactionResponse,
+  type Subscription,
 } from "@alexasomba/better-auth-paystack";
 import { auth, paystackOptions } from "@/lib/auth";
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 const renewalInputSchema = z.object({
   subscriptionId: z.string().min(1),
@@ -18,11 +20,33 @@ const verifyCallbackInputSchema = z.object({
   reference: z.string().min(1),
 });
 
-type VerifyCallbackResult = {
+export interface VerifyCallbackResult {
   status: string;
   reference: string;
-  data: PaystackTransactionResponse;
-};
+  data: {
+    status: string;
+    metadata?: JsonValue;
+  };
+}
+
+interface RawVerifyTransactionResult {
+  status: string;
+  reference: string;
+  data: {
+    status: string;
+    metadata?: unknown;
+  };
+}
+
+function toJsonValue(value: unknown): JsonValue | undefined {
+  if (value === undefined) return undefined;
+
+  try {
+    return JSON.parse(JSON.stringify(value)) as JsonValue;
+  } catch {
+    return undefined;
+  }
+}
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -52,14 +76,14 @@ function requirePaystackOptions(): NonNullable<typeof paystackOptions> {
 }
 
 async function getAuthenticatedContext() {
-  const headers = await getRequestHeaders();
+  const headers = getRequestHeaders();
   const session = await auth.api.getSession({ headers });
 
   if (session?.user === undefined || session.user === null) {
     throw new Error("You must be signed in to run trusted billing operations.");
   }
 
-  const ctx = { context: await auth.$context } as GenericEndpointContext;
+  const ctx = { context: auth.$context } as unknown as GenericEndpointContext;
 
   return { ctx, session };
 }
@@ -84,7 +108,7 @@ export const chargeRenewalServerFn = createServerFn({ method: "POST" })
     const input = serverCtx.data;
     const { ctx, session } = await getAuthenticatedContext();
 
-    const subscription = await ctx.context.adapter.findOne({
+    const subscription = await ctx.context.adapter.findOne<Subscription>({
       model: "subscription",
       where: [{ field: "id", value: input.subscriptionId }],
     });
@@ -124,22 +148,31 @@ export const chargeRenewalServerFn = createServerFn({ method: "POST" })
 export const verifyPaystackCallbackServerFn = createServerFn({ method: "POST" })
   .inputValidator(verifyCallbackInputSchema)
   .handler(async ({ data }) => {
-    const headers = await getRequestHeaders();
+    const headers = getRequestHeaders();
     let lastError: unknown;
 
     for (let attempt = 0; attempt < 4; attempt++) {
       try {
-        return (await auth.api.verifyTransaction({
+        const result = (await auth.api.verifyTransaction({
           body: { reference: data.reference },
           headers,
-        })) as VerifyCallbackResult;
+        })) as RawVerifyTransactionResult;
+
+        return {
+          status: result.status,
+          reference: result.reference,
+          data: {
+            status: result.data.status,
+            metadata: toJsonValue(result.data.metadata),
+          },
+        } satisfies VerifyCallbackResult;
       } catch (error: unknown) {
         lastError = error;
         const message = getErrorMessage(error);
         const shouldRetry = message.includes("Transaction reference not found") && attempt < 3;
 
         if (!shouldRetry) {
-          throw new Error(message);
+          throw new Error(message, { cause: error });
         }
 
         await new Promise((resolve) => {

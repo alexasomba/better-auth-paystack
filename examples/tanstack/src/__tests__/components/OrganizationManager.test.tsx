@@ -30,12 +30,16 @@ vi.mock("@phosphor-icons/react", () => ({
 describe("OrganizationManager component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(authClient.organization.list).mockResolvedValue({ data: [] } as never);
+    vi.mocked(authClient.organization.list).mockResolvedValue({
+      data: [],
+    } as never);
     vi.mocked(authClient.organization.create).mockResolvedValue({
       data: null,
       error: null,
     } as never);
-    vi.mocked(authClient.organization.setActive).mockResolvedValue({ data: null } as never);
+    vi.mocked(authClient.organization.setActive).mockResolvedValue({
+      data: null,
+    } as never);
     vi.mocked(authClient.organization.getFullOrganization).mockResolvedValue({
       data: { members: [] },
     } as never);

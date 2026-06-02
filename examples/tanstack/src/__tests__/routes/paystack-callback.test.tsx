@@ -72,7 +72,9 @@ describe("Paystack callback route", () => {
     render(<CallbackPage />);
 
     await waitFor(() => {
-      expect(verifyCallbackMock).toHaveBeenCalledWith({ data: { reference: "trx_123" } });
+      expect(verifyCallbackMock).toHaveBeenCalledWith({
+        data: { reference: "trx_123" },
+      });
       expect(screen.getByText("Payment Successful!")).toBeInTheDocument();
     });
   });

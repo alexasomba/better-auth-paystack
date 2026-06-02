@@ -4,7 +4,7 @@ import { absoluteUrl, getOrigin } from "@/lib/agent-discovery";
 export const Route = createFileRoute("/robots.txt")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: ({ request }) => {
         const origin = getOrigin(request);
 
         return new Response(

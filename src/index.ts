@@ -453,6 +453,7 @@ export type {
   PaystackPlan,
   PaystackOptions,
   PaystackProduct,
+  PaystackTransactionResponse,
   PaystackClientLike,
   ChargeRecurringSubscriptionResult,
   PaystackSyncResult,

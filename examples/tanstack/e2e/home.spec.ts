@@ -21,7 +21,9 @@ test.describe("Authentication Flow", () => {
     await page.goto("/");
 
     // Click guest sign in
-    const signInButton = page.getByRole("button", { name: "Login Anonymously" });
+    const signInButton = page.getByRole("button", {
+      name: "Login Anonymously",
+    });
     await signInButton.click();
 
     // Should redirect to dashboard
