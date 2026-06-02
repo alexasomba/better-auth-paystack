@@ -32,4 +32,4 @@ jobs:
             exit 1
           fi
 
-          gh workflow run publish-npm.yml --repo "$GITHUB_REPOSITORY" --ref main -f tag="$RELEASE_TAG"
+          gh workflow run publish-npm.yml --repo "$GITHUB_REPOSITORY" --ref "$RELEASE_TAG"
