@@ -4,7 +4,7 @@ import { getOpenApiDocument, getOrigin } from "@/lib/agent-discovery";
 export const Route = createFileRoute("/openapi.json")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: ({ request }) => {
         return Response.json(getOpenApiDocument(getOrigin(request)), {
           headers: {
             "Content-Type": "application/vnd.oai.openapi+json; charset=utf-8",

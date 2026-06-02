@@ -1,17 +1,31 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
-import { verifyPaystackCallbackServerFn } from "@/lib/paystack-admin";
+import { verifyPaystackCallbackServerFn, type VerifyCallbackResult } from "@/lib/paystack-admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { parsePaystackMetadata } from "@alexasomba/better-auth-paystack/client";
+import { createSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/billing/paystack/callback")({
+  head: () =>
+    createSeoHead({
+      title: "Paystack Checkout Callback",
+      description:
+        "Payment verification return page for the Better Auth Paystack TanStack Start example.",
+      path: "/billing/paystack/callback",
+      noIndex: true,
+    }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    reference: typeof search.reference === "string" ? search.reference : undefined,
+    trxref: typeof search.trxref === "string" ? search.trxref : undefined,
+  }),
   component: CallbackPage,
 });
 
 export function CallbackPage() {
   const router = useRouter();
   const verifyPaystackCallback = useServerFn(verifyPaystackCallbackServerFn);
-  const searchParams = Route.useSearch() as { reference?: string; trxref?: string };
+  const searchParams = Route.useSearch();
   const reference = searchParams.reference ?? searchParams.trxref;
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [error, setError] = useState("");
@@ -25,23 +39,15 @@ export function CallbackPage() {
 
     const verify = async () => {
       try {
-        const result = await verifyPaystackCallback({ data: { reference } });
+        const result = (await verifyPaystackCallback({
+          data: { reference },
+        })) as VerifyCallbackResult;
 
         if (result.data.status !== "success") {
           throw new Error("Verification did not complete successfully");
         }
 
-        const metadataRaw = (result.data as { metadata?: unknown }).metadata;
-        const metadata = (() => {
-          if (typeof metadataRaw === "string") {
-            try {
-              return JSON.parse(metadataRaw) as Record<string, unknown>;
-            } catch {
-              return {};
-            }
-          }
-          return (metadataRaw as Record<string, unknown> | null | undefined) ?? {};
-        })();
+        const metadata = parsePaystackMetadata((result.data as { metadata?: unknown }).metadata);
 
         const isTrial = metadata.isTrial === true || metadata.isTrial === "true";
         const trialRequested =

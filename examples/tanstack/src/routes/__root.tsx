@@ -5,6 +5,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from "../styles.css?url";
+import { createSeoHead } from "@/lib/seo";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -14,26 +15,30 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  head: () => ({
-    meta: [
-      {
-        charSet: "utf-8",
-      },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1",
-      },
-      {
-        title: "Better Auth Paystack - TanStack Start",
-      },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-    ],
-  }),
+  head: () => {
+    const seo = createSeoHead({ includeCanonical: false });
+
+    return {
+      ...seo,
+      meta: [
+        {
+          charSet: "utf-8",
+        },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1",
+        },
+        ...seo.meta,
+      ],
+      links: [
+        ...seo.links,
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+      ],
+    };
+  },
 
   shellComponent: RootDocument,
   errorComponent: ({ error }: any) => {

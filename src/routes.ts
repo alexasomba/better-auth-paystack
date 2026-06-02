@@ -1,4 +1,4 @@
-import { defineErrorCodes, HIDE_METADATA } from "better-auth";
+import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
 import { createAuthEndpoint } from "better-auth/api";
 /* oxlint-disable no-restricted-imports */
@@ -8,7 +8,6 @@ import type {
   GenericEndpointContext,
   MiddlewareInputContext,
   MiddlewareOptions,
-  RawError,
   StrictEndpoint,
 } from "better-auth";
 
@@ -25,13 +24,19 @@ import type {
   User,
   PaystackUser,
   PaystackCheckoutChannel,
+  PaystackInitializeResult,
 } from "./types";
+import {
+  createCheckoutMetadata,
+  hasPaystackMetadata,
+  parsePaystackMetadata,
+  stringifyPaystackMetadata,
+} from "./metadata";
 import {
   syncProductQuantityFromPaystack,
   getPlanByName,
   getPlans,
   getProductByName,
-  getProducts,
   getPlanSeatAmount,
   calculatePlanAmount,
   isLocalSubscriptionCode,
@@ -39,61 +44,26 @@ import {
 import { referenceMiddleware } from "./middleware";
 import { authorizeBillingReference } from "./reference-access";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
-import { getOrganizationSubscription } from "./limits";
 import { createBillingStore } from "./billing-store";
-import { handleProratedUpgrade } from "./subscription-lifecycle";
+import {
+  handleProratedUpgrade,
+  resolveCheckoutTargetEmail,
+  resolveTrialLifecycle,
+  scheduleSubscriptionLifecycleChange,
+} from "./subscription-lifecycle";
 import { reconcilePaystackTransaction } from "./reconciliation";
-
-const PAYSTACK_ERROR_CODES: {
-  SUBSCRIPTION_NOT_FOUND: RawError<"SUBSCRIPTION_NOT_FOUND">;
-  SUBSCRIPTION_PLAN_NOT_FOUND: RawError<"SUBSCRIPTION_PLAN_NOT_FOUND">;
-  UNABLE_TO_CREATE_CUSTOMER: RawError<"UNABLE_TO_CREATE_CUSTOMER">;
-  FAILED_TO_INITIALIZE_TRANSACTION: RawError<"FAILED_TO_INITIALIZE_TRANSACTION">;
-  FAILED_TO_VERIFY_TRANSACTION: RawError<"FAILED_TO_VERIFY_TRANSACTION">;
-  FAILED_TO_DISABLE_SUBSCRIPTION: RawError<"FAILED_TO_DISABLE_SUBSCRIPTION">;
-  FAILED_TO_ENABLE_SUBSCRIPTION: RawError<"FAILED_TO_ENABLE_SUBSCRIPTION">;
-  EMAIL_VERIFICATION_REQUIRED: RawError<"EMAIL_VERIFICATION_REQUIRED">;
-  SUBSCRIPTION_PAYMENT_CHANNEL_NOT_ALLOWED: RawError<"SUBSCRIPTION_PAYMENT_CHANNEL_NOT_ALLOWED">;
-} = defineErrorCodes({
-  SUBSCRIPTION_NOT_FOUND: "Subscription not found",
-  SUBSCRIPTION_PLAN_NOT_FOUND: "Subscription plan not found",
-  UNABLE_TO_CREATE_CUSTOMER: "Unable to create customer",
-  FAILED_TO_INITIALIZE_TRANSACTION: "Failed to initialize transaction",
-  FAILED_TO_VERIFY_TRANSACTION: "Failed to verify transaction",
-  FAILED_TO_DISABLE_SUBSCRIPTION: "Failed to disable subscription",
-  FAILED_TO_ENABLE_SUBSCRIPTION: "Failed to enable subscription",
-  EMAIL_VERIFICATION_REQUIRED: "Email verification is required before you can subscribe to a plan",
-  SUBSCRIPTION_PAYMENT_CHANNEL_NOT_ALLOWED:
-    "This subscription only supports specific payment channels",
-});
-
-function getAllowedSubscriptionChannels(
-  options: AnyPaystackOptions,
-): PaystackCheckoutChannel[] | undefined {
-  const channels = options.subscription?.allowedPaymentChannels;
-  return Array.isArray(channels) && channels.length > 0 ? channels : undefined;
-}
-
-async function hmacSha512Hex(secret: string, message: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const msgData = encoder.encode(message);
-
-  const crypto = globalThis.crypto;
-  if (crypto !== undefined && crypto !== null && "subtle" in crypto) {
-    const subtle = crypto.subtle;
-    const key = await subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-512" }, false, [
-      "sign",
-    ]);
-    const signature = await subtle.sign("HMAC", key, msgData);
-    return Array.from(new Uint8Array(signature))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-  }
-
-  const { createHmac } = await import("node:crypto");
-  return createHmac("sha512", secret).update(message).digest("hex");
-}
+import { initializeTransactionBodySchema } from "./route-modules/checkout";
+import { getConfiguredCatalog, listStoredPlans, listStoredProducts } from "./route-modules/catalog";
+import {
+  enableDisableBodySchema,
+  tryGetEmailTokenFromSubscriptionManageLink,
+} from "./route-modules/subscriptions";
+import { getWebhookClientIP, getWebhookHeaders, getWebhookRequest } from "./route-modules/webhook";
+import {
+  getAllowedSubscriptionChannels,
+  hmacSha512Hex,
+  PAYSTACK_ERROR_CODES,
+} from "./route-modules/shared";
 
 export const paystackWebhook = <P extends string = "/webhook">(
   options: AnyPaystackOptions,
@@ -129,19 +99,15 @@ export const paystackWebhook = <P extends string = "/webhook">(
       disableBody: true,
     },
     async (ctx) => {
-      const request =
-        (ctx as unknown as { requestClone?: Request }).requestClone ??
-        (ctx as { request: Request }).request;
+      const request = getWebhookRequest(ctx as GenericEndpointContext);
       if (request === undefined || request === null) {
         throw new APIError("BAD_REQUEST", {
           message: "Request object is missing from context",
         });
       }
       const payload = await request.text();
-      const headers =
-        (ctx as GenericEndpointContext & { headers?: Headers }).headers ??
-        (ctx.request as unknown as { headers: Headers })?.headers;
-      const signature = headers?.get("x-paystack-signature") as string | null | undefined;
+      const headers = getWebhookHeaders(ctx as GenericEndpointContext);
+      const signature = headers?.get("x-paystack-signature");
 
       if (options.webhook?.verifyIP === true) {
         const trustedIPs = options.webhook.trustedIPs ?? [
@@ -149,10 +115,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
           "52.49.173.169",
           "52.214.14.220",
         ];
-        const clientIP =
-          headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-          headers?.get("x-real-ip") ??
-          (ctx.request as unknown as { ip?: string }).ip;
+        const clientIP = getWebhookClientIP(ctx as GenericEndpointContext, headers);
 
         if (
           clientIP !== undefined &&
@@ -267,20 +230,9 @@ export const paystackWebhook = <P extends string = "/webhook">(
             const planCode = (subscriptionData.plan as { plan_code?: string | null } | undefined)
               ?.plan_code;
 
-            const metadataVal = (subscriptionData as unknown as { metadata?: unknown }).metadata;
-            let metadata: unknown = metadataVal;
-            if (typeof metadata === "string") {
-              try {
-                metadata = JSON.parse(metadata);
-              } catch {
-                // ignore
-              }
-            }
-
-            const metadataObj =
-              metadata !== undefined && metadata !== null && typeof metadata === "object"
-                ? (metadata as Record<string, unknown>)
-                : {};
+            const metadataObj = parsePaystackMetadata(
+              (subscriptionData as unknown as { metadata?: unknown }).metadata,
+            );
             const referenceIdFromMetadata =
               typeof metadataObj.referenceId === "string" ? metadataObj.referenceId : undefined;
             let planNameFromMetadata =
@@ -477,21 +429,6 @@ export const paystackWebhook = <P extends string = "/webhook">(
   );
 };
 
-const initializeTransactionBodySchema = z.object({
-  plan: z.string().optional(),
-  product: z.string().optional(),
-  amount: z.number().int().positive().optional(),
-  currency: z.string().optional(),
-  email: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-  referenceId: z.string().optional(),
-  callbackURL: z.string().optional(),
-  quantity: z.number().int().positive().optional(),
-  scheduleAtPeriodEnd: z.boolean().optional(),
-  cancelAtPeriodEnd: z.boolean().optional(),
-  prorateAndCharge: z.boolean().optional(),
-});
-
 export const initializeTransaction = <P extends string = "/initialize-transaction">(
   options: AnyPaystackOptions,
   path: P = "/initialize-transaction" as P,
@@ -523,23 +460,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
     )[];
   },
-  | {
-      status: string;
-      message: string;
-      scheduled: boolean;
-    }
-  | {
-      status: string;
-      message: string;
-      prorated: boolean;
-    }
-  | {
-      url: string;
-      reference: string;
-      accessCode: string;
-      redirect: boolean;
-    }
-  | undefined
+  PaystackInitializeResult | undefined
 > => {
   const subscriptionOptions = options.subscription;
   const useMiddlewares =
@@ -687,45 +608,14 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       const referenceId =
         ctx.body.referenceId ?? referenceIdFromCtx ?? (session.user as { id: string }).id;
 
-      // Handle scheduleAtPeriodEnd for existing subscriptions
-      if (plan !== undefined && scheduleAtPeriodEnd === true) {
-        const existingSub = await getOrganizationSubscription(ctx, referenceId);
-        if (existingSub?.status === "active") {
-          await ctx.context.adapter.update({
-            model: "subscription",
-            where: [{ field: "id", value: existingSub.id }],
-            update: {
-              pendingPlan: plan.name,
-              updatedAt: new Date(),
-            },
-          });
-          return ctx.json({
-            status: "success",
-            message: "Plan change scheduled at period end.",
-            scheduled: true,
-          });
-        }
-      }
-
-      // Handle cancelAtPeriodEnd for existing subscriptions
-      if (cancelAtPeriodEnd === true) {
-        const existingSub = await getOrganizationSubscription(ctx, referenceId);
-        if (existingSub?.status === "active") {
-          await ctx.context.adapter.update({
-            model: "subscription",
-            where: [{ field: "id", value: existingSub.id }],
-            update: {
-              cancelAtPeriodEnd: true,
-              updatedAt: new Date(),
-            },
-          });
-
-          return ctx.json({
-            status: "success",
-            message: "Subscription cancellation scheduled at period end.",
-            scheduled: true,
-          });
-        }
+      const scheduledChange = await scheduleSubscriptionLifecycleChange(ctx, {
+        referenceId,
+        plan,
+        scheduleAtPeriodEnd,
+        cancelAtPeriodEnd,
+      });
+      if (scheduledChange !== null) {
+        return ctx.json(scheduledChange);
       }
 
       // Calculate final amount considering seats if applicable
@@ -752,111 +642,42 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       let reference: string | undefined;
       let accessCode: string | undefined;
 
-      // Check trial eligibility - prevent trial abuse
-      let trialStart: Date | undefined;
-      let trialEnd: Date | undefined;
-      const requestedTrialDays =
-        plan?.freeTrial?.days !== undefined && plan.freeTrial.days > 0 ? plan.freeTrial.days : 0;
-      const trialRequested = requestedTrialDays > 0;
-      let trialGranted = false;
-      let trialDeniedReason: "already_used" | undefined;
-      if (trialRequested) {
-        // Check if user/referenceId has ever had a trial
-        const previousTrials = await ctx.context.adapter.findMany<Subscription>({
-          model: "subscription",
-          where: [{ field: "referenceId", value: referenceId }],
-        });
-        const hadTrial = previousTrials?.some(
-          (sub: Subscription) =>
-            (sub.trialStart !== undefined && sub.trialStart !== null) ||
-            (sub.trialEnd !== undefined && sub.trialEnd !== null) ||
-            sub.status === "trialing",
-        );
-
-        if (hadTrial === false) {
-          trialStart = new Date();
-          trialEnd = new Date();
-          trialEnd.setDate(trialEnd.getDate() + requestedTrialDays);
-          trialGranted = true;
-        } else {
-          trialDeniedReason = "already_used";
-        }
-      }
+      const trial = await resolveTrialLifecycle(ctx, { referenceId, plan });
+      const { trialStart, trialEnd } = trial;
 
       try {
-        // Determine Customer Email & Code (Organization support)
-        let targetEmail = email ?? user.email;
-
-        if (
-          options.organization?.enabled === true &&
-          referenceId !== undefined &&
-          referenceId !== null &&
-          referenceId !== user.id
-        ) {
-          const org = await ctx.context.adapter.findOne({
-            model: "organization",
-            where: [{ field: "id", value: referenceId }],
-          });
-          if (org !== undefined && org !== null) {
-            const orgWithEmail = org as { email?: string | null };
-            if (
-              orgWithEmail.email !== undefined &&
-              orgWithEmail.email !== null &&
-              orgWithEmail.email !== ""
-            ) {
-              targetEmail = orgWithEmail.email;
-            } else {
-              // Fallback: Use Organization Owner Email
-              const ownerMember = await ctx.context.adapter.findOne({
-                model: "member",
-                where: [
-                  { field: "organizationId", value: referenceId },
-                  { field: "role", value: "owner" },
-                ],
-              });
-
-              if (ownerMember !== undefined && ownerMember !== null) {
-                const ownerUser = (await ctx.context.adapter.findOne({
-                  model: "user",
-                  where: [{ field: "id", value: (ownerMember as Member).userId }],
-                })) as User | null;
-
-                if (
-                  ownerUser !== undefined &&
-                  ownerUser !== null &&
-                  ownerUser.email !== undefined &&
-                  ownerUser.email !== null &&
-                  ownerUser.email !== ""
-                ) {
-                  targetEmail = ownerUser.email;
-                }
-              }
-            }
-          }
-        }
+        const targetEmail = await resolveCheckoutTargetEmail(ctx, options, {
+          email,
+          referenceId,
+          user: user as User,
+        });
 
         const allowedSubscriptionChannels = plan
           ? getAllowedSubscriptionChannels(options)
           : undefined;
 
         // Construct Metadata
-        const metadata = JSON.stringify({
-          referenceId,
-          userId: user.id,
-          plan: plan !== undefined ? plan.name.toLowerCase() : undefined, // Undefined for one-time
-          product: product !== undefined ? product.name.toLowerCase() : undefined,
-          ...extraMetadata,
-          isTrial: trialStart !== undefined,
-          trialRequested,
-          trialGranted,
-          trialDeniedReason,
-          trialEnd: trialEnd !== undefined ? trialEnd.toISOString() : undefined,
-        });
+        const metadata = stringifyPaystackMetadata(
+          createCheckoutMetadata({
+            referenceId,
+            userId: user.id,
+            plan: plan !== undefined ? plan.name.toLowerCase() : undefined,
+            product: product !== undefined ? product.name.toLowerCase() : undefined,
+            extra: extraMetadata,
+            trial: {
+              isTrial: trialStart !== undefined,
+              requested: trial.requested,
+              granted: trial.granted,
+              deniedReason: trial.deniedReason,
+              endsAt: trialEnd,
+            },
+          }),
+        );
 
         const initBody: {
           email: string;
           callback_url?: string;
-          metadata: string;
+          metadata?: string;
           currency: string;
           quantity?: number;
           amount?: number;
@@ -891,19 +712,21 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
 
           if (proration?.kind === "checkout") {
             return ctx.json({
+              kind: "checkout",
               url: proration.url ?? "",
               reference: proration.reference ?? "",
               accessCode: proration.accessCode ?? "",
               redirect: proration.redirect,
-            });
+            } satisfies PaystackInitializeResult);
           }
 
-          if (proration?.kind === "completed") {
+          if (proration?.kind === "prorated") {
             return ctx.json({
+              kind: "prorated",
               status: proration.status,
               message: proration.message,
               prorated: proration.prorated,
-            });
+            } satisfies PaystackInitializeResult);
           }
         }
 
@@ -969,10 +792,9 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           status: "pending",
           plan: plan !== undefined ? plan.name.toLowerCase() : undefined,
           product: product !== undefined ? product.name.toLowerCase() : undefined,
-          metadata:
-            extraMetadata !== undefined && Object.keys(extraMetadata).length > 0
-              ? JSON.stringify(extraMetadata)
-              : undefined,
+          metadata: hasPaystackMetadata(extraMetadata)
+            ? stringifyPaystackMetadata(extraMetadata)
+            : undefined,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -1032,11 +854,12 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       }
 
       return ctx.json({
-        url,
-        reference,
-        accessCode,
+        kind: "checkout",
+        url: url ?? "",
+        reference: reference ?? "",
+        accessCode: accessCode ?? "",
         redirect: true,
-      });
+      } satisfies PaystackInitializeResult);
     },
   );
 };
@@ -1073,23 +896,7 @@ export const createSubscription = <P extends string = "/create-subscription">(
       | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
     )[];
   },
-  | {
-      status: string;
-      message: string;
-      scheduled: boolean;
-    }
-  | {
-      status: string;
-      message: string;
-      prorated: boolean;
-    }
-  | {
-      url: string;
-      reference: string;
-      accessCode: string;
-      redirect: boolean;
-    }
-  | undefined
+  PaystackInitializeResult | undefined
 > => initializeTransaction(options, path);
 
 export const upgradeSubscription = <P extends string = "/upgrade-subscription">(
@@ -1123,23 +930,7 @@ export const upgradeSubscription = <P extends string = "/upgrade-subscription">(
       | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
     )[];
   },
-  | {
-      status: string;
-      message: string;
-      scheduled: boolean;
-    }
-  | {
-      status: string;
-      message: string;
-      prorated: boolean;
-    }
-  | {
-      url: string;
-      reference: string;
-      accessCode: string;
-      redirect: boolean;
-    }
-  | undefined
+  PaystackInitializeResult | undefined
 > => initializeTransaction(options, path);
 
 export const cancelSubscription = <P extends string = "/cancel-subscription">(
@@ -1497,40 +1288,6 @@ export const listTransactions = <P extends string = "/list-transactions">(
   );
 };
 
-const enableDisableBodySchema = z.object({
-  referenceId: z.string().optional(),
-  subscriptionCode: z.string(),
-  emailToken: z.string().optional(),
-  atPeriodEnd: z.boolean().optional(),
-});
-
-function decodeBase64UrlToString(value: string): string {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized + "===".slice((normalized.length + 3) % 4);
-  const binaryString = atob(padded);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return new TextDecoder().decode(bytes);
-}
-
-function tryGetEmailTokenFromSubscriptionManageLink(link: string): string | undefined {
-  try {
-    const url = new URL(link);
-    const subscriptionToken = url.searchParams.get("subscription_token");
-    if (subscriptionToken === undefined || subscriptionToken === null || subscriptionToken === "")
-      return undefined;
-    const parts = subscriptionToken.split(".");
-    if (parts.length < 2) return undefined;
-    const payloadJson = decodeBase64UrlToString(parts[1]);
-    const payload = JSON.parse(payloadJson) as Record<string, unknown>;
-    return typeof payload.email_token === "string" ? payload.email_token : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 export const disablePaystackSubscription = <P extends string = "/disable-subscription">(
   options: AnyPaystackOptions,
   path: P = "/disable-subscription" as P,
@@ -1874,7 +1631,7 @@ export const listProducts = <P extends string = "/list-products">(
       },
     },
     async (ctx) => {
-      const products = await createBillingStore(ctx).listProducts();
+      const products = await listStoredProducts(ctx);
       return ctx.json({ products });
     },
   );
@@ -1927,7 +1684,7 @@ export const listPlans = <P extends string = "/list-plans">(
     },
     async (ctx) => {
       try {
-        const plans = await createBillingStore(ctx).listPlans();
+        const plans = await listStoredPlans(ctx);
         return ctx.json({ plans });
       } catch (error: unknown) {
         ctx.context.logger.error("Failed to list plans", error);
@@ -1969,10 +1726,7 @@ export const getConfig = <P extends string = "/get-config">(
       },
     },
     async (ctx: GenericEndpointContext) => {
-      const plans =
-        options.subscription?.enabled === true ? await getPlans(options.subscription) : [];
-      const products = await getProducts(options.products);
-      return ctx.json({ plans, products });
+      return ctx.json(await getConfiguredCatalog(options));
     },
   );
 };

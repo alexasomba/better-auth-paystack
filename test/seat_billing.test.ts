@@ -11,6 +11,11 @@ import { setCookieToHeader } from "better-auth/cookies";
 import { paystack } from "../src/index.ts";
 import { paystackClient as createPaystackClient } from "../src/client.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
+import {
+  expectCheckoutResult,
+  expectProratedResult,
+  expectScheduledResult,
+} from "./helpers/paystack-results";
 
 describe("Seat-Based Billing & Scheduled Changes", () => {
   const paystackSdk = {
@@ -314,6 +319,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
+    expectScheduledResult(json);
     expect(json.status).toBe("success");
     expect(json.scheduled).toBe(true);
 
@@ -496,6 +502,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
     const json = await res.json();
     expect(res.status).toBe(200);
+    expectProratedResult(json);
     expect(json.status).toBe("success");
     expect(json.prorated).toBe(true);
 
@@ -577,6 +584,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
     const json = await res.json();
     expect(res.status).toBe(200);
+    expectCheckoutResult(json);
     expect(json.redirect).toBe(true);
     expect(json.url).toBe("https://paystack.com/pay/proration-transfer");
 

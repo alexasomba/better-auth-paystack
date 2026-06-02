@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { parsePaystackMetadata } from "@alexasomba/better-auth-paystack/client";
 
 interface Transaction {
   id: string;
@@ -457,7 +458,7 @@ export default function TransactionsTable() {
                       Metadata
                     </span>
                     <pre className="mt-1 max-h-25 overflow-auto rounded-md bg-muted p-2 text-[10px]">
-                      {JSON.stringify(JSON.parse(selectedTransaction.metadata), null, 2)}
+                      {JSON.stringify(parsePaystackMetadata(selectedTransaction.metadata), null, 2)}
                     </pre>
                   </div>
                 )}

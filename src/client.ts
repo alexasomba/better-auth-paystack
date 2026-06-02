@@ -8,10 +8,14 @@ import type {
   Subscription,
   PaystackClientLike,
   AnyPaystackOptions,
+  PaystackInitializeResult,
 } from "./types";
 
 import type { paystack as paystackServer } from "./index";
 import { PACKAGE_VERSION } from "./version";
+
+export { parsePaystackMetadata } from "./metadata";
+export type { PaystackMetadata } from "./metadata";
 
 /**
  * Helper type to handle the conditional return type based on 'throw' option.
@@ -35,17 +39,7 @@ export interface PaystackActions {
       referenceId?: string;
     },
     options?: O,
-  ) => Promise<
-    FetchResult<
-      {
-        url: string;
-        reference: string;
-        accessCode: string;
-        redirect: boolean;
-      },
-      O
-    >
-  >;
+  ) => Promise<FetchResult<PaystackInitializeResult, O>>;
   /**
    * Verify a transaction by reference.
    */

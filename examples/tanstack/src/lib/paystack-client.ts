@@ -1,10 +1,10 @@
 import { authClient } from "@/lib/auth-client";
 import type { PaystackClientActions } from "@alexasomba/better-auth-paystack/client";
 
-type BetterAuthPaystackClient = {
+interface BetterAuthPaystackClient {
   paystack: PaystackClientActions;
   subscription: PaystackClientActions["subscription"];
-};
+}
 
 const billingAuthClient = authClient as typeof authClient & BetterAuthPaystackClient;
 

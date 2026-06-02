@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { paystack } from "../src/index.ts";
 import { paystackClient } from "../src/client.ts";
+import { expectCheckoutResult } from "./helpers/paystack-results";
 import type { Member } from "../src/types";
 
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
@@ -124,6 +125,7 @@ describe("planCode and organization referenceId tests", () => {
 
       const init = await authClient.paystack.initializeTransaction({ plan: "starter" });
       if (init.error) throw new Error("Initialization failed");
+      expectCheckoutResult(init.data);
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_plancode_123");
 
@@ -219,6 +221,7 @@ describe("planCode and organization referenceId tests", () => {
       const init = await authClient.paystack.initializeTransaction({ plan: "team" });
 
       if (init.error) throw new Error("Initialization failed");
+      expectCheckoutResult(init.data);
       expect(init.data.url).toBe("https://paystack/checkout");
 
       const callArgs = paystackSdk.transaction.initialize.mock.calls[0][0];
@@ -346,6 +349,7 @@ describe("planCode and organization referenceId tests", () => {
         referenceId: orgId,
       });
       if (init.error) throw new Error("Initialization failed");
+      expectCheckoutResult(init.data);
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_org_123");
 

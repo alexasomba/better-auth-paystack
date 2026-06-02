@@ -4,6 +4,7 @@ import type { GenericEndpointContext } from "better-auth";
 import { createBillingStore } from "./billing-store";
 import { createPaystackAdapter } from "./paystack-sdk";
 import { getNextPeriodEnd, getPlans, validateMinAmount } from "./utils";
+import { createRenewalMetadata, stringifyPaystackMetadata } from "./metadata";
 import type {
   AnyPaystackOptions,
   ChargeRecurringSubscriptionInput,
@@ -42,11 +43,7 @@ export async function syncPaystackProducts(
           (product as { slug?: string }).slug ??
           product.name?.toLowerCase().replace(/\s+/g, "-") ??
           "",
-        metadata:
-          (product as { metadata?: unknown }).metadata !== undefined &&
-          (product as { metadata?: unknown }).metadata !== null
-            ? JSON.stringify((product as { metadata?: unknown }).metadata)
-            : undefined,
+        metadata: stringifyPaystackMetadata((product as { metadata?: unknown }).metadata),
         updatedAt: new Date(),
       };
 
@@ -89,11 +86,7 @@ export async function syncPaystackPlans(
         interval: plan.interval ?? "",
         planCode: plan.plan_code ?? "",
         paystackId,
-        metadata:
-          (plan as { metadata?: unknown }).metadata !== undefined &&
-          (plan as { metadata?: unknown }).metadata !== null
-            ? JSON.stringify((plan as { metadata?: unknown }).metadata)
-            : undefined,
+        metadata: stringifyPaystackMetadata((plan as { metadata?: unknown }).metadata),
         updatedAt: new Date(),
       };
 
@@ -181,15 +174,18 @@ export async function chargeSubscriptionRenewal(
   }
 
   const paystack = createPaystackAdapter(options.paystackClient);
+  const renewalMetadata = createRenewalMetadata({
+    subscriptionId,
+    referenceId,
+  });
+  const serializedRenewalMetadata = stringifyPaystackMetadata(renewalMetadata);
+
   const chargeData = await paystack.chargeAuthorization({
     email,
     amount,
     authorization_code: subscription.paystackAuthorizationCode,
     reference: `rec_${subscription.id}_${Date.now()}`,
-    metadata: JSON.stringify({
-      subscriptionId,
-      referenceId,
-    }),
+    metadata: serializedRenewalMetadata,
   });
 
   const typedChargeData = chargeData as PaystackChargeAuthorizationResponse;
@@ -209,11 +205,7 @@ export async function chargeSubscriptionRenewal(
       currency: typedChargeData.currency,
       status: "success",
       plan: plan.name.toLowerCase(),
-      metadata: JSON.stringify({
-        type: "renewal",
-        subscriptionId,
-        referenceId,
-      }),
+      metadata: serializedRenewalMetadata,
       createdAt: now,
       updatedAt: now,
     });

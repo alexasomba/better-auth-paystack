@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: () => {
         return Response.json({
           jsonrpc: "2.0",
           error: {
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/mcp")({
           },
         });
       },
-      POST: async () => {
+      POST: () => {
         return Response.json({
           jsonrpc: "2.0",
           result: {

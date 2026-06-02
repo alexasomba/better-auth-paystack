@@ -6,6 +6,12 @@ import { createBillingStore } from "./billing-store";
 import { authorizeBillingReference } from "./reference-access";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
 import { getPlans, syncProductQuantityFromPaystack } from "./utils";
+import {
+  getMetadataBoolean,
+  getMetadataNumber,
+  getMetadataString,
+  parsePaystackMetadata,
+} from "./metadata";
 import type {
   AnyPaystackOptions,
   PaystackCheckoutChannel,
@@ -158,23 +164,6 @@ function throwOrReturnFailure(
   }
 
   return createFailureResult(input);
-}
-
-function parseMetadata(metadata: unknown): Record<string, unknown> {
-  if (metadata === undefined || metadata === null || metadata === "") {
-    return {};
-  }
-  if (typeof metadata === "string") {
-    try {
-      return JSON.parse(metadata) as Record<string, unknown>;
-    } catch {
-      return {};
-    }
-  }
-  if (typeof metadata === "object") {
-    return metadata as Record<string, unknown>;
-  }
-  return {};
 }
 
 function hasReferenceMismatch(input: {
@@ -418,15 +407,15 @@ export async function reconcilePaystackTransaction(
     };
   }
 
-  const metadataObj = parseMetadata(data.metadata);
-  const isTrial = metadataObj.isTrial === true || metadataObj.isTrial === "true";
-  const trialEnd = metadataObj.trialEnd as string | undefined;
-  const targetPlan = metadataObj.plan as string | undefined;
+  const metadataObj = parsePaystackMetadata(data.metadata);
+  const isTrial = getMetadataBoolean(metadataObj, "isTrial");
+  const trialEnd = getMetadataString(metadataObj, "trialEnd");
+  const targetPlan = getMetadataString(metadataObj, "plan");
 
   if (metadataObj.type === "proration") {
-    const subscriptionId = metadataObj.subscriptionId as string | undefined;
-    const newPlan = metadataObj.newPlan as string | undefined;
-    const newSeatCount = metadataObj.newSeatCount as number | undefined;
+    const subscriptionId = getMetadataString(metadataObj, "subscriptionId");
+    const newPlan = getMetadataString(metadataObj, "newPlan");
+    const newSeatCount = getMetadataNumber(metadataObj, "newSeatCount");
 
     if (
       subscriptionId !== undefined &&

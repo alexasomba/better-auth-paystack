@@ -18,7 +18,10 @@ export const getRouter = () => {
     defaultPreload: "intent",
   });
 
-  setupRouterSsrQueryIntegration({ router, queryClient: rqContext.queryClient });
+  setupRouterSsrQueryIntegration({
+    router,
+    queryClient: rqContext.queryClient,
+  });
 
   return router;
 };

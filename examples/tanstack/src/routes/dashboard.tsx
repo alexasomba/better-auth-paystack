@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { auth } from "@/lib/auth";
 import DashboardContent from "@/components/dashboard/DashboardContent";
+import { createSeoHead } from "@/lib/seo";
 
 const getSession = createServerFn({ method: "GET" }).handler(async () => {
   const headers = getRequestHeaders();
@@ -11,6 +12,14 @@ const getSession = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createFileRoute("/dashboard")({
+  head: () =>
+    createSeoHead({
+      title: "Billing Dashboard",
+      description:
+        "Authenticated billing dashboard for the Better Auth Paystack TanStack Start example.",
+      path: "/dashboard",
+      noIndex: true,
+    }),
   component: DashboardPage,
   loader: async () => {
     const session = await getSession();

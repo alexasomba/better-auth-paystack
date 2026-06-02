@@ -4,9 +4,9 @@ description: >
   Integrate @alexasomba/better-auth-paystack in TanStack Start. Use for Better Auth API routes, tanstackStartCookies(), server functions, getRequestHeaders(), authClient Paystack actions, admin billing server functions, and Cloudflare Workers deployment.
 type: composition
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.5.1" # x-release-please-version
+library_version: "3.0.0" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:examples/tanstack/README.md"
   - "alexasomba/better-auth-paystack:examples/tanstack/src/lib/auth.ts"
@@ -119,6 +119,16 @@ export const syncPlans = createServerFn({ method: "POST" }).handler(async () => 
 ```
 
 Pass request headers when Better Auth needs session context.
+
+### Keep SEO and discovery route-owned
+
+Use TanStack route `head` functions for titles, descriptions, Open Graph/Twitter tags, canonical
+links, robots meta, and JSON-LD. Keep `<HeadContent />` in the root document head and `<Scripts />`
+in the body.
+
+Only leaf public pages should emit canonical links. Authenticated dashboards, billing layouts, and
+Paystack callback routes should be `noindex` and excluded from the sitemap, while still remaining
+available for checkout redirects and payment verification.
 
 ### Keep Cloudflare Worker dependencies compatible
 

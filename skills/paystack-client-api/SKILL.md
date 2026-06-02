@@ -1,12 +1,12 @@
 ---
 name: paystack-client-api
 description: >
-  Modify or use the @alexasomba/better-auth-paystack browser client API. Use for paystackClient(), authClient.paystack, authClient.transaction, authClient.subscription, initializeTransaction, verifyTransaction, listTransactions, listSubscriptions, listProducts, listPlans, subscription billingPortal/manageLink, cancel/restore aliases, BetterFetch throw option return types, and deprecated disable/enable behavior.
+  Modify or use the @alexasomba/better-auth-paystack browser client API. Use for paystackClient(), authClient.paystack, authClient.transaction, authClient.subscription, initializeTransaction, verifyTransaction, listTransactions, listSubscriptions, listProducts, listPlans, subscription billingPortal/manageLink, cancel/restore methods, BetterFetch throw option return types, and legacy disable/enable aliases.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "2.5.1" # x-release-please-version
+library_version: "3.0.0" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=24.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=2.4.2 <3.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:src/client.ts"
   - "alexasomba/better-auth-paystack:src/routes.ts"
@@ -57,18 +57,21 @@ await authClient.subscription.create({ plan: "starter" });
 await authClient.subscription.upgrade({ plan: "team" });
 await authClient.subscription.list();
 await authClient.subscription.billingPortal({ subscriptionCode: "SUB_code" });
-await authClient.subscription.cancel({ subscriptionCode: "SUB_code", atPeriodEnd: true });
+await authClient.subscription.cancel({
+  subscriptionCode: "SUB_code",
+  atPeriodEnd: true,
+});
 await authClient.subscription.restore({ subscriptionCode: "SUB_code" });
 ```
 
 `subscription.manageLink` is an alias for `subscription.billingPortal`.
 
-### Preserve deprecated aliases
+### Preserve legacy aliases
 
 `subscription.disable` maps to `subscription.cancel`.
 `subscription.enable` maps to `subscription.restore`.
 
-Keep these aliases in the 2.x line for compatibility, but do not introduce them in new examples.
+Keep these aliases for migration compatibility, but do not introduce them in new examples.
 
 ### Respect BetterFetch return typing
 

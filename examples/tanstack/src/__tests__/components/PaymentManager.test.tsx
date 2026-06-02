@@ -126,7 +126,9 @@ describe("PaymentManager component", () => {
     vi.mocked((authClient as any).paystack.listPlans).mockResolvedValue({
       data: { plans: [] },
     } as any);
-    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: [] } as any);
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({
+      data: [],
+    } as any);
     syncProductsMock.mockResolvedValue({ status: "success", count: 2 });
     syncPlansMock.mockResolvedValue({ status: "success", count: 3 });
     chargeRenewalMock.mockResolvedValue({
@@ -211,7 +213,7 @@ describe("PaymentManager component", () => {
       data: { products: mockProducts },
     } as any);
     vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
-      data: { url: "https://paystack.com/pay/mock" },
+      data: { kind: "checkout", url: "https://paystack.com/pay/mock", redirect: true },
     } as any);
 
     // Mock window.location.href
@@ -247,8 +249,20 @@ describe("PaymentManager component", () => {
 
   it("should list native plans correctly", async () => {
     const mockPlans = [
-      { paystackId: "1", name: "Plan A", amount: 500000, currency: "NGN", interval: "annually" },
-      { planCode: "PLN_2", name: "Plan B", amount: 5000, currency: "NGN", interval: "monthly" },
+      {
+        paystackId: "1",
+        name: "Plan A",
+        amount: 500000,
+        currency: "NGN",
+        interval: "annually",
+      },
+      {
+        planCode: "PLN_2",
+        name: "Plan B",
+        amount: 5000,
+        currency: "NGN",
+        interval: "monthly",
+      },
     ];
     vi.mocked((authClient as any).paystack.listPlans).mockResolvedValue({
       data: { plans: mockPlans },
@@ -267,12 +281,17 @@ describe("PaymentManager component", () => {
 
   it("should pass quantity when subscribing for an organization", async () => {
     const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
-    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({
+      data: mockOrgs,
+    } as any);
     vi.mocked((authClient as any).paystack.config).mockResolvedValue({
-      data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
+      data: {
+        plans: [{ name: "Starter", amount: 1000, currency: "NGN" }],
+        products: [],
+      },
     } as any);
     vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
-      data: { url: "https://paystack.com/pay/mock" },
+      data: { kind: "checkout", url: "https://paystack.com/pay/mock", redirect: true },
     } as any);
 
     render(<PaymentManager activeTab="subscriptions" />);
@@ -314,9 +333,14 @@ describe("PaymentManager component", () => {
 
   it("should update displayed price when quantity changes", async () => {
     const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
-    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({
+      data: mockOrgs,
+    } as any);
     vi.mocked((authClient as any).paystack.config).mockResolvedValue({
-      data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
+      data: {
+        plans: [{ name: "Starter", amount: 1000, currency: "NGN" }],
+        products: [],
+      },
     } as any);
 
     render(<PaymentManager activeTab="subscriptions" />);
@@ -495,9 +519,14 @@ describe("PaymentManager component", () => {
 
   it("reloads subscriptions with the selected organization reference", async () => {
     const mockOrgs = [{ id: "org_123", name: "Test Org", slug: "test-org" }];
-    vi.mocked((authClient as any).organization.list).mockResolvedValue({ data: mockOrgs } as any);
+    vi.mocked((authClient as any).organization.list).mockResolvedValue({
+      data: mockOrgs,
+    } as any);
     vi.mocked((authClient as any).paystack.config).mockResolvedValue({
-      data: { plans: [{ name: "Starter", amount: 1000, currency: "NGN" }], products: [] },
+      data: {
+        plans: [{ name: "Starter", amount: 1000, currency: "NGN" }],
+        products: [],
+      },
     } as any);
 
     render(<PaymentManager activeTab="subscriptions" />);
@@ -638,7 +667,12 @@ describe("PaymentManager component", () => {
     vi.mocked((authClient as any).paystack.config).mockResolvedValue({
       data: {
         plans: [
-          { name: "Starter", amount: 1000, currency: "NGN", planCode: "PLN_starter" },
+          {
+            name: "Starter",
+            amount: 1000,
+            currency: "NGN",
+            planCode: "PLN_starter",
+          },
           { name: "Team", amount: 3000, currency: "NGN" },
         ],
         products: [],
@@ -658,6 +692,8 @@ describe("PaymentManager component", () => {
     } as any);
     vi.mocked((authClient as any).paystack.initializeTransaction).mockResolvedValue({
       data: {
+        kind: "prorated",
+        status: "success",
         prorated: true,
         message: "Subscription successfully upgraded with prorated charge.",
       },
