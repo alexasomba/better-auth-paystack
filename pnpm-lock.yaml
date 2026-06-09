@@ -61,8 +61,8 @@ catalogs:
       specifier: ^1.161.6
       version: 1.161.6
     '@tanstack/intent':
-      specifier: ^0.0.41
-      version: 0.0.41
+      specifier: ^0.0.42
+      version: 0.0.42
     '@tanstack/react-devtools':
       specifier: ^0.10.5
       version: 0.10.5
@@ -255,7 +255,7 @@ importers:
         version: 10.0.1(eslint@10.2.0(jiti@2.7.0))
       '@tanstack/intent':
         specifier: 'catalog:'
-        version: 0.0.41
+        version: 0.0.42
       '@types/node':
         specifier: 'catalog:'
         version: 24.12.4
@@ -2127,8 +2127,8 @@ packages:
     resolution: {integrity: sha512-79pf/RkhteYZTRgcR4F9kbk84P2N8rugQJswxfIqovlbRiT3yI7eBE+5QorIrZaOKktsgzRlXh1l/du/xpl4iA==}
     engines: {node: '>=20.19'}
 
-  '@tanstack/intent@0.0.41':
-    resolution: {integrity: sha512-Psl+oDiidLvtctswkTQ1P6sQIihwrMLcdfQVfkLpO42oKwxWEr1lodWUHiOG5jFXsGwDDvpUv/WAdlmJF+yGpw==}
+  '@tanstack/intent@0.0.42':
+    resolution: {integrity: sha512-jRjArJ8wcMmi49tByK6KCrJxPp8EqFuFH+ltDG6HTPizTrBCAXkJB3dTtTXurLJh67YsPLzU0wLPdOtWYDuGSw==}
     hasBin: true
 
   '@tanstack/pacer-lite@0.1.1':
@@ -6275,7 +6275,7 @@ snapshots:
 
   '@tanstack/history@1.162.0': {}
 
-  '@tanstack/intent@0.0.41':
+  '@tanstack/intent@0.0.42':
     dependencies:
       cac: 6.7.14
       jsonc-parser: 3.3.1
