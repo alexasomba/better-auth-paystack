@@ -351,7 +351,7 @@ describe("paystack", () => {
       name: "Test User",
     };
 
-    const res = await authClient.signUp.email(testUser, { throw: true });
+    const res = await (authClient as any).signUp.email(testUser, { throw: true });
     expect(res.user.id).toBeDefined();
     expect(createCustomer).toHaveBeenCalledTimes(1);
 
@@ -511,10 +511,10 @@ describe("paystack", () => {
       name: "Sub User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -596,10 +596,10 @@ describe("paystack", () => {
       name: "Sub Enable User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -662,10 +662,10 @@ describe("paystack", () => {
       name: "List Sub User",
     };
 
-    const signUpRes = await authClient.signUp.email(testUser, { throw: true });
+    const signUpRes = await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -742,9 +742,9 @@ describe("paystack", () => {
       name: "Portal User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -822,10 +822,10 @@ describe("paystack", () => {
       name: "Callback User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -934,7 +934,7 @@ describe("paystack", () => {
 
     const signInWithCookies = async (user: typeof userA) => {
       // headers = new Headers();
-      await authClient.signIn.email(user, {
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(headers),
       });
@@ -944,8 +944,8 @@ describe("paystack", () => {
       return reqHeaders;
     };
 
-    const aRes = await authClient.signUp.email(userA, { throw: true });
-    const bRes = await authClient.signUp.email(userB, { throw: true });
+    const aRes = await (authClient as any).signUp.email(userA, { throw: true });
+    const bRes = await (authClient as any).signUp.email(userB, { throw: true });
 
     const aHeaders = await signInWithCookies(userA);
 
@@ -1124,8 +1124,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "product@test.com", password: "password", name: "Buyer" };
-    const _signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const _signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1190,8 +1190,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "user1@test.com", password: "password", name: "User 1" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1246,8 +1246,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "admin@test.com", password: "password", name: "Admin" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1308,8 +1308,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "member@test.com", password: "password", name: "Member" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1697,8 +1697,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "trial_abuse@test.com", password: "password", name: "Trial User" };
-    const signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1792,8 +1792,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "card-only@test.com", password: "password", name: "Card Only" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -1871,8 +1871,8 @@ describe("paystack", () => {
       password: "password",
       name: "Card Enforced",
     };
-    const signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -1970,8 +1970,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "first_trial@test.com", password: "password", name: "First Trial" };
-    const signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -2131,8 +2131,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "admin@org.com", password: "password", name: "Org Admin" };
-    const signUpRes = await client.signUp.email(user);
-    await client.signIn.email(user, {
+    const signUpRes = await (client as any).signUp.email(user);
+    await (client as any).signIn.email(user, {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
@@ -2242,8 +2242,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "owner@org.com", password: "password", name: "Org Owner" };
-    const signUpRes = await client.signUp.email(user);
-    await client.signIn.email(user, {
+    const signUpRes = await (client as any).signUp.email(user);
+    await (client as any).signIn.email(user, {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 

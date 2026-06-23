@@ -85,9 +85,12 @@ describe("Local Custom Subscriptions", () => {
 
   it("should capture authorization_code and generate LOC_ code for local plans in verifyTransaction", async () => {
     const testUser = { email: "local@test.com", password: "password", name: "Local User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
     // Mock transaction verify response
     (paystackSdk.transaction.verify as any).mockResolvedValue({
@@ -151,7 +154,7 @@ describe("Local Custom Subscriptions", () => {
 
   it("should process recurring charge successfully", async () => {
     const testUser = { email: "recurring@test.com", password: "password", name: "Recurring User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const userId = signUp.user.id;
 
     const ctx = await auth.$context;
@@ -192,7 +195,7 @@ describe("Local Custom Subscriptions", () => {
 
   it("should reject recurring charge if amount is below minimum", async () => {
     const testUser = { email: "below-min@test.com", password: "password", name: "Min User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
 
     const ctx = await auth.$context;
     const sub = await (ctx.adapter as any).create({
@@ -225,9 +228,12 @@ describe("Local Custom Subscriptions", () => {
 
   it("should handle trials for local subscriptions", async () => {
     const testUser = { email: "local-trial@test.com", password: "password", name: "Trial User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
     const trialEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -290,11 +296,11 @@ describe("Local Custom Subscriptions", () => {
 
   it("should handle local subscription cancellation without calling Paystack", async () => {
     const testUser = { email: "cancel-local@test.com", password: "password", name: "Cancel User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const userId = signUp.user.id;
 
     const headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });

@@ -99,9 +99,9 @@ describe("examples/nextjs integration - paystack flow", () => {
     });
 
     const user = { email: "user@example.com", password: "password", name: "Test" };
-    await authClient.signUp.email(user, { throw: true });
+    await (authClient as any).signUp.email(user, { throw: true });
 
-    await authClient.signIn.email(user, {
+    await (authClient as any).signIn.email(user, {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 

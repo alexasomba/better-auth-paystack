@@ -118,8 +118,8 @@ describe("planCode and organization referenceId tests", () => {
         password: "password",
         name: "PlanCode User",
       };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
@@ -212,8 +212,8 @@ describe("planCode and organization referenceId tests", () => {
       });
 
       const user = { email: "team.user@example.com", password: "password", name: "Team User" };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(cookieHeaders),
       });
@@ -331,13 +331,13 @@ describe("planCode and organization referenceId tests", () => {
       });
 
       const user = { email: "org.owner@example.com", password: "password", name: "Org Owner" };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const org = await authClient.organization.create({
+      const org = await (authClient as any).organization.create({
         name: "Test Org",
         slug: "test-org",
       });
@@ -442,8 +442,8 @@ describe("planCode and organization referenceId tests", () => {
       });
 
       const user = { email: "nonmember@example.com", password: "password", name: "Non Member" };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(cookieHeaders),
       });
