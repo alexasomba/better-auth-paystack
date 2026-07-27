@@ -1,8 +1,8 @@
 import { describe, expectTypeOf, it } from "vite-plus/test";
 import type { BetterAuthPlugin } from "better-auth";
 
-import { paystack } from "../src/index.ts";
-import { paystackClient } from "../src/client.ts";
+import type { paystack } from "../src/index.ts";
+import type { paystackClient } from "../src/client.ts";
 
 /**
  * Regression tests for this plugin's types leaking into — and collapsing — the *consuming*
