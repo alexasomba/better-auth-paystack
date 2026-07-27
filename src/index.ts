@@ -71,9 +71,18 @@ const INTERNAL_ERROR_CODES: ReturnType<typeof defineErrorCodes> = defineErrorCod
   ),
 );
 
-type BetterAuthEndpoint = NonNullable<BetterAuthPlugin["endpoints"]>[string];
-
-interface PaystackPluginEndpoints extends Record<string, BetterAuthEndpoint> {
+/**
+ * Must stay a `type` rather than an `interface`.
+ *
+ * `BetterAuthPlugin["endpoints"]` is `{ [key: string]: Endpoint }`, and only object literal
+ * *type aliases* get TypeScript's implicit index signature — interfaces do not. Declaring
+ * this as `interface ... extends Record<string, Endpoint>` satisfies that constraint but
+ * gives the plugin a real string index signature. Better Auth merges every plugin's
+ * endpoints into `auth.api`, so that signature spreads across the whole API surface and,
+ * under `noUncheckedIndexedAccess`, makes *every* `auth.api.*` call possibly `undefined`.
+ */
+// oxlint-disable-next-line typescript/consistent-type-definitions
+type PaystackPluginEndpoints = {
   initializeTransaction: ReturnType<typeof initializeTransaction>;
   verifyTransaction: ReturnType<typeof verifyTransaction>;
   listSubscriptions: ReturnType<typeof listSubscriptions>;
@@ -90,7 +99,7 @@ interface PaystackPluginEndpoints extends Record<string, BetterAuthEndpoint> {
   restoreSubscription: ReturnType<typeof restoreSubscription>;
   listProducts: ReturnType<typeof listProducts>;
   listPlans: ReturnType<typeof listPlans>;
-}
+};
 
 type PaystackHookHandler = (...args: unknown[]) => unknown;
 
