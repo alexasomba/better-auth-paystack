@@ -6,11 +6,10 @@
 
 ## [3.1.1](https://github.com/alexasomba/better-auth-paystack/compare/v3.1.0...v3.1.1) (2026-07-29)
 
-
 ### Miscellaneous Chores
 
-* update better auth to 1.6.25 ([f1f0812](https://github.com/alexasomba/better-auth-paystack/commit/f1f0812b36a2aa7f6714655ede328ecf2aa3bde7))
-* update better auth to 1.6.25 ([7ae6f6d](https://github.com/alexasomba/better-auth-paystack/commit/7ae6f6d2d6d4e0eeae6b7782fd4c7ff87364357d))
+- update better auth to 1.6.25 ([f1f0812](https://github.com/alexasomba/better-auth-paystack/commit/f1f0812b36a2aa7f6714655ede328ecf2aa3bde7))
+- update better auth to 1.6.25 ([7ae6f6d](https://github.com/alexasomba/better-auth-paystack/commit/7ae6f6d2d6d4e0eeae6b7782fd4c7ff87364357d))
 
 ## [3.1.0](https://github.com/alexasomba/better-auth-paystack/compare/v3.0.1...v3.1.0) (2026-07-29)
 
