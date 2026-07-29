@@ -1,5 +1,5 @@
 {
-  "name": "@alexasomba/better-auth-paystack",
+  "name": "better-auth-paystack",
   "version": "3.1.1",
   "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "keywords": [

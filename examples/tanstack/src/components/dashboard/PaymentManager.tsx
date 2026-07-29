@@ -26,8 +26,8 @@ import {
   type PaystackPlan,
   type PaystackProduct,
   type Subscription,
-} from "@alexasomba/better-auth-paystack";
-import { parsePaystackMetadata } from "@alexasomba/better-auth-paystack/client";
+} from "better-auth-paystack";
+import { parsePaystackMetadata } from "better-auth-paystack/client";
 import {
   ActionMessageBanner,
   type OperationMessage,

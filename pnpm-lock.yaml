@@ -306,7 +306,7 @@ importers:
 
   examples/tanstack:
     dependencies:
-      '@alexasomba/better-auth-paystack':
+      'better-auth-paystack':
         specifier: workspace:*
         version: link:../..
       '@alexasomba/paystack-node':

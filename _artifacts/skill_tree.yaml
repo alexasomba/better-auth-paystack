@@ -1,11 +1,11 @@
 library:
-  name: "@alexasomba/better-auth-paystack"
+  name: "better-auth-paystack"
   version: 3.1.1
   repository: https://github.com/alexasomba/better-auth-paystack
   license: MIT
   compatibility: >-
     Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
-    @alexasomba/better-auth-paystack >=3.0.0 <4.0.0
+    better-auth-paystack >=3.0.0 <4.0.0
   description: >-
     Paystack billing plugin for Better Auth with subscriptions, transactions,
     organization billing, and webhooks.
@@ -22,7 +22,7 @@ skills:
     license: MIT
     compatibility: >-
       Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
-      @alexasomba/better-auth-paystack >=3.0.0 <4.0.0
+      better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Configure the Better Auth Paystack server and client plugins, schema,
       products, plans, webhook secret, and canonical client actions.
@@ -39,7 +39,7 @@ skills:
     license: MIT
     compatibility: >-
       Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
-      @alexasomba/better-auth-paystack >=3.0.0 <4.0.0
+      better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Build Paystack checkout, transaction verification, subscription lifecycle,
       products/plans, and server-only renewal/sync flows.
@@ -56,7 +56,7 @@ skills:
     license: MIT
     compatibility: >-
       Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
-      @alexasomba/better-auth-paystack >=3.0.0 <4.0.0
+      better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Configure organization billing authorization, owner/admin defaults, custom
       authorizeReference, organization customer creation, and seat/team limits.
@@ -73,7 +73,7 @@ skills:
     license: MIT
     compatibility: >-
       Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
-      @alexasomba/better-auth-paystack >=3.0.0 <4.0.0
+      better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Configure products, Paystack-native plans, local plans, free trials, seat
       billing, plan limits, and catalog sync jobs.
@@ -91,7 +91,7 @@ skills:
     license: MIT
     compatibility: >-
       Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
-      @alexasomba/better-auth-paystack >=3.0.0 <4.0.0
+      better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Integrate Better Auth Paystack in TanStack Start with auth routes,
       tanstackStartCookies, server functions, client actions, and Cloudflare

@@ -7,7 +7,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "@alexasomba/better-auth-paystack",
+      "package-name": "better-auth-paystack",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": false,
       "include-v-in-tag": true,

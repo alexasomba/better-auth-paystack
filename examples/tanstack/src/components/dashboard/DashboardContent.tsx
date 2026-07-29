@@ -203,7 +203,7 @@ export default function DashboardContent({ session }: DashboardContentProps) {
               <span>GitHub</span>
             </a>
             <a
-              href="https://www.npmjs.com/package/@alexasomba/better-auth-paystack"
+              href="https://www.npmjs.com/package/better-auth-paystack"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 hover:text-gray-700 transition-colors"

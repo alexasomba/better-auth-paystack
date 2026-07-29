@@ -1,12 +1,12 @@
 ---
 name: paystack-tanstack-start
 description: >
-  Integrate @alexasomba/better-auth-paystack in TanStack Start. Use for Better Auth API routes, tanstackStartCookies(), server functions, getRequestHeaders(), authClient Paystack actions, admin billing server functions, and Cloudflare Workers deployment.
+  Integrate better-auth-paystack in TanStack Start. Use for Better Auth API routes, tanstackStartCookies(), server functions, getRequestHeaders(), authClient Paystack actions, admin billing server functions, and Cloudflare Workers deployment.
 type: composition
-library: "@alexasomba/better-auth-paystack"
+library: "better-auth-paystack"
 library_version: "3.1.1" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:examples/tanstack/README.md"
   - "alexasomba/better-auth-paystack:examples/tanstack/src/lib/auth.ts"
@@ -21,7 +21,7 @@ Create the Better Auth server config with Paystack and `tanstackStartCookies()` 
 ```ts
 import { betterAuth } from "better-auth";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { paystack } from "@alexasomba/better-auth-paystack";
+import { paystack } from "better-auth-paystack";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -58,7 +58,7 @@ Create the client plugin:
 
 ```ts
 import { createAuthClient } from "better-auth/client";
-import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+import { paystackClient } from "better-auth-paystack/client";
 
 export const authClient = createAuthClient({
   plugins: [paystackClient()],
@@ -96,7 +96,7 @@ Use client actions for checkout and user-triggered subscription lifecycle calls.
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { auth } from "./auth";
-import { syncPaystackPlans } from "@alexasomba/better-auth-paystack";
+import { syncPaystackPlans } from "better-auth-paystack";
 
 export const syncPlans = createServerFn({ method: "POST" }).handler(async () => {
   const session = await auth.api.getSession({

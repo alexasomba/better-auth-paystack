@@ -7,7 +7,7 @@ import {
   syncPaystackPlans,
   syncPaystackProducts,
   type Subscription,
-} from "@alexasomba/better-auth-paystack";
+} from "better-auth-paystack";
 import { auth, paystackOptions } from "@/lib/auth";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };

@@ -24,8 +24,8 @@
     "types": ["node", "react", "react-dom", "@testing-library/jest-dom"],
     "paths": {
       "@/*": ["./src/*"],
-      "@alexasomba/better-auth-paystack": ["../../src/index.ts"],
-      "@alexasomba/better-auth-paystack/client": ["../../src/client.ts"]
+      "better-auth-paystack": ["../../src/index.ts"],
+      "better-auth-paystack/client": ["../../src/client.ts"]
     }
   }
 }

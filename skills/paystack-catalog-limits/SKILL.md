@@ -1,12 +1,12 @@
 ---
 name: paystack-catalog-limits
 description: >
-  Configure products, Paystack-native plans, local-managed plans, free trials, seat billing, resource limits, and catalog sync in @alexasomba/better-auth-paystack. Use when tasks mention planCode, freeTrial, trial eligibility, seatAmount, seatPlanCode, limits, products, syncPaystackProducts, or syncPaystackPlans.
+  Configure products, Paystack-native plans, local-managed plans, free trials, seat billing, resource limits, and catalog sync in better-auth-paystack. Use when tasks mention planCode, freeTrial, trial eligibility, seatAmount, seatPlanCode, limits, products, syncPaystackProducts, or syncPaystackPlans.
 type: core
-library: "@alexasomba/better-auth-paystack"
+library: "better-auth-paystack"
 library_version: "3.1.1" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/types.ts"
@@ -20,7 +20,7 @@ sources:
 Configure catalog data on the server plugin. Products are one-time purchasable catalog items. Plans are subscription catalog items.
 
 ```ts
-import { paystack } from "@alexasomba/better-auth-paystack";
+import { paystack } from "better-auth-paystack";
 
 export const paystackPlugin = paystack({
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
@@ -144,7 +144,7 @@ Use `limits` for app resource enforcement and `seatAmount` for local seat billin
 Use server-only helpers to mirror Paystack catalog data into local tables:
 
 ```ts
-import { syncPaystackPlans, syncPaystackProducts } from "@alexasomba/better-auth-paystack";
+import { syncPaystackPlans, syncPaystackProducts } from "better-auth-paystack";
 
 export async function syncCatalog(ctx: unknown, options: unknown) {
   await syncPaystackProducts(ctx, options);

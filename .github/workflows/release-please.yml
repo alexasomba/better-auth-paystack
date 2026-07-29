@@ -51,7 +51,7 @@ jobs:
 
       - name: Checkout release tag
         if: ${{ env.release_tag != '' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ env.release_tag }}
@@ -62,10 +62,15 @@ jobs:
 
       - name: Setup Node
         if: ${{ env.release_tag != '' }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      - name: Install npm with trusted publishing support
+        if: ${{ env.release_tag != '' }}
+        run: npm install --global npm@11.18.0
 
       - name: Install dependencies
         if: ${{ env.release_tag != '' }}
@@ -108,8 +113,16 @@ jobs:
 
           PACKED_NAME="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); console.log(pkg.name);' "$PACK_DIR/package.json")"
           PACKED_VERSION="$(node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); console.log(pkg.version);' "$PACK_DIR/package.json")"
+          if [[ "$PACKED_NAME" != "better-auth-paystack" ]]; then
+            echo "::error ::Packed name $PACKED_NAME does not match better-auth-paystack."
+            exit 1
+          fi
           if [[ "$PACKED_VERSION" != "$release_version" ]]; then
             echo "::error ::Packed version $PACKED_VERSION does not match release tag $release_tag."
+            exit 1
+          fi
+          if grep -q '@alexasomba/better-auth-paystack' "$PACK_DIR/package.json"; then
+            echo "::error ::Packed package.json contains the retired scoped package identity."
             exit 1
           fi
 
@@ -128,6 +141,6 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish to npmjs with provenance
+      - name: Publish to npmjs with trusted publishing
         if: ${{ env.release_tag != '' && steps.npmjs.outputs.exists != 'true' }}
         run: npm publish "${{ steps.pack.outputs.tarball }}" --access public --provenance --tag latest

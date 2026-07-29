@@ -15,7 +15,7 @@ const config = defineConfig({
     tsconfigPaths: true,
   },
   ssr: {
-    noExternal: ["@alexasomba/better-auth-paystack"],
+    noExternal: ["better-auth-paystack"],
   },
   plugins: [
     devtools(),

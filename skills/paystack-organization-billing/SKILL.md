@@ -1,12 +1,12 @@
 ---
 name: paystack-organization-billing
 description: >
-  Configure organization billing in @alexasomba/better-auth-paystack. Use for organization.enabled, Better Auth organization plugin setup, owner/admin default billing authorization, organization.billingRoles, subscription.authorizeReference, organization Paystack customers, seats, invitations, members, and team limits.
+  Configure organization billing in better-auth-paystack. Use for organization.enabled, Better Auth organization plugin setup, owner/admin default billing authorization, organization.billingRoles, subscription.authorizeReference, organization Paystack customers, seats, invitations, members, and team limits.
 type: core
-library: "@alexasomba/better-auth-paystack"
+library: "better-auth-paystack"
 library_version: "3.1.1" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/index.ts"
@@ -21,7 +21,7 @@ Install the Better Auth organization plugin and enable Paystack organization bil
 ```ts
 import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins/organization";
-import { paystack } from "@alexasomba/better-auth-paystack";
+import { paystack } from "better-auth-paystack";
 
 export const auth = betterAuth({
   plugins: [

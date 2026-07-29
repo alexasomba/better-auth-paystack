@@ -1,12 +1,12 @@
 ---
 name: paystack-local-subscriptions
 description: >
-  Implement, debug, or test local-managed subscription behavior in @alexasomba/better-auth-paystack. Use for local plans without planCode, saved authorization renewal, chargeSubscriptionRenewal, seat billing, prorateAndCharge, pendingPlan, LOC_ subscription codes, trial transitions, schedule-at-period-end upgrades, and Paystack-managed vs local-managed behavior.
+  Implement, debug, or test local-managed subscription behavior in better-auth-paystack. Use for local plans without planCode, saved authorization renewal, chargeSubscriptionRenewal, seat billing, prorateAndCharge, pendingPlan, LOC_ subscription codes, trial transitions, schedule-at-period-end upgrades, and Paystack-managed vs local-managed behavior.
 type: core
-library: "@alexasomba/better-auth-paystack"
+library: "better-auth-paystack"
 library_version: "3.1.1" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:src/subscription-lifecycle.ts"
   - "alexasomba/better-auth-paystack:src/operations.ts"
