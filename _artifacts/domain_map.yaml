@@ -1,5 +1,5 @@
 library:
-  name: '@alexasomba/better-auth-paystack'
+  name: "@alexasomba/better-auth-paystack"
   version: 3.1.0
   repository: https://github.com/alexasomba/better-auth-paystack
   description: >-
