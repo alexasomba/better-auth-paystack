@@ -9,7 +9,6 @@
 
 ### Bug Fixes
 
-* migrate package to unscoped npm name ([2ce1194](https://github.com/alexasomba/better-auth-paystack/commit/2ce1194c1681c81b1d92d113829708840bcf6303))
 * migrate package to unscoped npm name ([966054a](https://github.com/alexasomba/better-auth-paystack/commit/966054ab39b099cf2581338e93fe566376484c17))
 
 ## [3.1.1](https://github.com/alexasomba/better-auth-paystack/compare/v3.1.0...v3.1.1) (2026-07-29)
