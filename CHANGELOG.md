@@ -4,6 +4,22 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.1.0](https://github.com/alexasomba/better-auth-paystack/compare/v3.0.1...v3.1.0) (2026-07-29)
+
+### Features
+
+- add billing lifecycle and subscription groups ([e821b37](https://github.com/alexasomba/better-auth-paystack/commit/e821b373fd9f787ff6c7c837b8e90bc6268df06e))
+
+### Bug Fixes
+
+- keep tanstack lint compatible with vite plus ([ed20187](https://github.com/alexasomba/better-auth-paystack/commit/ed20187fa9a1383cf4454eb680ebd0430520e441))
+- verify webhooks with paystack secret key ([f44ba9b](https://github.com/alexasomba/better-auth-paystack/commit/f44ba9bcaeb4964317911967a4e766620b1a5bb7))
+
+### Miscellaneous Chores
+
+- remove beads integration ([3d80bce](https://github.com/alexasomba/better-auth-paystack/commit/3d80bce684128df8d076b03bc8b3003268a8cda5))
+- update vite plus to 0.2.6 ([795f9d3](https://github.com/alexasomba/better-auth-paystack/commit/795f9d3edda01194aeaf5c78ab947acdcc3f91ae))
+
 ## [3.0.1](https://github.com/alexasomba/better-auth-paystack/compare/v3.0.0...v3.0.1) (2026-07-27)
 
 ### Bug Fixes

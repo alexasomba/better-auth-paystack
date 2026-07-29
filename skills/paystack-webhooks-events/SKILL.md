@@ -4,7 +4,7 @@ description: >
   Implement, debug, or test @alexasomba/better-auth-paystack webhook handling. Use for Paystack webhook signatures, secretKey verification, trusted IP checks, charge.success, reconcilePaystackTransaction, subscription.create, subscription.disable, subscription.enable, product quantity updates, subscription status changes, metadata parsing, and event hooks.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "3.0.1" # x-release-please-version
+library_version: "3.1.0" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
 sources:
