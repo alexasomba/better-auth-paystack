@@ -37,7 +37,6 @@ describe("paystack regressions", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -65,9 +64,9 @@ describe("paystack regressions", () => {
       name: "List Sub User",
     };
 
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -122,7 +121,6 @@ describe("paystack regressions", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -150,9 +148,9 @@ describe("paystack regressions", () => {
       name: "Portal User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });

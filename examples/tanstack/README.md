@@ -39,7 +39,6 @@ Create a `.dev.vars` file:
 
 ```env
 PAYSTACK_SECRET_KEY=sk_test_...
-PAYSTACK_WEBHOOK_SECRET=sk_test_...
 BETTER_AUTH_SECRET=your-secret-key
 BETTER_AUTH_URL=http://localhost:3000
 VITE_BETTER_AUTH_URL=http://localhost:3000
@@ -101,7 +100,7 @@ export const auth = betterAuth({
     admin(),
     paystack({
       paystackClient,
-      webhook: { secret: env.PAYSTACK_WEBHOOK_SECRET },
+      secretKey: env.PAYSTACK_SECRET_KEY,
       subscription: {
         enabled: true,
         allowedPaymentChannels: ["card"],
@@ -201,13 +200,12 @@ What stays server-owned:
 
 ## Environment Variables
 
-| Variable                  | Description                                         |
-| ------------------------- | --------------------------------------------------- |
-| `PAYSTACK_SECRET_KEY`     | Your Paystack secret key                            |
-| `PAYSTACK_WEBHOOK_SECRET` | Webhook signing secret (usually same as secret key) |
-| `BETTER_AUTH_SECRET`      | Secret for Better Auth session encryption           |
-| `BETTER_AUTH_URL`         | Server-side base URL                                |
-| `VITE_BETTER_AUTH_URL`    | Client-side base URL                                |
+| Variable               | Description                                        |
+| ---------------------- | -------------------------------------------------- |
+| `PAYSTACK_SECRET_KEY`  | Paystack API key; also verifies webhook signatures |
+| `BETTER_AUTH_SECRET`   | Secret for Better Auth session encryption          |
+| `BETTER_AUTH_URL`      | Server-side base URL                               |
+| `VITE_BETTER_AUTH_URL` | Client-side base URL                               |
 
 ## Learn More
 

@@ -2,7 +2,7 @@ import { defineConfig, type UserConfig } from "vite-plus";
 
 const config: UserConfig = defineConfig({
   staged: {
-    "*.{ts,tsx}": "vp check --fix",
+    "*.{js,ts,tsx,vue,svelte}": "vp check --fix",
   },
   fmt: {},
   pack: {

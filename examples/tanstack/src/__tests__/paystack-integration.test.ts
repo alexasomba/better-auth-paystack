@@ -66,7 +66,6 @@ describe("TanStack Example - Paystack Integration", () => {
 
   beforeAll(() => {
     vi.stubEnv("PAYSTACK_SECRET_KEY", "sk_test_mock");
-    vi.stubEnv("PAYSTACK_WEBHOOK_SECRET", "whsec_test_mock");
 
     // Seed products into memory database
     data.paystackProduct = [
@@ -95,7 +94,6 @@ describe("TanStack Example - Paystack Integration", () => {
         paystack({
           paystackClient,
           secretKey: "sk_test_mock",
-          webhook: { secret: "whsec_test_mock" },
           subscription: {
             enabled: true,
             plans: [],

@@ -2,3 +2,4 @@
 - 2026-06-01: npmjs publish is not complete unless the latest package page shows provenance and installs cleanly; for pnpm catalog workspaces, publish the `pnpm pack` tarball with `npm publish --provenance` so catalog specifiers are rewritten before npm signs the package.
 - 2026-06-01: Keep `catalog:` specifiers in workspace/source manifests where pnpm supports them; verify the packed npm tarball has concrete versions instead of replacing valid source catalogs by hand.
 - 2026-06-02: When adding or reviewing package versions, check every workspace manifest for remaining direct semver specs; add them to `pnpm-workspace.yaml` catalog and use `catalog:` when pnpm can resolve them.
+- 2026-07-29: Paystack webhook signatures use the integration API `secretKey`; do not copy Stripe's separate webhook-secret model into runtime options, examples, README guidance, tests, or packaged skills.

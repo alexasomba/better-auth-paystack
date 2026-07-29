@@ -24,6 +24,15 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  lint: {
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
+    env: {
+      builtin: true,
+    },
+  },
 });
 
 export default config;

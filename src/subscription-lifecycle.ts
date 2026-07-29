@@ -10,6 +10,7 @@ import {
   calculatePlanAmount,
   getPlanByName,
   getPlanSeatAmount,
+  normalizeSubscriptionGroup,
 } from "./utils";
 import type {
   AnyPaystackOptions,
@@ -45,13 +46,18 @@ export async function scheduleSubscriptionLifecycleChange(
   ctx: GenericEndpointContext,
   input: {
     referenceId: string;
+    subscriptionId?: string;
     plan?: PaystackPlan;
     scheduleAtPeriodEnd?: boolean;
     cancelAtPeriodEnd?: boolean;
   },
 ): Promise<Extract<PaystackInitializeResult, { kind: "scheduled" }> | null> {
+  const groupId = normalizeSubscriptionGroup(input.plan?.group);
   if (input.plan !== undefined && input.scheduleAtPeriodEnd === true) {
-    const existingSub = await getOrganizationSubscription(ctx, input.referenceId);
+    const existingSub =
+      input.subscriptionId === undefined
+        ? await getOrganizationSubscription(ctx, input.referenceId, groupId)
+        : await createBillingStore(ctx).findSubscriptionById(input.subscriptionId);
     if (existingSub?.status === "active") {
       await ctx.context.adapter.update({
         model: "subscription",
@@ -71,13 +77,22 @@ export async function scheduleSubscriptionLifecycleChange(
   }
 
   if (input.cancelAtPeriodEnd === true) {
-    const existingSub = await getOrganizationSubscription(ctx, input.referenceId);
+    const existingSub =
+      input.subscriptionId === undefined
+        ? await getOrganizationSubscription(
+            ctx,
+            input.referenceId,
+            input.plan === undefined ? undefined : groupId,
+          )
+        : await createBillingStore(ctx).findSubscriptionById(input.subscriptionId);
     if (existingSub?.status === "active") {
       await ctx.context.adapter.update({
         model: "subscription",
         where: [{ field: "id", value: existingSub.id }],
         update: {
           cancelAtPeriodEnd: true,
+          cancelAt: existingSub.periodEnd ?? null,
+          canceledAt: new Date(),
           updatedAt: new Date(),
         },
       });
@@ -195,10 +210,10 @@ export async function resolveCheckoutTargetEmail(
     return targetEmail;
   }
 
-  const ownerUser = (await ctx.context.adapter.findOne({
+  const ownerUser = await ctx.context.adapter.findOne<User>({
     model: "user",
     where: [{ field: "id", value: (ownerMember as { userId: string }).userId }],
-  })) as User | null;
+  });
 
   return ownerUser?.email !== undefined && ownerUser.email !== "" ? ownerUser.email : targetEmail;
 }
@@ -209,6 +224,7 @@ export async function handleProratedUpgrade(
   input: {
     plan: PaystackPlan;
     referenceId: string;
+    subscriptionId?: string;
     quantity?: number;
     targetEmail: string;
     userId: string;
@@ -218,7 +234,13 @@ export async function handleProratedUpgrade(
   },
 ): Promise<ProratedUpgradeOutcome | null> {
   const store = createBillingStore(ctx);
-  const existingSub = await store.findCurrentSubscription(input.referenceId);
+  const existingSub =
+    input.subscriptionId === undefined
+      ? await store.findCurrentSubscription(
+          input.referenceId,
+          normalizeSubscriptionGroup(input.plan.group),
+        )
+      : await store.findSubscriptionById(input.subscriptionId);
   if (
     existingSub?.status !== "active" ||
     existingSub.paystackSubscriptionCode === undefined ||

@@ -18,7 +18,15 @@ export interface BillingStore {
   findSubscriptionById(id: string): Promise<Subscription | null>;
   findSubscriptionByCode(subscriptionCode: string): Promise<Subscription | null>;
   findSubscriptionsByReference(referenceId: string): Promise<Subscription[]>;
-  findCurrentSubscription(referenceId: string): Promise<Subscription | null>;
+  findCurrentSubscription(
+    referenceId: string,
+    groupId?: string | null,
+  ): Promise<Subscription | null>;
+  retireCompetingSubscriptions(
+    referenceId: string,
+    groupId: string | null,
+    exceptId: string,
+  ): Promise<void>;
   findSubscriptionsByTransactionReference(reference: string): Promise<Subscription[]>;
   createSubscription(data: Partial<Subscription> & Record<string, unknown>): Promise<Subscription>;
   updateSubscription(
@@ -91,7 +99,7 @@ export function createBillingStore(ctx: GenericEndpointContext): BillingStore {
 
 export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
   const findOne = async <T>(model: string, where: WhereClause): Promise<T | null> =>
-    ((await adapter.findOne<T>({ model, where })) ?? null) as T | null;
+    (await adapter.findOne<T>({ model, where })) ?? null;
 
   const findMany = async <T>(model: string, where?: WhereClause): Promise<T[]> =>
     (await adapter.findMany<T>({ model, ...(where ? { where } : {}) })) ?? [];
@@ -105,9 +113,42 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
       ]),
     findSubscriptionsByReference: (referenceId) =>
       findMany<Subscription>("subscription", [{ field: "referenceId", value: referenceId }]),
-    async findCurrentSubscription(referenceId) {
+    async findCurrentSubscription(referenceId, groupId) {
       const subscriptions = await this.findSubscriptionsByReference(referenceId);
-      return sortSubscriptionsForCurrent(subscriptions)[0] ?? null;
+      const scoped =
+        groupId === undefined
+          ? subscriptions
+          : subscriptions.filter((subscription) =>
+              groupId === null
+                ? subscription.groupId === undefined ||
+                  subscription.groupId === null ||
+                  subscription.groupId === ""
+                : subscription.groupId === groupId,
+            );
+      return sortSubscriptionsForCurrent(scoped)[0] ?? null;
+    },
+    async retireCompetingSubscriptions(referenceId, groupId, exceptId) {
+      const subscriptions = await this.findSubscriptionsByReference(referenceId);
+      const competitors = subscriptions.filter(
+        (subscription) =>
+          subscription.id !== exceptId &&
+          (subscription.status === "active" || subscription.status === "trialing") &&
+          (groupId === null
+            ? subscription.groupId === undefined ||
+              subscription.groupId === null ||
+              subscription.groupId === ""
+            : subscription.groupId === groupId),
+      );
+      const now = new Date();
+      for (const subscription of competitors) {
+        await this.updateSubscription(subscription.id, {
+          status: "canceled",
+          cancelAtPeriodEnd: false,
+          canceledAt: now,
+          endedAt: now,
+          updatedAt: now,
+        });
+      }
     },
     findSubscriptionsByTransactionReference: (reference) =>
       findMany<Subscription>("subscription", [

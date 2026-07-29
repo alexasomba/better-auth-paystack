@@ -19,7 +19,6 @@ import type {
   PaystackOptions,
   PaystackClientLike,
   PaystackUser,
-  PaystackPlan,
   PaystackResponse,
   PaystackCustomerResponse,
 } from "../src/types";
@@ -31,7 +30,6 @@ describe("paystack type", () => {
     paystackClient: {} as PaystackClientLike,
     subscription: { enabled: true, plans: [] },
     secretKey: "sk_test_123",
-    webhook: { secret: "whsec_test" },
   } satisfies PaystackOptions<PaystackClientLike>;
 
   const auth = betterAuth({
@@ -125,6 +123,12 @@ describe("paystack type", () => {
     const schema = getSchema(options);
     expect(schema.paystackProduct).toBeDefined();
     expect(schema.paystackPlan).toBeDefined();
+    expect(schema.subscription?.fields).toMatchObject({
+      cancelAt: { type: "date", required: false },
+      canceledAt: { type: "date", required: false },
+      endedAt: { type: "date", required: false },
+      billingInterval: { type: "string", required: false },
+    });
   });
 
   it("should skip organization hooks when organization billing is enabled without the organization plugin", () => {
@@ -183,7 +187,6 @@ describe("paystack", () => {
     const options = {
       paystackClient: {} as PaystackClientLike,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -209,7 +212,6 @@ describe("paystack", () => {
     const options = {
       paystackClient: {} as PaystackClientLike,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -220,9 +222,7 @@ describe("paystack", () => {
     });
 
     const payload = JSON.stringify({ event: "charge.success", data: {} });
-    const signature = createHmac("sha512", options.webhook?.secret ?? options.secretKey)
-      .update(payload)
-      .digest("hex");
+    const signature = createHmac("sha512", options.secretKey).update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -232,14 +232,15 @@ describe("paystack", () => {
       body: payload,
     });
     const res = await auth.handler(req);
-    expect(res.status).toBe(200);
+    expect(res.status, await res.clone().text()).toBe(200);
   });
 
-  it("should accept the deprecated paystackWebhookSecret alias for webhook signatures", async () => {
+  it("should ignore legacy webhook secret overrides and use the Paystack secret key", async () => {
     const options = {
       paystackClient: {} as PaystackClientLike,
       secretKey: "sk_test_123",
       paystackWebhookSecret: "whsec_legacy",
+      webhook: { secret: "whsec_other" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -250,9 +251,7 @@ describe("paystack", () => {
     });
 
     const payload = JSON.stringify({ event: "charge.success", data: {} });
-    const signature = createHmac("sha512", options.paystackWebhookSecret)
-      .update(payload)
-      .digest("hex");
+    const signature = createHmac("sha512", options.secretKey).update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -262,7 +261,19 @@ describe("paystack", () => {
       body: payload,
     });
     const res = await auth.handler(req);
-    expect(res.status).toBe(200);
+    expect(res.status, await res.clone().text()).toBe(200);
+
+    const legacySignature = createHmac("sha512", options.webhook.secret)
+      .update(payload)
+      .digest("hex");
+    const legacyResponse = await auth.handler(
+      new Request("http://localhost:3000/api/auth/paystack/webhook", {
+        method: "POST",
+        headers: { "x-paystack-signature": legacySignature },
+        body: payload,
+      }),
+    );
+    expect(legacyResponse.status).toBe(401);
   });
 
   it("should create Paystack customer on sign up", async () => {
@@ -313,7 +324,6 @@ describe("paystack", () => {
       paystackClient: paystackSdk,
       createCustomerOnSignUp: true,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -351,7 +361,7 @@ describe("paystack", () => {
       name: "Test User",
     };
 
-    const res = await authClient.signUp.email(testUser, { throw: true });
+    const res = await (authClient as any).signUp.email(testUser, { throw: true });
     expect(res.user.id).toBeDefined();
     expect(createCustomer).toHaveBeenCalledTimes(1);
 
@@ -392,7 +402,6 @@ describe("paystack", () => {
         paystack<PaystackClientLike>({
           paystackClient: paystackSdk,
           secretKey: "sk_test_123",
-          webhook: { secret: "whsec_test" },
         }),
       ],
     });
@@ -400,7 +409,6 @@ describe("paystack", () => {
     const result = await syncPaystackProducts({ context: await auth.$context } as any, {
       paystackClient: paystackSdk,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     });
 
     expect(result).toEqual({ status: "success", count: 1 });
@@ -437,7 +445,6 @@ describe("paystack", () => {
         paystack<PaystackClientLike>({
           paystackClient: paystackSdk,
           secretKey: "sk_test_123",
-          webhook: { secret: "whsec_test" },
         }),
       ],
     });
@@ -445,7 +452,6 @@ describe("paystack", () => {
     const result = await syncPaystackPlans({ context: await auth.$context } as any, {
       paystackClient: paystackSdk,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     });
 
     expect(result).toEqual({ status: "success", count: 1 });
@@ -481,7 +487,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -511,10 +516,10 @@ describe("paystack", () => {
       name: "Sub User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -566,7 +571,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -596,10 +600,10 @@ describe("paystack", () => {
       name: "Sub Enable User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -630,7 +634,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -662,10 +665,10 @@ describe("paystack", () => {
       name: "List Sub User",
     };
 
-    const signUpRes = await authClient.signUp.email(testUser, { throw: true });
+    const signUpRes = await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -681,7 +684,7 @@ describe("paystack", () => {
         paystackSubscriptionCode: "SUB_list_123",
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as unknown as Subscription,
+      },
     });
 
     const res = await authClient.subscription.list({}, { headers });
@@ -711,7 +714,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -742,9 +744,9 @@ describe("paystack", () => {
       name: "Portal User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -788,11 +790,10 @@ describe("paystack", () => {
             amount: 1000,
             currency: "NGN",
             interval: "monthly",
-          } as PaystackPlan,
+          },
         ],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -822,10 +823,10 @@ describe("paystack", () => {
       name: "Callback User",
     };
 
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
 
     // headers = new Headers();
-    await authClient.signIn.email(testUser, {
+    await (authClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -887,11 +888,10 @@ describe("paystack", () => {
             amount: 1000,
             currency: "NGN",
             interval: "monthly",
-          } as PaystackPlan,
+          },
         ],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -934,7 +934,7 @@ describe("paystack", () => {
 
     const signInWithCookies = async (user: typeof userA) => {
       // headers = new Headers();
-      await authClient.signIn.email(user, {
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(headers),
       });
@@ -944,8 +944,8 @@ describe("paystack", () => {
       return reqHeaders;
     };
 
-    const aRes = await authClient.signUp.email(userA, { throw: true });
-    const bRes = await authClient.signUp.email(userB, { throw: true });
+    const aRes = await (authClient as any).signUp.email(userA, { throw: true });
+    const bRes = await (authClient as any).signUp.email(userB, { throw: true });
 
     const aHeaders = await signInWithCookies(userA);
 
@@ -1095,7 +1095,6 @@ describe("paystack", () => {
         ],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1124,8 +1123,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "product@test.com", password: "password", name: "Buyer" };
-    const _signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const _signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1160,7 +1159,6 @@ describe("paystack", () => {
         authorizeReference,
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1190,8 +1188,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "user1@test.com", password: "password", name: "User 1" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1216,7 +1214,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1246,8 +1243,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "admin@test.com", password: "password", name: "Admin" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1278,7 +1275,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1308,8 +1304,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "member@test.com", password: "password", name: "Member" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1356,7 +1352,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const middleware = referenceMiddleware(options, "list-subscriptions") as any;
@@ -1395,7 +1390,6 @@ describe("paystack", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const middleware = referenceMiddleware(options, "list-subscriptions") as any;
@@ -1433,7 +1427,6 @@ describe("paystack", () => {
         authorizeReference,
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const middleware = referenceMiddleware(options, "list-subscriptions") as any;
@@ -1472,7 +1465,6 @@ describe("paystack", () => {
       paystackClient: {} as PaystackClientLike,
       subscription: { enabled: true, plans: [] },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1500,7 +1492,7 @@ describe("paystack", () => {
         status: "disabled",
       },
     });
-    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
+    const signature = createHmac("sha512", "sk_test_123").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -1519,15 +1511,25 @@ describe("paystack", () => {
 
   it("should call onSubscriptionCreated hook when subscription.create webhook fires", async () => {
     const onSubscriptionCreated = vi.fn();
+    const onTrialEnd = vi.fn();
+    const onTrialExpired = vi.fn();
     const options = {
       paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
-        plans: [{ name: "pro", amount: 5000, currency: "NGN", planCode: "PLN_pro" }],
+        plans: [
+          {
+            name: "pro",
+            amount: 5000,
+            currency: "NGN",
+            interval: "monthly",
+            planCode: "PLN_pro",
+            freeTrial: { days: 14, onTrialEnd, onTrialExpired },
+          },
+        ],
         onSubscriptionCreated,
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1544,7 +1546,7 @@ describe("paystack", () => {
       data: {
         plan: "pro",
         referenceId: "user_hook_123",
-        status: "incomplete",
+        status: "trialing",
         createdAt: new Date(),
         updatedAt: new Date(),
       } as any,
@@ -1560,7 +1562,7 @@ describe("paystack", () => {
         metadata: { referenceId: "user_hook_123", plan: "pro" },
       },
     });
-    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
+    const signature = createHmac("sha512", "sk_test_123").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -1582,19 +1584,24 @@ describe("paystack", () => {
       }),
       expect.any(Object),
     );
+    expect(onTrialEnd).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active", billingInterval: "monthly" }),
+    );
+    expect(onTrialExpired).not.toHaveBeenCalled();
   });
 
   it("should call onSubscriptionCancel hook when subscription.disable webhook fires", async () => {
-    const onSubscriptionCancel = vi.fn();
+    const onSubscriptionCancel = vi.fn().mockRejectedValue(new Error("consumer callback failed"));
+    const onSubscriptionUpdate = vi.fn();
     const options = {
       paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [{ name: "pro", amount: 5000, currency: "NGN" }],
         onSubscriptionCancel,
+        onSubscriptionUpdate,
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1613,7 +1620,7 @@ describe("paystack", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await ctx.adapter.create({ model: "subscription", data: sub as any });
+    const createdSub = await ctx.adapter.create({ model: "subscription", data: sub as any });
 
     const payload = JSON.stringify({
       event: "subscription.disable",
@@ -1622,7 +1629,7 @@ describe("paystack", () => {
         status: "disabled",
       },
     });
-    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
+    const signature = createHmac("sha512", "sk_test_123").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",
@@ -1630,18 +1637,40 @@ describe("paystack", () => {
       body: payload,
     });
 
-    await auth.handler(req);
+    const response = await auth.handler(req);
 
+    expect(response.status).toBe(200);
     expect(onSubscriptionCancel).toHaveBeenCalledTimes(1);
     expect(onSubscriptionCancel).toHaveBeenCalledWith(
       expect.objectContaining({
         subscription: expect.objectContaining({
           paystackSubscriptionCode: "SUB_CANCEL_123",
           status: "canceled",
+          canceledAt: expect.any(Date),
+          endedAt: expect.any(Date),
         }),
       }),
       expect.any(Object),
     );
+    expect(onSubscriptionUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscription: expect.objectContaining({
+          status: "canceled",
+          endedAt: expect.any(Date),
+        }),
+        plan: expect.objectContaining({ name: "pro" }),
+      }),
+      expect.any(Object),
+    );
+    const persisted = await ctx.adapter.findOne({
+      model: "subscription",
+      where: [{ field: "id", value: createdSub.id }],
+    });
+    expect(persisted).toMatchObject({
+      status: "canceled",
+      cancelAtPeriodEnd: false,
+    });
+    expect((persisted as any).endedAt).toBeInstanceOf(Date);
   });
 
   it("should prevent trial abuse - second subscription does not get trial", async () => {
@@ -1667,7 +1696,6 @@ describe("paystack", () => {
         plans: [{ name: "starter", amount: 1000, currency: "NGN", freeTrial: { days: 7 } }],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1697,8 +1725,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "trial_abuse@test.com", password: "password", name: "Trial User" };
-    const signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -1767,7 +1795,6 @@ describe("paystack", () => {
         plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1792,8 +1819,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "card-only@test.com", password: "password", name: "Card Only" };
-    await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -1841,7 +1868,6 @@ describe("paystack", () => {
         plans: [{ name: "starter", amount: 1000, currency: "NGN" }],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1871,8 +1897,8 @@ describe("paystack", () => {
       password: "password",
       name: "Card Enforced",
     };
-    const signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
@@ -1940,7 +1966,6 @@ describe("paystack", () => {
         ],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -1970,8 +1995,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "first_trial@test.com", password: "password", name: "First Trial" };
-    const signUpRes = await authClient.signUp.email(user, { throw: true });
-    await authClient.signIn.email(user, {
+    const signUpRes = await (authClient as any).signUp.email(user, { throw: true });
+    await (authClient as any).signIn.email(user, {
       throw: true,
       onSuccess: setCookieToHeader(cookieHeaders),
     });
@@ -2019,7 +2044,6 @@ describe("paystack", () => {
         enabled: true,
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -2100,7 +2124,6 @@ describe("paystack", () => {
         plans: [{ name: "enterprise", amount: 100000, currency: "NGN" }],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -2131,8 +2154,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "admin@org.com", password: "password", name: "Org Admin" };
-    const signUpRes = await client.signUp.email(user);
-    await client.signIn.email(user, {
+    const signUpRes = await (client as any).signUp.email(user);
+    await (client as any).signIn.email(user, {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
@@ -2214,7 +2237,6 @@ describe("paystack", () => {
         ],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -2242,8 +2264,8 @@ describe("paystack", () => {
     });
 
     const user = { email: "owner@org.com", password: "password", name: "Org Owner" };
-    const signUpRes = await client.signUp.email(user);
-    await client.signIn.email(user, {
+    const signUpRes = await (client as any).signUp.email(user);
+    await (client as any).signIn.email(user, {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
@@ -2321,7 +2343,6 @@ describe("paystack", () => {
     const options = {
       paystackClient: paystackSdk as unknown as PaystackClientLike as any,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -2331,10 +2352,7 @@ describe("paystack", () => {
       plugins: [paystack<PaystackClientLike>(options)],
     });
 
-    const json = await syncPaystackProducts(
-      { context: await auth.$context } as any,
-      options as any,
-    );
+    const json = await syncPaystackProducts({ context: await auth.$context } as any, options);
     expect(json.status).toBe("success");
     expect(json.count).toBe(1);
 
@@ -2368,7 +2386,6 @@ describe("paystack", () => {
     const options = {
       paystackClient: paystackSdk as unknown as PaystackClientLike as any,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -2421,7 +2438,7 @@ describe("paystack", () => {
       },
     });
 
-    const signature = createHmac("sha512", "whsec_test").update(payload).digest("hex");
+    const signature = createHmac("sha512", "sk_test_123").update(payload).digest("hex");
 
     const req = new Request("http://localhost:3000/api/auth/paystack/webhook", {
       method: "POST",

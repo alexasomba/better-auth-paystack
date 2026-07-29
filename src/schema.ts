@@ -42,6 +42,10 @@ type SubscriptionsSchema = PluginSchemaTable<
   | "trialStart"
   | "trialEnd"
   | "cancelAtPeriodEnd"
+  | "cancelAt"
+  | "canceledAt"
+  | "endedAt"
+  | "billingInterval"
   | "groupId"
   | "seats"
   | "pendingPlan"
@@ -73,6 +77,7 @@ type PlansSchema = PluginSchemaTable<
   | "amount"
   | "currency"
   | "interval"
+  | "group"
   | "planCode"
   | "paystackId"
   | "metadata"
@@ -208,6 +213,22 @@ const subscriptionsSchema: SubscriptionsSchema = {
         required: false,
         defaultValue: false,
       },
+      cancelAt: {
+        type: "date",
+        required: false,
+      },
+      canceledAt: {
+        type: "date",
+        required: false,
+      },
+      endedAt: {
+        type: "date",
+        required: false,
+      },
+      billingInterval: {
+        type: "string",
+        required: false,
+      },
       groupId: {
         type: "string",
         required: false,
@@ -337,6 +358,10 @@ const plansSchema: PlansSchema = {
       interval: {
         type: "string",
         required: true,
+      },
+      group: {
+        type: "string",
+        required: false,
       },
       planCode: {
         type: "string",

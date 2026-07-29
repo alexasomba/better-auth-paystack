@@ -22,7 +22,6 @@ import type { Member } from "../src/types";
 describe("planCode and organization referenceId tests", () => {
   beforeEach(() => {
     process.env.PAYSTACK_SECRET_KEY = "sk_test_123";
-    process.env.PAYSTACK_WEBHOOK_SECRET = "whsec_test";
   });
 
   describe("planCode subscription flow", () => {
@@ -72,7 +71,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -118,8 +116,8 @@ describe("planCode and organization referenceId tests", () => {
         password: "password",
         name: "PlanCode User",
       };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
@@ -178,7 +176,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -212,8 +209,8 @@ describe("planCode and organization referenceId tests", () => {
       });
 
       const user = { email: "team.user@example.com", password: "password", name: "Team User" };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(cookieHeaders),
       });
@@ -278,7 +275,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -331,13 +327,13 @@ describe("planCode and organization referenceId tests", () => {
       });
 
       const user = { email: "org.owner@example.com", password: "password", name: "Org Owner" };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(cookieHeaders),
       });
 
-      const org = await authClient.organization.create({
+      const org = await (authClient as any).organization.create({
         name: "Test Org",
         slug: "test-org",
       });
@@ -390,7 +386,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -442,8 +437,8 @@ describe("planCode and organization referenceId tests", () => {
       });
 
       const user = { email: "nonmember@example.com", password: "password", name: "Non Member" };
-      await authClient.signUp.email(user, { throw: true });
-      await authClient.signIn.email(user, {
+      await (authClient as any).signUp.email(user, { throw: true });
+      await (authClient as any).signIn.email(user, {
         throw: true,
         onSuccess: setCookieToHeader(cookieHeaders),
       });

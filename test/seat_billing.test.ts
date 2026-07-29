@@ -36,10 +36,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   const options = {
     paystackClient: sdkClient,
-    secretKey: "whsec_test",
-    webhook: {
-      secret: "whsec_test",
-    },
+    secretKey: "sk_test_123",
     subscription: {
       enabled: true,
       plans: [
@@ -103,11 +100,14 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   it("should calculate correct amount with seats in initializeTransaction", async () => {
     const testUser = { email: "owner@test.com", password: "password", name: "Owner" };
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
-    const orgRes = await authClient.organization.create(
+    const orgRes = await (authClient as any).organization.create(
       {
         name: "Test Org",
         slug: "test-org",
@@ -159,11 +159,14 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   it("should calculate correct amount when quantity is provided in request with seatAmount", async () => {
     const testUser = { email: "qty@test.com", password: "password", name: "Qty User" };
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
-    const orgRes = await authClient.organization.create(
+    const orgRes = await (authClient as any).organization.create(
       {
         name: "Qty Org",
         slug: "qty-org",
@@ -245,14 +248,14 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     const testUser = { email: "broken@test.com", password: "password", name: "Broken" };
-    await invalidClient.signUp.email(testUser, { throw: true });
+    await (invalidClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await invalidClient.signIn.email(testUser, {
+    await (invalidClient as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });
 
-    const orgRes = await invalidClient.organization.create(
+    const orgRes = await (invalidClient as any).organization.create(
       {
         name: "Broken Org",
         slug: "broken-org",
@@ -283,9 +286,12 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   it("should store pendingPlan when scheduleAtPeriodEnd is true", async () => {
     const testUser = { email: "schedule@test.com", password: "password", name: "User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
     const ctx = await auth.$context;
     await (ctx.adapter as any).create({
@@ -358,7 +364,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
         "raw",
-        encoder.encode("whsec_test"),
+        encoder.encode("sk_test_123"),
         { name: "HMAC", hash: "SHA-512" },
         false,
         ["sign"],
@@ -392,9 +398,12 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   it("should cancel immediately when atPeriodEnd is false", async () => {
     const testUser = { email: "immediate-cancel@test.com", password: "password", name: "User" };
-    await authClient.signUp.email(testUser, { throw: true });
+    await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
     const ctx = await auth.$context;
     await (ctx.adapter as any).create({
@@ -448,12 +457,18 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
     expect(updatedSub.status).toBe("canceled");
     expect(updatedSub.cancelAtPeriodEnd).toBe(false);
+    expect(updatedSub.cancelAt).toBeNull();
+    expect(updatedSub.canceledAt).toBeInstanceOf(Date);
+    expect(updatedSub.endedAt).toBeInstanceOf(Date);
   });
   it("should calculate and charge prorated amount for mid-cycle seat increase", async () => {
     const testUser = { email: "prorate@test.com", password: "password", name: "User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
     const ctx = await auth.$context;
 
@@ -535,9 +550,12 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   it("should create a checkout transaction for proration when no reusable authorization exists", async () => {
     const testUser = { email: "transfer@test.com", password: "password", name: "Transfer User" };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
     const ctx = await auth.$context;
     const now = new Date();
@@ -617,9 +635,12 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       password: "password",
       name: "Verify User",
     };
-    const signUp = await authClient.signUp.email(testUser, { throw: true });
+    const signUp = await (authClient as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await authClient.signIn.email(testUser, { throw: true, onSuccess: setCookieToHeader(headers) });
+    await (authClient as any).signIn.email(testUser, {
+      throw: true,
+      onSuccess: setCookieToHeader(headers),
+    });
 
     const ctx = await auth.$context;
     const now = new Date();
@@ -771,9 +792,9 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
 
     const testUser = { email: "noupdate@test.com", password: "password", name: "No Update" };
-    const signUp = await clientWithoutUpdate.signUp.email(testUser, { throw: true });
+    const signUp = await (clientWithoutUpdate as any).signUp.email(testUser, { throw: true });
     const headers = new Headers();
-    await clientWithoutUpdate.signIn.email(testUser, {
+    await (clientWithoutUpdate as any).signIn.email(testUser, {
       throw: true,
       onSuccess: setCookieToHeader(headers),
     });

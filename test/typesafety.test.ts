@@ -14,18 +14,24 @@ describe("Paystack Deep Typesafety", () => {
       paystackClient: {} as PaystackClientLike,
       secretKey: "test_key",
       webhook: {
-        secret: "test_secret",
+        verifyIP: true,
       },
       subscription: {
         enabled: true,
         plans: [
           {
             name: "Pro",
+            group: "workspace",
+            freeTrial: {
+              days: 14,
+              onTrialEnd: async (_subscription) => Promise.resolve(),
+              onTrialExpired: async (_subscription) => Promise.resolve(),
+            },
             limits: {
               maxProjects: 10,
               canExport: true,
             },
-          } as any,
+          },
         ],
         onSubscriptionComplete: async (_data, _ctx) => {
           await Promise.resolve();
@@ -33,6 +39,13 @@ describe("Paystack Deep Typesafety", () => {
           expectTypeOf(_data.event).toExtend<Record<string, unknown>>();
           // Verify plan limits generic
           expectTypeOf(_data.plan.limits).toExtend<Record<string, unknown> | undefined>();
+        },
+        onSubscriptionUpdate: async (_data, _ctx) => {
+          await Promise.resolve();
+          expectTypeOf(_data.subscription.billingInterval).toEqualTypeOf<
+            string | null | undefined
+          >();
+          expectTypeOf(_data.plan.group).toEqualTypeOf<string | undefined>();
         },
       },
       onCustomerCreate: async (_data, _ctx) => {
@@ -70,9 +83,6 @@ describe("Paystack Deep Typesafety", () => {
     const options = {
       paystackClient: sdkClient,
       secretKey: "sk_test_123",
-      webhook: {
-        secret: "whsec_test",
-      },
     } satisfies PaystackOptions<typeof sdkClient>;
 
     expectTypeOf(options.paystackClient).toEqualTypeOf<typeof sdkClient>();

@@ -33,13 +33,9 @@ const baseURL =
   process.env.BETTER_AUTH_URL ?? process.env.VITE_BETTER_AUTH_URL ?? "http://localhost:3000";
 
 const secretKey = process.env.PAYSTACK_SECRET_KEY;
-const webhookSecret = process.env.PAYSTACK_WEBHOOK_SECRET;
 
 if (secretKey === undefined || secretKey === null || secretKey === "") {
   console.warn("Missing PAYSTACK_SECRET_KEY in environment variables");
-}
-if (webhookSecret === undefined || webhookSecret === null || webhookSecret === "") {
-  console.warn("Missing PAYSTACK_WEBHOOK_SECRET in environment variables");
 }
 
 export const paystackClient =
@@ -136,14 +132,10 @@ const productCatalog = [
 ];
 
 export const paystackOptions =
-  paystackClient !== null &&
-  webhookSecret !== undefined &&
-  webhookSecret !== null &&
-  webhookSecret !== ""
+  paystackClient !== null
     ? ({
         paystackClient,
         secretKey: secretKey!,
-        webhook: { secret: webhookSecret },
         organization: {
           enabled: true,
         },
@@ -164,15 +156,11 @@ export const auth = betterAuth({
     anonymous(),
     organization(),
     admin(),
-    ...(paystackClient !== null &&
-    webhookSecret !== undefined &&
-    webhookSecret !== null &&
-    webhookSecret !== ""
+    ...(paystackClient !== null
       ? [
           paystack({
             paystackClient,
             secretKey: secretKey!,
-            webhook: { secret: webhookSecret },
 
             organization: {
               enabled: true,

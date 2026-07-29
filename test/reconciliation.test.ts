@@ -103,7 +103,6 @@ describe("reconcilePaystackTransaction", () => {
     const options = {
       paystackClient,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
     const ctx = await createAuthContext(options);
 
@@ -184,7 +183,6 @@ describe("reconcilePaystackTransaction", () => {
       const options = {
         paystackClient,
         secretKey: "sk_test_123",
-        webhook: { secret: "whsec_test" },
       } satisfies PaystackOptions<PaystackClientLike>;
       const ctx = await createAuthContext(options);
 
@@ -241,7 +239,6 @@ describe("reconcilePaystackTransaction", () => {
     const options = {
       paystackClient,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
       subscription: {
         enabled: true,
         plans: [
@@ -350,7 +347,6 @@ describe("reconcilePaystackTransaction", () => {
     const options = {
       paystackClient,
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
       subscription: {
         enabled: true,
         plans: [

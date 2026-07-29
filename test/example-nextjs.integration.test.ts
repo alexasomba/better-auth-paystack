@@ -14,7 +14,6 @@ import { expectCheckoutResult } from "./helpers/paystack-results";
 describe("examples/nextjs integration - paystack flow", () => {
   beforeEach(() => {
     process.env.PAYSTACK_SECRET_KEY = "sk_test_123";
-    process.env.PAYSTACK_WEBHOOK_SECRET = "whsec_test";
   });
 
   it("should initialize and verify a transaction via the example auth instance", async () => {
@@ -62,7 +61,6 @@ describe("examples/nextjs integration - paystack flow", () => {
         paystack<any>({
           paystackClient: paystackSdk,
           secretKey: "sk_test_123",
-          webhook: { secret: "whsec_test" },
           subscription: {
             enabled: true,
             plans: [
@@ -99,9 +97,9 @@ describe("examples/nextjs integration - paystack flow", () => {
     });
 
     const user = { email: "user@example.com", password: "password", name: "Test" };
-    await authClient.signUp.email(user, { throw: true });
+    await (authClient as any).signUp.email(user, { throw: true });
 
-    await authClient.signIn.email(user, {
+    await (authClient as any).signIn.email(user, {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 

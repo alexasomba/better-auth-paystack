@@ -10,7 +10,6 @@ import type { PaystackClientLike } from "../src/types";
 describe("Issue #60 Reproduction", () => {
   beforeEach(() => {
     process.env.PAYSTACK_SECRET_KEY = "sk_test_123";
-    process.env.PAYSTACK_WEBHOOK_SECRET = "whsec_test";
   });
 
   it("should calculate correct billing periods even for edge-case dates", async () => {
@@ -52,7 +51,6 @@ describe("Issue #60 Reproduction", () => {
         paystack<PaystackClientLike>({
           paystackClient: paystackSdk,
           secretKey: "sk_test_123",
-          webhook: { secret: "whsec_test" },
           subscription: {
             enabled: true,
             plans: [],

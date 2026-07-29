@@ -28,9 +28,6 @@ export const auth = betterAuth({
   plugins: [
     paystack({
       secretKey: process.env.PAYSTACK_SECRET_KEY!,
-      webhook: {
-        secret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-      },
       subscription: {
         enabled: true,
         plans: [],

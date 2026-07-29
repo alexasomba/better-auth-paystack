@@ -118,9 +118,16 @@ export interface PaystackPlan {
   seatPriceId?: number | string;
   seatPlanCode?: string;
   invoiceLimit?: number;
+  /**
+   * Optional subscription group. A reference may hold one active or trialing
+   * subscription per normalized group. Omitted values use the legacy default group.
+   */
+  group?: string;
   freeTrial?: {
     days?: number;
     onTrialStart?: (subscription: Subscription) => Promise<void>;
+    onTrialEnd?: (subscription: Subscription) => Promise<void>;
+    onTrialExpired?: (subscription: Subscription) => Promise<void>;
   };
   limits?: Record<string, unknown>;
   features?: string[];
@@ -194,6 +201,10 @@ export interface SubscriptionOptions {
     data: { event: PaystackWebhookPayload; subscription: Subscription; plan: PaystackPlan },
     ctx: GenericEndpointContext,
   ) => Promise<void>;
+  onSubscriptionUpdate?: (
+    data: { event: PaystackWebhookPayload; subscription: Subscription; plan: PaystackPlan },
+    ctx: GenericEndpointContext,
+  ) => Promise<void>;
   onSubscriptionCancel?: (
     data: { event: PaystackWebhookPayload; subscription: Subscription },
     ctx: GenericEndpointContext,
@@ -222,8 +233,7 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    */
   secretKey: string;
   /**
-   * Deprecated alias for `webhook.secret`.
-   * Use `webhook.secret` for new code.
+   * @deprecated Paystack signs webhooks with `secretKey`; this option is ignored.
    */
   paystackWebhookSecret?: string;
   /**
@@ -236,7 +246,7 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    */
   webhook?: {
     /**
-     * Webhook secret for signature verification
+     * @deprecated Paystack signs webhooks with `secretKey`; this option is ignored.
      */
     secret?: string;
     /**
@@ -319,6 +329,10 @@ export interface Subscription {
   periodStart?: Date | null;
   periodEnd?: Date | null;
   cancelAtPeriodEnd: boolean;
+  cancelAt?: Date | null;
+  canceledAt?: Date | null;
+  endedAt?: Date | null;
+  billingInterval?: string | null;
   trialStart?: Date | null;
   trialEnd?: Date | null;
   groupId?: string | null;
