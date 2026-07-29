@@ -1,12 +1,12 @@
 ---
 name: paystack-billing-flows
 description: >
-  Build Paystack transaction and subscription flows with @alexasomba/better-auth-paystack. Use for initialize/verify transaction, create/upgrade/cancel/restore/list subscriptions, products/plans, billing portal links, webhooks, reconcilePaystackTransaction, chargeSubscriptionRenewal, syncPaystackProducts, and syncPaystackPlans.
+  Build Paystack transaction and subscription flows with better-auth-paystack. Use for initialize/verify transaction, create/upgrade/cancel/restore/list subscriptions, products/plans, billing portal links, webhooks, reconcilePaystackTransaction, chargeSubscriptionRenewal, syncPaystackProducts, and syncPaystackPlans.
 type: core
-library: "@alexasomba/better-auth-paystack"
+library: "better-auth-paystack"
 library_version: "3.1.1" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:README.md"
   - "alexasomba/better-auth-paystack:src/routes.ts"
@@ -19,7 +19,7 @@ sources:
 Enable subscriptions with concrete Paystack plan metadata:
 
 ```ts
-import { paystack } from "@alexasomba/better-auth-paystack";
+import { paystack } from "better-auth-paystack";
 
 paystack({
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
@@ -115,7 +115,7 @@ import {
   reconcilePaystackTransaction,
   syncPaystackPlans,
   syncPaystackProducts,
-} from "@alexasomba/better-auth-paystack";
+} from "better-auth-paystack";
 
 export async function runBillingJob(ctx: unknown, options: unknown) {
   await reconcilePaystackTransaction(ctx, options, {

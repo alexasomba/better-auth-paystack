@@ -10,7 +10,7 @@ import {
   type PaystackPlan,
   type PaystackProduct,
   type PaystackOptions,
-} from "@alexasomba/better-auth-paystack";
+} from "better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
 
 export const data: Record<string, unknown[]> = {

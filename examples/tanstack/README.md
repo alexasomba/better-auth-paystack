@@ -1,6 +1,6 @@
 # Better Auth Paystack - TanStack Start Example
 
-A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin with TanStack Start, deployed on Cloudflare Workers.
+A complete example demonstrating the `better-auth-paystack` plugin with TanStack Start, deployed on Cloudflare Workers.
 
 [**Live Demo**](https://better-auth-paystack.gittech.workers.dev)
 
@@ -21,7 +21,7 @@ A complete example demonstrating the `@alexasomba/better-auth-paystack` plugin w
 
 - **Framework**: [TanStack Start](https://tanstack.com/start)
 - **Auth**: [Better Auth](https://www.better-auth.com/)
-- **Payments**: [Paystack](https://paystack.com/) via `@alexasomba/better-auth-paystack`
+- **Payments**: [Paystack](https://paystack.com/) via `better-auth-paystack`
 - **UI**: React + [Shadcn UI](https://ui.shadcn.com/) + Tailwind CSS
 - **Deployment**: Cloudflare Workers
 
@@ -91,7 +91,7 @@ src/
 ### Server Configuration (`src/lib/auth.ts`)
 
 ```ts
-import { paystack } from "@alexasomba/better-auth-paystack";
+import { paystack } from "better-auth-paystack";
 import { organization, admin } from "better-auth/plugins";
 
 export const auth = betterAuth({
@@ -133,7 +133,7 @@ export const auth = betterAuth({
 
 ```ts
 import { createAuthClient } from "better-auth/react";
-import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+import { paystackClient } from "better-auth-paystack/client";
 import { organizationClient, adminClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
@@ -168,7 +168,7 @@ import {
   chargeSubscriptionRenewal,
   syncPaystackPlans,
   syncPaystackProducts,
-} from "@alexasomba/better-auth-paystack";
+} from "better-auth-paystack";
 
 // Example: sync your Paystack catalog into Better Auth's local tables
 await syncPaystackProducts(ctx, options);
@@ -211,5 +211,5 @@ What stays server-owned:
 
 - [Better Auth Documentation](https://www.better-auth.com/docs)
 - [Paystack API Documentation](https://paystack.com/docs/api/)
-- [@alexasomba/better-auth-paystack](https://github.com/alexasomba/better-auth-paystack)
+- [better-auth-paystack](https://github.com/alexasomba/better-auth-paystack)
 - [TanStack Start](https://tanstack.com/start)

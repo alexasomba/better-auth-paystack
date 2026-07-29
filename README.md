@@ -4,10 +4,10 @@ A TypeScript-first plugin that integrates Paystack into [Better Auth](https://ww
 
 <div align="center">
 
-![npm downloads](https://img.shields.io/npm/dm/@alexasomba/better-auth-paystack.svg)
+![npm downloads](https://img.shields.io/npm/dm/better-auth-paystack.svg)
 [![GitHub stars](https://img.shields.io/github/stars/alexasomba/better-auth-paystack.svg?style=social&label=Star)](https://github.com/alexasomba/better-auth-paystack/stargazers)
 [![GitHub release](https://img.shields.io/github/v/release/alexasomba/better-auth-paystack)](https://github.com/alexasomba/better-auth-paystack/releases)
-[![bundlephobia](https://img.shields.io/bundlephobia/minzip/@alexasomba/better-auth-paystack)](https://bundlephobia.com/result?p=@alexasomba/better-auth-paystack)
+[![bundlephobia](https://img.shields.io/bundlephobia/minzip/better-auth-paystack)](https://bundlephobia.com/result?p=better-auth-paystack)
 [![Follow on Twitter](https://img.shields.io/twitter/follow/alexasomba?style=social)](https://twitter.com/alexasomba)
 ![GitHub License](https://img.shields.io/github/license/alexasomba/better-auth-paystack)
 
@@ -23,8 +23,8 @@ Use [TanStack Intent](https://www.npmjs.com/package/@tanstack/intent) when you w
 
 ```bash
 npx @tanstack/intent@latest list
-npx @tanstack/intent@latest load @alexasomba/better-auth-paystack#better-auth-paystack-setup
-npx @tanstack/intent@latest load @alexasomba/better-auth-paystack#paystack-testing-fixtures
+npx @tanstack/intent@latest load better-auth-paystack#better-auth-paystack-setup
+npx @tanstack/intent@latest load better-auth-paystack#paystack-testing-fixtures
 ```
 
 If you use an AI agent, run `npx @tanstack/intent@latest install` in your project so the agent knows how to discover package skills.
@@ -32,7 +32,7 @@ If you use an AI agent, run `npx @tanstack/intent@latest install` in your projec
 This package also ships skills in the npm package under `skills/*/SKILL.md`, so projects can use [skills-npm](https://www.npmjs.com/package/skills-npm) to symlink installed package skills for compatible agents:
 
 ```bash
-npm install @alexasomba/better-auth-paystack
+npm install better-auth-paystack
 npx skills-npm --yes
 ```
 
@@ -64,8 +64,24 @@ For this repository, maintainers can run `pnpm run skills:dry-run` to preview di
 ### 1. Install Plugin & SDKs
 
 ```bash
-npm install better-auth @alexasomba/better-auth-paystack @alexasomba/paystack-node
+npm install better-auth better-auth-paystack @alexasomba/paystack-node
 ```
+
+#### Migrating from the scoped package
+
+Replace the scoped dependency with the unscoped package:
+
+```bash
+npm uninstall @alexasomba/better-auth-paystack
+npm install better-auth-paystack
+```
+
+Then update imports from `@alexasomba/better-auth-paystack` to `better-auth-paystack` and from
+`@alexasomba/better-auth-paystack/client` to `better-auth-paystack/client`.
+
+This is a package-name migration only. The plugin API, configuration, routes, and database schema
+are unchanged, so no database migration or configuration changes are required. Do not install both
+package names simultaneously: they expose the same Better Auth plugin and schema.
 
 #### Optional: Browser SDK (for Popup Modals)
 
@@ -85,7 +101,7 @@ BETTER_AUTH_URL=http://localhost:8787
 
 ```ts title="auth.ts"
 import { betterAuth } from "better-auth";
-import { paystack } from "@alexasomba/better-auth-paystack";
+import { paystack } from "better-auth-paystack";
 import { createPaystack } from "@alexasomba/paystack-node";
 import { admin } from "better-auth/plugins";
 
@@ -135,7 +151,7 @@ are accepted for source compatibility but ignored.
 
 ```ts title="client.ts"
 import { createAuthClient } from "better-auth/client";
-import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+import { paystackClient } from "better-auth-paystack/client";
 import { adminClient } from "better-auth/client/plugins";
 
 export const client = createAuthClient({
@@ -187,7 +203,7 @@ import {
   syncPaystackProducts,
   type ChargeRecurringSubscriptionResult,
   type PaystackSyncResult,
-} from "@alexasomba/better-auth-paystack";
+} from "better-auth-paystack";
 
 const ctx = { context: await auth.$context } as any;
 const paystackOptions = {
@@ -454,7 +470,7 @@ import {
   reconcilePaystackTransaction,
   syncPaystackPlans,
   syncPaystackProducts,
-} from "@alexasomba/better-auth-paystack";
+} from "better-auth-paystack";
 
 const ctx = { context: await auth.$context } as any;
 
@@ -753,7 +769,7 @@ The public `/paystack/sync-products` endpoint was removed in `2.0.0`.
 Run the trusted server operation from backend code instead:
 
 ```ts
-import { syncPaystackProducts } from "@alexasomba/better-auth-paystack";
+import { syncPaystackProducts } from "better-auth-paystack";
 
 const ctx = { context: await auth.$context } as any;
 

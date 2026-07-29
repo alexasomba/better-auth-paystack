@@ -1,12 +1,12 @@
 ---
 name: paystack-client-api
 description: >
-  Modify or use the @alexasomba/better-auth-paystack browser client API. Use for paystackClient(), authClient.paystack, authClient.transaction, authClient.subscription, initializeTransaction, verifyTransaction, listTransactions, listSubscriptions, listProducts, listPlans, subscription billingPortal/manageLink, cancel/restore methods, BetterFetch throw option return types, and legacy disable/enable aliases.
+  Modify or use the better-auth-paystack browser client API. Use for paystackClient(), authClient.paystack, authClient.transaction, authClient.subscription, initializeTransaction, verifyTransaction, listTransactions, listSubscriptions, listProducts, listPlans, subscription billingPortal/manageLink, cancel/restore methods, BetterFetch throw option return types, and legacy disable/enable aliases.
 type: core
-library: "@alexasomba/better-auth-paystack"
+library: "better-auth-paystack"
 library_version: "3.1.1" # x-release-please-version
 license: "MIT"
-compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
+compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:
   - "alexasomba/better-auth-paystack:src/client.ts"
   - "alexasomba/better-auth-paystack:src/routes.ts"
@@ -20,7 +20,7 @@ Install the browser plugin from the client entrypoint:
 
 ```ts
 import { createAuthClient } from "better-auth/client";
-import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+import { paystackClient } from "better-auth-paystack/client";
 
 export const authClient = createAuthClient({
   plugins: [paystackClient({ subscription: true })],
@@ -100,7 +100,7 @@ await authClient.transaction.list({ query: { referenceId: "org_123" } });
 
 ### Importing the server package in browser code
 
-Browser code should import only `@alexasomba/better-auth-paystack/client`. Server helpers such as
+Browser code should import only `better-auth-paystack/client`. Server helpers such as
 `syncPaystackPlans` and `chargeSubscriptionRenewal` belong in server functions, cron jobs, or trusted
 routes.
 

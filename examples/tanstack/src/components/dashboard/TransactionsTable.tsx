@@ -32,7 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { parsePaystackMetadata } from "@alexasomba/better-auth-paystack/client";
+import { parsePaystackMetadata } from "better-auth-paystack/client";
 
 interface Transaction {
   id: string;

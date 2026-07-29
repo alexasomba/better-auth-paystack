@@ -1,5 +1,5 @@
 import { authClient } from "@/lib/auth-client";
-import type { PaystackClientActions } from "@alexasomba/better-auth-paystack/client";
+import type { PaystackClientActions } from "better-auth-paystack/client";
 
 interface BetterAuthPaystackClient {
   paystack: PaystackClientActions;

@@ -28,7 +28,6 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@alexasomba/better-auth-paystack": "workspace:*",
     "@alexasomba/paystack-node": "catalog:",
     "@base-ui/react": "catalog:",
     "@better-auth/infra": "catalog:",
@@ -45,6 +44,7 @@
     "@tanstack/react-start": "catalog:",
     "@tanstack/react-table": "catalog:",
     "better-auth": "catalog:",
+    "better-auth-paystack": "workspace:*",
     "better-sqlite3": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",

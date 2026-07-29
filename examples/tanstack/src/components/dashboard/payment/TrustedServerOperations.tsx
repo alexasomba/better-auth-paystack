@@ -1,4 +1,4 @@
-import type { PaystackPlan, PaystackProduct, Subscription } from "@alexasomba/better-auth-paystack";
+import type { PaystackPlan, PaystackProduct, Subscription } from "better-auth-paystack";
 
 import { Button } from "@/components/ui/button";
 import {

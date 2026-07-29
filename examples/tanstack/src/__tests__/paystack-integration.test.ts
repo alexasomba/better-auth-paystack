@@ -3,8 +3,8 @@ import { betterAuth } from "better-auth";
 import { createAuthClient } from "better-auth/react";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { anonymous, organization } from "better-auth/plugins";
-import { paystack } from "@alexasomba/better-auth-paystack";
-import { paystackClient } from "@alexasomba/better-auth-paystack/client";
+import { paystack } from "better-auth-paystack";
+import { paystackClient } from "better-auth-paystack/client";
 import { createPaystack } from "@alexasomba/paystack-node";
 
 vi.mock("@alexasomba/paystack-node", async (importOriginal) => {

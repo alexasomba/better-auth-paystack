@@ -2,8 +2,8 @@
 
 This package should expose skills for agents implementing Paystack billing with Better Auth. The skills should be task-focused and grounded in the public package surface:
 
-- `paystack()` server plugin from `@alexasomba/better-auth-paystack`
-- `paystackClient()` client plugin from `@alexasomba/better-auth-paystack/client`
+- `paystack()` server plugin from `better-auth-paystack`
+- `paystackClient()` client plugin from `better-auth-paystack/client`
 - subscription actions: `create`, `upgrade`, `cancel`, `restore`, `list`, `billingPortal`
 - transaction actions: initialize, verify, list
 - server-only operations: `chargeSubscriptionRenewal`, `syncPaystackProducts`, `syncPaystackPlans`
@@ -34,7 +34,7 @@ Generate flat skills because the package is focused and has fewer than five high
 ## Shared Constraints
 
 - Include `license: "MIT"` and `compatibility` frontmatter in every skill shipped to npm.
-- Compatibility must state Node.js `>=22.0.0`, Better Auth `^1.6.9`, `@alexasomba/paystack-node` `1.10.x`, and the supported `@alexasomba/better-auth-paystack` line `>=3.0.0 <4.0.0`.
+- Compatibility must state Node.js `>=22.0.0`, Better Auth `^1.6.9`, `@alexasomba/paystack-node` `1.10.x`, and the supported `better-auth-paystack` line `>=3.0.0 <4.0.0`.
 - Do not instruct agents to import from `@better-auth/core/*` in runtime package code.
 - Keep product and plan schema tables enabled by default.
 - Prefer canonical client methods over deprecated `subscription.disable` and `subscription.enable` aliases.
