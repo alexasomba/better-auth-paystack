@@ -3,6 +3,7 @@ import {
   PaystackError,
   PaystackResponse,
   type CustomerCreatePayload,
+  type CustomerUpdatePayload,
 } from "@alexasomba/paystack-node";
 import type { components } from "@alexasomba/paystack-node";
 import type { PaystackClientLike } from "./types";
@@ -101,6 +102,11 @@ export interface PaystackAdapter {
   verifyTransaction(reference: string): Promise<unknown>;
   chargeAuthorization(body: ChargeAuthorizationPayload): Promise<unknown>;
   createCustomer(body: CustomerCreatePayload): Promise<unknown>;
+  fetchCustomer(emailOrCode: string): Promise<unknown>;
+  updateCustomer(
+    emailOrCode: string,
+    body: CustomerUpdatePayload & { email?: string },
+  ): Promise<unknown>;
   listProducts(): Promise<components["schemas"]["ProductListsResponseArray"][]>;
   fetchProduct(productId: number): Promise<unknown>;
   listPlans(): Promise<components["schemas"]["PlanListResponseArray"][]>;
@@ -136,6 +142,19 @@ export function createPaystackAdapter(client?: PaystackClientLike): PaystackAdap
     },
     async createCustomer(body: CustomerCreatePayload): Promise<unknown> {
       const raw = await requireClient().customer?.create({ body });
+      return unwrapSdkResult(raw);
+    },
+    async fetchCustomer(emailOrCode: string): Promise<unknown> {
+      const raw = await requireClient().customer?.fetch(emailOrCode);
+      return unwrapSdkResult(raw);
+    },
+    async updateCustomer(
+      emailOrCode: string,
+      body: CustomerUpdatePayload & { email?: string },
+    ): Promise<unknown> {
+      const raw = await requireClient().customer?.update(emailOrCode, {
+        body: body as CustomerUpdatePayload,
+      });
       return unwrapSdkResult(raw);
     },
     async listProducts(): Promise<components["schemas"]["ProductListsResponseArray"][]> {

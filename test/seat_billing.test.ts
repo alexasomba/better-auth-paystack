@@ -460,6 +460,9 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     });
     expect(updatedSub.status).toBe("canceled");
     expect(updatedSub.cancelAtPeriodEnd).toBe(false);
+    expect(updatedSub.cancelAt).toBeNull();
+    expect(updatedSub.canceledAt).toBeInstanceOf(Date);
+    expect(updatedSub.endedAt).toBeInstanceOf(Date);
   });
   it("should calculate and charge prorated amount for mid-cycle seat increase", async () => {
     const testUser = { email: "prorate@test.com", password: "password", name: "User" };

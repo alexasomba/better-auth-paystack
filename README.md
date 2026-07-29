@@ -107,6 +107,7 @@ export const auth = betterAuth({
         plans: [
           {
             name: "pro",
+            group: "workspace", // Optional: one active/trialing subscription per group
             planCode: "PLN_pro_123", // Native: Managed by Paystack
             freeTrial: { days: 14 },
             limits: { teams: 5, seats: 10 }, // Custom resource & member limits
@@ -254,7 +255,9 @@ await authClient.paystack.transaction.initialize({
 
 ## Limits & Seat Management
 
-The plugin automatically enforces limits based on the active subscription.
+The plugin automatically enforces limits across active and trialing subscriptions. When multiple
+subscription groups define the same numeric limit, the highest value wins; plan features are
+combined.
 
 ### Member Seat Limits
 
@@ -269,6 +272,22 @@ plans: [{ name: "pro", limits: { teams: 5, seats: 10 } }];
 ```
 
 The plugin natively checks the `teams` limit if using the Better Auth Organization plugin.
+
+### Subscription Groups
+
+Set `group` on related plans when a user or organization may own independent subscriptions:
+
+```ts
+plans: [
+  { name: "pro", group: "workspace", planCode: "PLN_pro" },
+  { name: "priority-support", group: "support", planCode: "PLN_support" },
+];
+```
+
+Group names are trimmed and lowercased. A reference can have one active or trialing subscription
+per group. Plans without `group` remain in the legacy default group, represented by a nullable
+`subscription.groupId`, so existing configurations keep their previous single-subscription
+behavior.
 
 ---
 
@@ -404,6 +423,7 @@ React to billing events on the server by providing callbacks in your configurati
 
 - `onSubscriptionComplete`: Called after successful transaction verification (Native or Local).
 - `onSubscriptionCreated`: Called when a subscription record is first initialized in the DB.
+- `onSubscriptionUpdate`: Called after a persisted lifecycle change.
 - `onSubscriptionCancel`: Called when a user or organization cancels their subscription.
 
 #### Customer Hooks (`top-level` or `organization.*`)
@@ -414,6 +434,11 @@ React to billing events on the server by providing callbacks in your configurati
 #### Trial Hooks (`subscription.plans[].freeTrial.*`)
 
 - `onTrialStart`: Called when a new trial period begins.
+- `onTrialEnd`: Called when a trial converts to an active subscription.
+- `onTrialExpired`: Called when a trial ends without conversion.
+
+Application callback failures are logged after billing state is persisted and do not cause an
+otherwise valid Paystack webhook to be replayed.
 
 #### Global Hook
 
@@ -701,6 +726,10 @@ The plugin extends your database with the following fields and tables.
 ### Database Indexing
 
 The plugin's schema definition includes recommended indexes and uniqueness constraints for performance. When you run `npx better-auth migrate`, these will be automatically applied to your database.
+
+After upgrading, run `npx better-auth migrate` (or `npx better-auth generate` for schema-managed
+adapters). The additive `cancelAt`, `canceledAt`, `endedAt`, and `billingInterval` subscription
+columns are nullable; historical rows are populated as future lifecycle events are processed.
 
 The following fields are indexed:
 

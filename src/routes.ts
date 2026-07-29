@@ -40,6 +40,7 @@ import {
   getPlanSeatAmount,
   calculatePlanAmount,
   isLocalSubscriptionCode,
+  normalizeSubscriptionGroup,
 } from "./utils";
 import { referenceMiddleware } from "./middleware";
 import { authorizeBillingReference } from "./reference-access";
@@ -246,6 +247,10 @@ export const paystackWebhook = <P extends string = "/webhook">(
               planCode !== undefined && planCode !== null && planCode !== ""
                 ? plans.find((p) => p.planCode === planCode)
                 : undefined;
+            const groupIdFromMetadata =
+              typeof metadataObj.groupId === "string"
+                ? normalizeSubscriptionGroup(metadataObj.groupId)
+                : normalizeSubscriptionGroup(planFromCode?.group);
             const planPart = planFromCode?.name ?? planNameFromMetadata;
             const planName =
               planPart !== undefined && planPart !== null && planPart !== ""
@@ -283,53 +288,69 @@ export const paystackWebhook = <P extends string = "/webhook">(
                     value: string | number | boolean | null;
                   }[],
                 });
-                const subscription = matches?.[0];
+                const subscription = matches?.find((candidate) =>
+                  groupIdFromMetadata === null
+                    ? candidate.groupId === undefined ||
+                      candidate.groupId === null ||
+                      candidate.groupId === ""
+                    : candidate.groupId === groupIdFromMetadata,
+                );
                 if (subscription !== undefined && subscription !== null) {
-                  await ctx.context.adapter.update({
-                    model: "subscription",
-                    update: {
-                      paystackSubscriptionCode: subscriptionCode,
-                      status: "active",
-                      updatedAt: new Date(),
-                      periodEnd:
-                        subscriptionData.next_payment_date !== undefined &&
-                        subscriptionData.next_payment_date !== null
-                          ? new Date(subscriptionData.next_payment_date)
-                          : undefined,
-                    },
-                    where: [{ field: "id", value: subscription.id }],
-                  });
-
                   const plan =
                     planFromCode ??
                     (planName !== undefined && planName !== null && planName !== ""
                       ? await getPlanByName(options, planName)
                       : undefined);
+                  const now = new Date();
+                  const persistedSubscription: Subscription = {
+                    ...subscription,
+                    paystackSubscriptionCode: subscriptionCode,
+                    status: "active",
+                    billingInterval: plan?.interval ?? subscription.billingInterval ?? null,
+                    periodEnd:
+                      subscriptionData.next_payment_date !== undefined &&
+                      subscriptionData.next_payment_date !== null
+                        ? new Date(subscriptionData.next_payment_date)
+                        : subscription.periodEnd,
+                    updatedAt: now,
+                  };
+                  await ctx.context.adapter.update({
+                    model: "subscription",
+                    update: {
+                      paystackSubscriptionCode: persistedSubscription.paystackSubscriptionCode,
+                      status: persistedSubscription.status,
+                      billingInterval: persistedSubscription.billingInterval,
+                      periodEnd: persistedSubscription.periodEnd,
+                      updatedAt: persistedSubscription.updatedAt,
+                    },
+                    where: [{ field: "id", value: subscription.id }],
+                  });
+                  await createBillingStore(ctx).retireCompetingSubscriptions(
+                    subscription.referenceId,
+                    subscription.groupId ?? null,
+                    subscription.id,
+                  );
+
                   if (plan !== undefined && plan !== null) {
-                    await options.subscription.onSubscriptionComplete?.(
-                      {
-                        event,
-                        subscription: {
-                          ...subscription,
-                          paystackSubscriptionCode: subscriptionCode,
-                          status: "active",
-                        },
-                        plan,
-                      },
-                      ctx as GenericEndpointContext,
-                    );
-                    await options.subscription.onSubscriptionCreated?.(
-                      {
-                        event,
-                        subscription: {
-                          ...subscription,
-                          paystackSubscriptionCode: subscriptionCode,
-                          status: "active",
-                        },
-                        plan,
-                      },
-                      ctx as GenericEndpointContext,
-                    );
+                    const callbackData = { event, subscription: persistedSubscription, plan };
+                    for (const callback of [
+                      options.subscription.onSubscriptionComplete,
+                      options.subscription.onSubscriptionCreated,
+                      options.subscription.onSubscriptionUpdate,
+                    ]) {
+                      try {
+                        await callback?.(callbackData, ctx as GenericEndpointContext);
+                      } catch (error) {
+                        ctx.context.logger.error("Paystack subscription callback failed", error);
+                      }
+                    }
+                    if (subscription.status === "trialing") {
+                      try {
+                        await plan.freeTrial?.onTrialEnd?.(persistedSubscription);
+                      } catch (error) {
+                        ctx.context.logger.error("Paystack trial end callback failed", error);
+                      }
+                    }
                   }
                 }
               }
@@ -359,22 +380,61 @@ export const paystackWebhook = <P extends string = "/webhook">(
                 newStatus = "active";
               }
 
+              const now = new Date();
+              const persistedSubscription =
+                existing === null || existing === undefined
+                  ? undefined
+                  : ({
+                      ...existing,
+                      status: newStatus,
+                      cancelAtPeriodEnd: newStatus === "active",
+                      cancelAt: newStatus === "active" ? (periodEnd ?? null) : null,
+                      canceledAt: now,
+                      endedAt: newStatus === "canceled" ? now : null,
+                      ...(periodEnd ? { periodEnd } : {}),
+                      updatedAt: now,
+                    } as Subscription);
               await ctx.context.adapter.update({
                 model: "subscription",
                 update: {
                   status: newStatus,
-                  cancelAtPeriodEnd: true,
+                  cancelAtPeriodEnd: newStatus === "active",
+                  cancelAt: newStatus === "active" ? (periodEnd ?? null) : null,
+                  canceledAt: now,
+                  endedAt: newStatus === "canceled" ? now : null,
                   ...(periodEnd ? { periodEnd } : {}),
-                  updatedAt: new Date(),
+                  updatedAt: now,
                 },
                 where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
               });
 
-              if (existing !== null && existing !== undefined) {
-                await options.subscription.onSubscriptionCancel?.(
-                  { event, subscription: { ...existing, status: "canceled" } as Subscription },
-                  ctx as GenericEndpointContext,
-                );
+              if (persistedSubscription !== undefined) {
+                try {
+                  await options.subscription.onSubscriptionCancel?.(
+                    { event, subscription: persistedSubscription },
+                    ctx as GenericEndpointContext,
+                  );
+                } catch (error) {
+                  ctx.context.logger.error("Paystack subscription cancel callback failed", error);
+                }
+                const plan = await getPlanByName(options, persistedSubscription.plan);
+                if (plan !== undefined && plan !== null) {
+                  try {
+                    await options.subscription.onSubscriptionUpdate?.(
+                      { event, subscription: persistedSubscription, plan },
+                      ctx as GenericEndpointContext,
+                    );
+                  } catch (error) {
+                    ctx.context.logger.error("Paystack subscription update callback failed", error);
+                  }
+                  if (existing?.status === "trialing" && newStatus === "canceled") {
+                    try {
+                      await plan.freeTrial?.onTrialExpired?.(persistedSubscription);
+                    } catch (error) {
+                      ctx.context.logger.error("Paystack trial expiry callback failed", error);
+                    }
+                  }
+                }
               }
             }
           }
@@ -445,6 +505,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         email: z.ZodOptional<z.ZodString>;
         metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
         quantity: z.ZodOptional<z.ZodNumber>;
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
@@ -489,6 +550,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         scheduleAtPeriodEnd,
         cancelAtPeriodEnd,
         prorateAndCharge,
+        subscriptionId,
       } = ctx.body;
 
       // 1. Validate Callback URL validation (same as before)
@@ -607,9 +669,24 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         | undefined;
       const referenceId =
         ctx.body.referenceId ?? referenceIdFromCtx ?? (session.user as { id: string }).id;
+      const groupId = normalizeSubscriptionGroup(plan?.group);
+      if (subscriptionId !== undefined) {
+        const selectedSubscription =
+          await createBillingStore(ctx).findSubscriptionById(subscriptionId);
+        if (
+          selectedSubscription === null ||
+          selectedSubscription.referenceId !== referenceId ||
+          normalizeSubscriptionGroup(selectedSubscription.groupId) !== groupId
+        ) {
+          throw new APIError("BAD_REQUEST", {
+            message: "Subscription does not belong to the authorized reference and plan group.",
+          });
+        }
+      }
 
       const scheduledChange = await scheduleSubscriptionLifecycleChange(ctx, {
         referenceId,
+        subscriptionId,
         plan,
         scheduleAtPeriodEnd,
         cancelAtPeriodEnd,
@@ -662,6 +739,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             referenceId,
             userId: user.id,
             plan: plan !== undefined ? plan.name.toLowerCase() : undefined,
+            groupId,
             product: product !== undefined ? product.name.toLowerCase() : undefined,
             extra: extraMetadata,
             trial: {
@@ -702,6 +780,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           const proration = await handleProratedUpgrade(ctx, options, {
             plan,
             referenceId,
+            subscriptionId,
             quantity,
             targetEmail,
             userId: user.id,
@@ -823,6 +902,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           model: "subscription",
           data: {
             plan: plan.name.toLowerCase(),
+            groupId,
             referenceId,
             userId: user.id,
             paystackCustomerCode: storedCustomerCode ?? "",
@@ -831,6 +911,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             paystackAuthorizationCode: "",
             paystackTransactionReference: reference ?? "",
             status: trialStart !== undefined ? "trialing" : "incomplete",
+            billingInterval: plan.interval ?? null,
             seats: quantity ?? 1,
             periodStart: new Date(),
             periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
@@ -881,6 +962,7 @@ export const createSubscription = <P extends string = "/create-subscription">(
         email: z.ZodOptional<z.ZodString>;
         metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
         quantity: z.ZodOptional<z.ZodNumber>;
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
@@ -915,6 +997,7 @@ export const upgradeSubscription = <P extends string = "/upgrade-subscription">(
         email: z.ZodOptional<z.ZodString>;
         metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         referenceId: z.ZodOptional<z.ZodString>;
+        subscriptionId: z.ZodOptional<z.ZodString>;
         callbackURL: z.ZodOptional<z.ZodString>;
         quantity: z.ZodOptional<z.ZodNumber>;
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
@@ -1336,12 +1419,17 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
           });
 
           if (sub !== null && sub !== undefined) {
+            const now = new Date();
+            const immediate = atPeriodEnd === false;
             await ctx.context.adapter.update({
               model: "subscription",
               update: {
-                status: atPeriodEnd === false ? "canceled" : "active",
-                cancelAtPeriodEnd: atPeriodEnd !== false,
-                updatedAt: new Date(),
+                status: immediate ? "canceled" : "active",
+                cancelAtPeriodEnd: !immediate,
+                cancelAt: immediate ? null : (sub.periodEnd ?? null),
+                canceledAt: now,
+                endedAt: immediate ? now : null,
+                updatedAt: now,
               },
               where: [{ field: "id", value: sub.id }],
             });
@@ -1398,13 +1486,18 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
         });
 
         if (sub !== undefined && sub !== null) {
+          const now = new Date();
+          const immediate = atPeriodEnd === false;
           await ctx.context.adapter.update({
             model: "subscription",
             update: {
-              status: atPeriodEnd === false ? "canceled" : "active",
-              cancelAtPeriodEnd: atPeriodEnd !== false,
+              status: immediate ? "canceled" : "active",
+              cancelAtPeriodEnd: !immediate,
+              cancelAt: immediate ? null : (periodEnd ?? sub.periodEnd ?? null),
+              canceledAt: now,
+              endedAt: immediate ? now : null,
               periodEnd,
-              updatedAt: new Date(),
+              updatedAt: now,
             },
             where: [{ field: "id", value: sub.id }],
           });
@@ -1512,6 +1605,10 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
           model: "subscription",
           update: {
             status: "active",
+            cancelAtPeriodEnd: false,
+            cancelAt: null,
+            canceledAt: null,
+            endedAt: null,
             updatedAt: new Date(),
           },
           where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],

@@ -314,6 +314,7 @@ describe("Local Custom Subscriptions", () => {
         status: "active",
         paystackSubscriptionCode: "LOC_ref_999",
         paystackAuthorizationCode: "AUTH_cancel_999",
+        periodEnd: new Date(Date.now() + 86_400_000),
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -340,5 +341,8 @@ describe("Local Custom Subscriptions", () => {
     const updatedSub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
     expect(updatedSub.status).toBe("active");
     expect(updatedSub.cancelAtPeriodEnd).toBe(true);
+    expect(updatedSub.cancelAt).toBeInstanceOf(Date);
+    expect(updatedSub.canceledAt).toBeInstanceOf(Date);
+    expect(updatedSub.endedAt).toBeNull();
   });
 });

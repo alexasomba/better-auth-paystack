@@ -4,6 +4,7 @@ export interface CheckoutMetadataInput {
   referenceId: string;
   userId: string;
   plan?: string;
+  groupId?: string | null;
   product?: string;
   extra?: PaystackMetadata;
   trial: {
@@ -77,6 +78,7 @@ export function createCheckoutMetadata(input: CheckoutMetadataInput): PaystackMe
     referenceId: input.referenceId,
     userId: input.userId,
     plan: input.plan,
+    groupId: input.groupId,
     product: input.product,
     ...input.extra,
     isTrial: input.trial.isTrial,

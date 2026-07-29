@@ -1,10 +1,10 @@
-import type { CustomerCreatePayload } from "@alexasomba/paystack-node";
 import {
   defineErrorCodes,
   type AuthContext,
   type BetterAuthPlugin,
   type GenericEndpointContext,
 } from "better-auth";
+import { APIError } from "better-auth/api";
 import { defu } from "defu";
 
 import {
@@ -26,19 +26,13 @@ import {
   listPlans,
 } from "./routes";
 import { getSchema } from "./schema";
-import { checkSeatLimit, checkTeamLimit, getOrganizationSubscription } from "./limits";
-import { getPlanByName, syncSubscriptionSeats } from "./utils";
-import type {
-  PaystackClientLike,
-  PaystackOptions,
-  PaystackCustomerResponse,
-  AnyPaystackOptions,
-  User,
-} from "./types";
+import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits";
+import { syncSubscriptionSeats } from "./utils";
+import type { PaystackClientLike, PaystackOptions, AnyPaystackOptions, User } from "./types";
 import { createPaystackAdapter } from "./paystack-sdk";
 import { PACKAGE_VERSION } from "./version";
 import { createBillingStoreFromAdapter } from "./billing-store";
-import { stringifyPaystackMetadata } from "./metadata";
+import { resolvePaystackCustomer } from "./customer";
 
 export {
   createCheckoutMetadata,
@@ -192,7 +186,13 @@ const createPaystackPlugin = <
             user: {
               create: {
                 async after(
-                  user: { id: string; email?: string | null; name?: string | null },
+                  user: {
+                    id: string;
+                    email?: string | null;
+                    name?: string | null;
+                    emailVerified?: boolean;
+                    paystackCustomerCode?: string | null;
+                  },
                   hookCtx?: GenericEndpointContext | null,
                 ) {
                   if (
@@ -205,41 +205,68 @@ const createPaystackPlugin = <
                     return;
 
                   try {
-                    const sdkRes = (await createPaystackAdapter(
-                      options.paystackClient as PaystackClientLike,
-                    ).createCustomer({
-                      email: user.email,
-                      first_name: user.name ?? undefined,
-                      metadata: stringifyPaystackMetadata({ userId: user.id }),
-                    })) as PaystackCustomerResponse;
-                    const customerCode = sdkRes?.customer_code;
+                    const result = await resolvePaystackCustomer({
+                      adapter: ctx.adapter,
+                      client: options.paystackClient as PaystackClientLike,
+                      logger: ctx.logger,
+                      reference: {
+                        id: user.id,
+                        type: "user",
+                        email: user.email,
+                        name: user.name,
+                        emailVerified: user.emailVerified,
+                        paystackCustomerCode: user.paystackCustomerCode,
+                      },
+                    });
+                    const customerCode = result?.customer.customer_code;
 
                     if (
-                      customerCode !== undefined &&
-                      customerCode !== null &&
-                      customerCode !== ""
+                      result?.created === true &&
+                      typeof customerCode === "string" &&
+                      typeof options.onCustomerCreate === "function"
                     ) {
-                      await createBillingStoreFromAdapter(ctx.adapter).saveCustomerCode(
-                        user.id,
-                        customerCode,
-                        false,
-                      );
-
-                      if (typeof options.onCustomerCreate === "function") {
-                        await options.onCustomerCreate(
-                          {
-                            paystackCustomer: sdkRes,
-                            user: {
-                              ...(user as User),
-                              paystackCustomerCode: customerCode,
-                            },
+                      await options.onCustomerCreate(
+                        {
+                          paystackCustomer: result.customer,
+                          user: {
+                            ...(user as User),
+                            paystackCustomerCode: customerCode,
                           },
-                          hookCtx,
-                        );
-                      }
+                        },
+                        hookCtx,
+                      );
                     }
                   } catch (error: unknown) {
                     ctx.logger.error("Failed to create Paystack customer for user", error);
+                  }
+                },
+              },
+              update: {
+                async after(user: {
+                  id: string;
+                  email?: string | null;
+                  paystackCustomerCode?: string | null;
+                }) {
+                  const persisted = await createBillingStoreFromAdapter(ctx.adapter).findUser(
+                    user.id,
+                  );
+                  const customerCode =
+                    user.paystackCustomerCode ??
+                    (persisted as (User & { paystackCustomerCode?: string | null }) | null)
+                      ?.paystackCustomerCode;
+                  if (
+                    typeof customerCode !== "string" ||
+                    customerCode === "" ||
+                    typeof user.email !== "string" ||
+                    user.email === ""
+                  )
+                    return;
+                  try {
+                    await createPaystackAdapter(
+                      options.paystackClient as PaystackClientLike,
+                    ).updateCustomer(customerCode, { email: user.email });
+                  } catch (error: unknown) {
+                    ctx.logger.error("Failed to synchronize Paystack customer email", error);
                   }
                 },
               },
@@ -275,52 +302,151 @@ const createPaystackPlugin = <
 
                           if (targetEmail === undefined || targetEmail === null) return;
 
-                          const params = defu(
-                            {
+                          const result = await resolvePaystackCustomer({
+                            adapter: ctx.adapter,
+                            client: options.paystackClient as PaystackClientLike,
+                            logger: ctx.logger,
+                            reference: {
+                              id: org.id,
+                              type: "organization",
                               email: targetEmail,
-                              first_name: org.name,
-                              metadata: stringifyPaystackMetadata({ organizationId: org.id }),
+                              name: org.name,
+                              paystackCustomerCode: (
+                                org as { paystackCustomerCode?: string | null }
+                              ).paystackCustomerCode,
                             },
-                            extraCreateParams,
-                          );
-                          const sdkRes = (await createPaystackAdapter(
-                            options.paystackClient as PaystackClientLike,
-                          ).createCustomer(
-                            params as CustomerCreatePayload,
-                          )) as PaystackCustomerResponse;
-                          const customerCode = sdkRes?.customer_code as string | undefined;
+                            createParams: defu({}, extraCreateParams),
+                          });
+                          const customerCode = result?.customer.customer_code;
 
                           if (
-                            customerCode !== undefined &&
-                            customerCode !== null &&
-                            customerCode !== "" &&
-                            sdkRes !== undefined &&
-                            sdkRes !== null
+                            result?.created === true &&
+                            typeof customerCode === "string" &&
+                            typeof options.organization?.onCustomerCreate === "function"
                           ) {
-                            await createBillingStoreFromAdapter(ctx.adapter).saveCustomerCode(
-                              org.id,
-                              customerCode,
-                              true,
-                            );
-
-                            if (typeof options.organization?.onCustomerCreate === "function") {
-                              await options.organization.onCustomerCreate(
-                                {
-                                  paystackCustomer: sdkRes,
-                                  organization: {
-                                    ...org,
-                                    paystackCustomerCode: customerCode,
-                                  },
+                            await options.organization.onCustomerCreate(
+                              {
+                                paystackCustomer: result.customer,
+                                organization: {
+                                  ...org,
+                                  paystackCustomerCode: customerCode,
                                 },
-                                hookCtx!,
-                              );
-                            }
+                              },
+                              hookCtx!,
+                            );
                           }
                         } catch (error: unknown) {
                           ctx.logger.error(
                             "Failed to create Paystack customer for organization",
                             error,
                           );
+                        }
+                      },
+                    },
+                    update: {
+                      async after(
+                        org: {
+                          id: string;
+                          name?: string | null;
+                          email?: string | null;
+                          paystackCustomerCode?: string | null;
+                        },
+                        hookCtx?: GenericEndpointContext | null,
+                      ) {
+                        const persisted = await createBillingStoreFromAdapter(
+                          ctx.adapter,
+                        ).findOrganization(org.id);
+                        const customerCode =
+                          org.paystackCustomerCode ?? persisted?.paystackCustomerCode;
+                        if (typeof customerCode !== "string" || customerCode === "") return;
+                        try {
+                          const configured =
+                            typeof options.organization?.getCustomerCreateParams === "function" &&
+                            hookCtx
+                              ? await options.organization.getCustomerCreateParams(
+                                  {
+                                    id: org.id,
+                                    name: org.name ?? persisted?.name ?? "",
+                                    email:
+                                      org.email ??
+                                      (persisted as typeof persisted & { email?: string | null })
+                                        ?.email,
+                                  },
+                                  hookCtx,
+                                )
+                              : {};
+                          const configuredEmail =
+                            typeof configured.email === "string" && configured.email !== ""
+                              ? configured.email
+                              : undefined;
+                          await createPaystackAdapter(
+                            options.paystackClient as PaystackClientLike,
+                          ).updateCustomer(customerCode, {
+                            ...(configuredEmail !== undefined ||
+                            (typeof org.email === "string" && org.email !== "")
+                              ? { email: configuredEmail ?? org.email ?? undefined }
+                              : {}),
+                            ...(typeof org.name === "string" && org.name !== ""
+                              ? { first_name: org.name }
+                              : {}),
+                          });
+                        } catch (error: unknown) {
+                          ctx.logger.error(
+                            "Failed to synchronize Paystack organization customer",
+                            error,
+                          );
+                        }
+                      },
+                    },
+                    delete: {
+                      async before(org: { id: string; paystackCustomerCode?: string | null }) {
+                        const store = createBillingStoreFromAdapter(ctx.adapter);
+                        const subscriptions = await store.findSubscriptionsByReference(org.id);
+                        if (
+                          subscriptions.some(
+                            (subscription) =>
+                              subscription.status === "active" ||
+                              subscription.status === "trialing",
+                          )
+                        ) {
+                          throw new APIError("BAD_REQUEST", {
+                            message:
+                              "Organization cannot be deleted while it has an active subscription",
+                          });
+                        }
+
+                        const persisted = await store.findOrganization(org.id);
+                        const customerCode =
+                          org.paystackCustomerCode ?? persisted?.paystackCustomerCode;
+                        if (typeof customerCode !== "string" || customerCode === "") return;
+                        try {
+                          const customer = (await createPaystackAdapter(
+                            options.paystackClient as PaystackClientLike,
+                          ).fetchCustomer(customerCode)) as {
+                            subscriptions?: { status?: string }[];
+                          };
+                          if (
+                            customer.subscriptions?.some(
+                              (subscription) =>
+                                subscription.status === "active" ||
+                                subscription.status === "trialing",
+                            ) === true
+                          ) {
+                            throw new APIError("BAD_REQUEST", {
+                              message:
+                                "Organization cannot be deleted while it has an active subscription",
+                            });
+                          }
+                        } catch (error: unknown) {
+                          if (error instanceof APIError) throw error;
+                          ctx.logger.error(
+                            "Failed to check Paystack subscriptions before organization deletion",
+                            error,
+                          );
+                          throw new APIError("BAD_REQUEST", {
+                            message:
+                              "Organization deletion could not verify its Paystack subscriptions",
+                          });
                         }
                       },
                     },
@@ -424,18 +550,14 @@ const createPaystackPlugin = <
                       ctx: GenericEndpointContext | null | undefined,
                     ) => {
                       if (options.subscription?.enabled === true && team.organizationId && ctx) {
-                        const subscription = await getOrganizationSubscription(
+                        const entitlements = await getOrganizationEntitlements(
                           ctx,
                           team.organizationId,
+                          routeOptions,
                         );
-                        if (subscription !== null && subscription !== undefined) {
-                          const plan = await getPlanByName(routeOptions, subscription.plan);
-                          const limits = plan?.limits;
-                          const maxTeams = limits?.teams as number | undefined;
-
-                          if (typeof maxTeams === "number") {
-                            await checkTeamLimit(ctx, team.organizationId, maxTeams);
-                          }
+                        const maxTeams = entitlements.limits.teams;
+                        if (typeof maxTeams === "number") {
+                          await checkTeamLimit(ctx, team.organizationId, maxTeams);
                         }
                       }
                     },
@@ -459,6 +581,7 @@ export type PaystackPlugin<
 > = ReturnType<typeof paystack<TPaystackClient, O>>;
 
 export { chargeSubscriptionRenewal, syncPaystackPlans, syncPaystackProducts } from "./operations";
+export { getOrganizationEntitlements } from "./limits";
 export { reconcilePaystackTransaction } from "./reconciliation";
 export type {
   PaystackReconciliationError,

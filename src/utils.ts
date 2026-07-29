@@ -37,6 +37,11 @@ export function calculatePlanAmount(plan: PaystackPlan, quantity: number): numbe
   return (plan.amount ?? 0) + quantity * (getPlanSeatAmount(plan) ?? 0);
 }
 
+export function normalizeSubscriptionGroup(group: string | undefined | null): string | null {
+  const normalized = group?.trim().toLowerCase();
+  return normalized === undefined || normalized === "" ? null : normalized;
+}
+
 export function isLocalSubscriptionCode(subscriptionCode: string | undefined | null): boolean {
   return (
     typeof subscriptionCode === "string" &&
@@ -291,36 +296,35 @@ export async function syncSubscriptionSeats(
   if (options.subscription?.enabled !== true) return;
 
   const store = createBillingStore(ctx);
-  const subscription = await store.findCurrentSubscription(organizationId);
-
-  if (
-    subscription?.paystackSubscriptionCode === undefined ||
-    subscription.paystackSubscriptionCode === null ||
-    subscription.paystackSubscriptionCode === ""
-  )
-    return;
-  if (subscription === null || subscription === undefined) return;
-  const plan = await getPlanByName(options, subscription.plan);
-  if (plan === null || plan === undefined) return;
-  const seatAmount = getPlanSeatAmount(plan);
-  if (seatAmount === undefined) return;
-
+  const subscriptions = (await store.findSubscriptionsByReference(organizationId)).filter(
+    (subscription) => subscription.status === "active" || subscription.status === "trialing",
+  );
+  const seatSubscriptions: Subscription[] = [];
+  for (const candidate of subscriptions) {
+    const candidatePlan = await getPlanByName(options, candidate.plan);
+    if (candidatePlan !== null && getPlanSeatAmount(candidatePlan) !== undefined) {
+      seatSubscriptions.push(candidate);
+    }
+  }
   const members = await store.listMembers(organizationId);
-
   const quantity = members.length;
+  for (const subscription of seatSubscriptions) {
+    if (
+      subscription.paystackSubscriptionCode === undefined ||
+      subscription.paystackSubscriptionCode === null ||
+      subscription.paystackSubscriptionCode === ""
+    )
+      continue;
+    try {
+      assertLocallyManagedSubscription(subscription, "automatic seat sync");
 
-  try {
-    assertLocallyManagedSubscription(subscription, "automatic seat sync");
-
-    // Locally managed subscriptions renew via saved authorizations, so seat count lives in our DB.
-    await store.updateSubscription(subscription.id, {
-      seats: quantity,
-      updatedAt: new Date(),
-    });
-  } catch (e: unknown) {
-    const log = ctx.context.logger;
-    if (log !== undefined && log !== null) {
-      log.error("Failed to sync subscription seats", e);
+      // Locally managed subscriptions renew via saved authorizations, so seat count lives in our DB.
+      await store.updateSubscription(subscription.id, {
+        seats: quantity,
+        updatedAt: new Date(),
+      });
+    } catch (e: unknown) {
+      ctx.context.logger.error("Failed to sync subscription seats", e);
     }
   }
 }

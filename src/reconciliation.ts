@@ -517,8 +517,13 @@ export async function reconcilePaystackTransaction(
 
   let updatedSubscription: Subscription | null = null;
   if (targetSub !== undefined && targetSub !== null) {
+    const plans = await getPlans(options.subscription);
+    const resolvedPlan = plans.find(
+      (candidate) => candidate.name.toLowerCase() === targetSub.plan.toLowerCase(),
+    );
     updatedSubscription = await store.updateSubscription(targetSub.id, {
       status: isTrial ? "trialing" : "active",
+      billingInterval: resolvedPlan?.interval ?? targetSub.billingInterval ?? null,
       periodStart: new Date(),
       updatedAt: new Date(),
       ...(isTrial && trialEnd !== undefined
@@ -536,26 +541,46 @@ export async function reconcilePaystackTransaction(
     summary.subscription.updated = updatedSubscription !== null;
     summary.subscription.id = updatedSubscription?.id ?? targetSub.id;
     summary.subscription.status = updatedSubscription?.status ?? targetSub.status;
+    if (
+      updatedSubscription !== null &&
+      (updatedSubscription.status === "active" || updatedSubscription.status === "trialing")
+    ) {
+      await store.retireCompetingSubscriptions(
+        updatedSubscription.referenceId,
+        updatedSubscription.groupId ?? null,
+        updatedSubscription.id,
+      );
+    }
   }
 
-  if (
-    updatedSubscription !== undefined &&
-    updatedSubscription !== null &&
-    options.subscription?.onSubscriptionComplete !== undefined
-  ) {
+  if (updatedSubscription !== undefined && updatedSubscription !== null) {
     const plans = await getPlans(options.subscription);
     const plan = plans.find(
       (candidate) => candidate.name.toLowerCase() === updatedSubscription.plan.toLowerCase(),
     );
     if (plan !== undefined) {
-      await options.subscription.onSubscriptionComplete(
-        {
-          event: data as unknown as PaystackWebhookPayload,
-          subscription: updatedSubscription,
-          plan,
-        },
-        ctx,
-      );
+      const callbackData = {
+        event: data as unknown as PaystackWebhookPayload,
+        subscription: updatedSubscription,
+        plan,
+      };
+      for (const callback of [
+        options.subscription?.onSubscriptionComplete,
+        options.subscription?.onSubscriptionUpdate,
+      ]) {
+        try {
+          await callback?.(callbackData, ctx);
+        } catch (error) {
+          ctx.context.logger.error("Paystack subscription callback failed", error);
+        }
+      }
+      if (targetSub?.status === "trialing" && updatedSubscription.status === "active") {
+        try {
+          await plan.freeTrial?.onTrialEnd?.(updatedSubscription);
+        } catch (error) {
+          ctx.context.logger.error("Paystack trial end callback failed", error);
+        }
+      }
     }
   }
 

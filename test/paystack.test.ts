@@ -125,6 +125,12 @@ describe("paystack type", () => {
     const schema = getSchema(options);
     expect(schema.paystackProduct).toBeDefined();
     expect(schema.paystackPlan).toBeDefined();
+    expect(schema.subscription?.fields).toMatchObject({
+      cancelAt: { type: "date", required: false },
+      canceledAt: { type: "date", required: false },
+      endedAt: { type: "date", required: false },
+      billingInterval: { type: "string", required: false },
+    });
   });
 
   it("should skip organization hooks when organization billing is enabled without the organization plugin", () => {
@@ -1519,11 +1525,22 @@ describe("paystack", () => {
 
   it("should call onSubscriptionCreated hook when subscription.create webhook fires", async () => {
     const onSubscriptionCreated = vi.fn();
+    const onTrialEnd = vi.fn();
+    const onTrialExpired = vi.fn();
     const options = {
       paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
-        plans: [{ name: "pro", amount: 5000, currency: "NGN", planCode: "PLN_pro" }],
+        plans: [
+          {
+            name: "pro",
+            amount: 5000,
+            currency: "NGN",
+            interval: "monthly",
+            planCode: "PLN_pro",
+            freeTrial: { days: 14, onTrialEnd, onTrialExpired },
+          },
+        ],
         onSubscriptionCreated,
       },
       secretKey: "sk_test_123",
@@ -1544,7 +1561,7 @@ describe("paystack", () => {
       data: {
         plan: "pro",
         referenceId: "user_hook_123",
-        status: "incomplete",
+        status: "trialing",
         createdAt: new Date(),
         updatedAt: new Date(),
       } as any,
@@ -1582,16 +1599,22 @@ describe("paystack", () => {
       }),
       expect.any(Object),
     );
+    expect(onTrialEnd).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "active", billingInterval: "monthly" }),
+    );
+    expect(onTrialExpired).not.toHaveBeenCalled();
   });
 
   it("should call onSubscriptionCancel hook when subscription.disable webhook fires", async () => {
-    const onSubscriptionCancel = vi.fn();
+    const onSubscriptionCancel = vi.fn().mockRejectedValue(new Error("consumer callback failed"));
+    const onSubscriptionUpdate = vi.fn();
     const options = {
       paystackClient: {} as PaystackClientLike,
       subscription: {
         enabled: true,
         plans: [{ name: "pro", amount: 5000, currency: "NGN" }],
         onSubscriptionCancel,
+        onSubscriptionUpdate,
       },
       secretKey: "sk_test_123",
       webhook: { secret: "whsec_test" },
@@ -1613,7 +1636,7 @@ describe("paystack", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await ctx.adapter.create({ model: "subscription", data: sub as any });
+    const createdSub = await ctx.adapter.create({ model: "subscription", data: sub as any });
 
     const payload = JSON.stringify({
       event: "subscription.disable",
@@ -1630,18 +1653,40 @@ describe("paystack", () => {
       body: payload,
     });
 
-    await auth.handler(req);
+    const response = await auth.handler(req);
 
+    expect(response.status).toBe(200);
     expect(onSubscriptionCancel).toHaveBeenCalledTimes(1);
     expect(onSubscriptionCancel).toHaveBeenCalledWith(
       expect.objectContaining({
         subscription: expect.objectContaining({
           paystackSubscriptionCode: "SUB_CANCEL_123",
           status: "canceled",
+          canceledAt: expect.any(Date),
+          endedAt: expect.any(Date),
         }),
       }),
       expect.any(Object),
     );
+    expect(onSubscriptionUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subscription: expect.objectContaining({
+          status: "canceled",
+          endedAt: expect.any(Date),
+        }),
+        plan: expect.objectContaining({ name: "pro" }),
+      }),
+      expect.any(Object),
+    );
+    const persisted = await ctx.adapter.findOne({
+      model: "subscription",
+      where: [{ field: "id", value: createdSub.id }],
+    });
+    expect(persisted).toMatchObject({
+      status: "canceled",
+      cancelAtPeriodEnd: false,
+    });
+    expect((persisted as any).endedAt).toBeInstanceOf(Date);
   });
 
   it("should prevent trial abuse - second subscription does not get trial", async () => {
