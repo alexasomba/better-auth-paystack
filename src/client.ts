@@ -152,6 +152,24 @@ declare module "better-auth" {
 }
 
 /**
+ * The concrete shape returned by {@link paystackClient}.
+ *
+ * `id` and `$InferServerPlugin` are deliberately narrower than the
+ * `BetterAuthClientPlugin` defaults: Better Auth keys its plugin merge on the *literal*
+ * plugin id and reads the server plugin's endpoints off `$InferServerPlugin`. Widening
+ * either one (e.g. by annotating this function as returning plain
+ * `BetterAuthClientPlugin`) collapses the entire inferred auth client to `never`.
+ */
+type PaystackClientPluginInstance = Omit<
+  BetterAuthClientPlugin,
+  "id" | "$InferServerPlugin" | "getActions"
+> & {
+  id: "paystack";
+  $InferServerPlugin: ReturnType<typeof paystackServer<PaystackClientLike, AnyPaystackOptions>>;
+  getActions: ($fetch: BetterFetch, $store: unknown, options: unknown) => PaystackClientActions;
+};
+
+/**
  * Better Auth Paystack Client Plugin
  */
 export const paystackClient = <
@@ -160,9 +178,7 @@ export const paystackClient = <
   } = { subscription?: boolean },
 >(
   _options?: O,
-): BetterAuthClientPlugin & {
-  getActions: ($fetch: BetterFetch, $store: unknown, options: unknown) => PaystackClientActions;
-} => {
+): PaystackClientPluginInstance => {
   return {
     id: "paystack",
     version: PACKAGE_VERSION,
