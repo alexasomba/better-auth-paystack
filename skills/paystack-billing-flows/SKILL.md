@@ -23,9 +23,6 @@ import { paystack } from "@alexasomba/better-auth-paystack";
 
 paystack({
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
-  webhook: {
-    secret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-  },
   subscription: {
     enabled: true,
     plans: [
@@ -148,7 +145,9 @@ Before implementing seat changes, check whether the target plan is local/seat-aw
 
 ### Skipping webhook verification
 
-Configure `webhook.secret` and let the plugin verify incoming webhook payloads. Do not process Paystack webhook bodies through an unrelated JSON route that bypasses the plugin endpoint.
+Configure `secretKey` and let the plugin verify incoming webhook payloads with that same Paystack
+API key. Do not invent a separate webhook secret or process Paystack webhook bodies through an
+unrelated JSON route that bypasses the plugin endpoint.
 
 ### Mixing plan name and Paystack plan code
 

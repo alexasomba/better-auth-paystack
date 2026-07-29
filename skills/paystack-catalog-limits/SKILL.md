@@ -24,9 +24,6 @@ import { paystack } from "@alexasomba/better-auth-paystack";
 
 export const paystackPlugin = paystack({
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
-  webhook: {
-    secret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-  },
   products: {
     products: [
       {

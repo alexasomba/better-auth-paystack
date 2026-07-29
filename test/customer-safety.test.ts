@@ -60,7 +60,6 @@ function setup(options: Record<string, unknown> = {}) {
     paystackClient: client,
     createCustomerOnSignUp: true,
     secretKey: "sk_test",
-    webhook: { secret: "whsec_test" },
     ...options,
   } as any);
   const hooks = plugin.init?.({

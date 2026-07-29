@@ -77,7 +77,6 @@ npm install @alexasomba/paystack-inline
 
 ```env
 PAYSTACK_SECRET_KEY=sk_test_...
-PAYSTACK_WEBHOOK_SECRET=sk_test_... # Usually same as your paystack secret key
 BETTER_AUTH_SECRET=...
 BETTER_AUTH_URL=http://localhost:8787
 ```
@@ -99,7 +98,7 @@ export const auth = betterAuth({
     admin(),
     paystack({
       paystackClient,
-      webhook: { secret: process.env.PAYSTACK_WEBHOOK_SECRET! },
+      secretKey: process.env.PAYSTACK_SECRET_KEY!,
       createCustomerOnSignUp: true,
       subscription: {
         enabled: true,
@@ -128,8 +127,9 @@ export const auth = betterAuth({
 });
 ```
 
-`webhook.secret` is the preferred webhook-signing config.
-If you still have older code using top-level `paystackWebhookSecret`, it is treated as a deprecated alias and falls back to the same signature check.
+Paystack signs webhook payloads with the same `PAYSTACK_SECRET_KEY` used for API authentication;
+there is no separate webhook secret. Legacy `webhook.secret` and `paystackWebhookSecret` options
+are accepted for source compatibility but ignored.
 
 ### 4. Configure Client Plugin
 
@@ -192,7 +192,6 @@ import {
 const ctx = { context: await auth.$context } as any;
 const paystackOptions = {
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
-  webhook: { secret: process.env.PAYSTACK_WEBHOOK_SECRET! },
   paystackClient,
 };
 
@@ -400,16 +399,16 @@ The plugin automatically verifies the `x-paystack-signature` header to ensure ev
 
 ```ts
 paystack({
+  secretKey: process.env.PAYSTACK_SECRET_KEY!,
   webhook: {
-    secret: process.env.PAYSTACK_WEBHOOK_SECRET!,
     verifyIP: true, // Enable IP whitelisting (defaults to false for flexible proxy support)
     trustedIPs: ["52.31.139.75", "52.49.173.169", "52.214.14.220"], // Optional: override trusted IPs
   },
 });
 ```
 
-Resolution order for webhook signature verification is:
-`webhook.secret` -> `paystackWebhookSecret` (deprecated) -> `secretKey`.
+Webhook signatures are always verified with `secretKey`, as required by Paystack. Do not create or
+configure a separate `PAYSTACK_WEBHOOK_SECRET`.
 
 ### Trial Abuse Prevention
 
@@ -717,7 +716,7 @@ The plugin extends your database with the following fields and tables.
 
 ## Troubleshooting
 
-- **Webhook Signature**: Ensure `PAYSTACK_WEBHOOK_SECRET` is correct matches your Paystack Dashboard's secret key.
+- **Webhook Signature**: Ensure `PAYSTACK_SECRET_KEY` matches the integration that sends the webhook. Paystack uses this API secret key for `x-paystack-signature`.
 - **Email Verification**: Use `requireEmailVerification: true` to prevent unverified checkouts.
 - **Redirect Failures**: Check your browser console; Paystack often returns 429 errors if you're hitting the test API too frequently.
 - **Reference mismatches**: Ensure `referenceId` is passed correctly for Organization billing.

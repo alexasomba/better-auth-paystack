@@ -1,7 +1,7 @@
 ---
 name: paystack-webhooks-events
 description: >
-  Implement, debug, or test @alexasomba/better-auth-paystack webhook handling. Use for Paystack webhook signatures, trusted IP checks, webhook.secret/paystackWebhookSecret behavior, charge.success, reconcilePaystackTransaction, subscription.create, subscription.disable, subscription.enable, product quantity updates, subscription status changes, metadata parsing, and event hooks.
+  Implement, debug, or test @alexasomba/better-auth-paystack webhook handling. Use for Paystack webhook signatures, secretKey verification, trusted IP checks, charge.success, reconcilePaystackTransaction, subscription.create, subscription.disable, subscription.enable, product quantity updates, subscription status changes, metadata parsing, and event hooks.
 type: core
 library: "@alexasomba/better-auth-paystack"
 library_version: "3.0.1" # x-release-please-version
@@ -20,13 +20,11 @@ sources:
 The Better Auth endpoint is registered as `auth.api.paystackWebhook` and mounted under
 `/api/auth/paystack/webhook` by the plugin. Always send the raw JSON body that Paystack signed.
 
-Signature verification uses HMAC SHA-512 over the raw request body. Secret precedence is:
+Signature verification uses HMAC SHA-512 over the raw request body with `secretKey`.
 
-1. `webhook.secret`
-2. `paystackWebhookSecret`
-3. `secretKey`
-
-Prefer `webhook.secret` in new code. Keep `paystackWebhookSecret` only for compatibility.
+Paystack does not issue a separate webhook signing secret. Never introduce
+`PAYSTACK_WEBHOOK_SECRET`. Deprecated `webhook.secret` and `paystackWebhookSecret` fields are
+ignored.
 
 ## Core Patterns
 

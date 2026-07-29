@@ -36,10 +36,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
   const options = {
     paystackClient: sdkClient,
-    secretKey: "whsec_test",
-    webhook: {
-      secret: "whsec_test",
-    },
+    secretKey: "sk_test_123",
     subscription: {
       enabled: true,
       plans: [
@@ -367,7 +364,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
         "raw",
-        encoder.encode("whsec_test"),
+        encoder.encode("sk_test_123"),
         { name: "HMAC", hash: "SHA-512" },
         false,
         ["sign"],

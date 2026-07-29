@@ -37,7 +37,6 @@ describe("paystack regressions", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({
@@ -122,7 +121,6 @@ describe("paystack regressions", () => {
         plans: [],
       },
       secretKey: "sk_test_123",
-      webhook: { secret: "whsec_test" },
     } satisfies PaystackOptions<PaystackClientLike>;
 
     const auth = betterAuth({

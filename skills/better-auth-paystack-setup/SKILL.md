@@ -1,7 +1,7 @@
 ---
 name: better-auth-paystack-setup
 description: >
-  Configure @alexasomba/better-auth-paystack with Better Auth. Use when adding the paystack() server plugin, paystackClient() client plugin, schema overrides, products/plans, webhook secrets, or canonical authClient.paystack/subscription/transaction actions.
+  Configure @alexasomba/better-auth-paystack with Better Auth. Use when adding the paystack() server plugin, paystackClient() client plugin, schema overrides, products/plans, webhook verification, or canonical authClient.paystack/subscription/transaction actions.
 type: core
 library: "@alexasomba/better-auth-paystack"
 library_version: "3.0.1" # x-release-please-version
@@ -36,9 +36,6 @@ export const auth = betterAuth({
     paystack({
       paystackClient: paystackSdk,
       secretKey: process.env.PAYSTACK_SECRET_KEY!,
-      webhook: {
-        secret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-      },
       subscription: {
         enabled: true,
         plans: [
@@ -129,20 +126,18 @@ await syncPaystackPlans(auth.$context, options);
 
 Correct: call admin helpers from server jobs, cron handlers, CLI scripts, or trusted server routes only.
 
-### Forgetting webhook secret normalization
+### Inventing a separate webhook secret
 
-Prefer the `webhook.secret` option:
+Paystack signs `x-paystack-signature` with the same secret key used for API authentication:
 
 ```ts
 paystack({
   secretKey: process.env.PAYSTACK_SECRET_KEY!,
-  webhook: {
-    secret: process.env.PAYSTACK_WEBHOOK_SECRET!,
-  },
 });
 ```
 
-`paystackWebhookSecret` is a compatibility alias. New code should not introduce it.
+Do not introduce `PAYSTACK_WEBHOOK_SECRET`, `webhook.secret`, or `paystackWebhookSecret`. The two
+options remain deprecated source-compatibility fields and are ignored.
 
 ### Treating plans as just display data
 

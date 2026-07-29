@@ -14,7 +14,7 @@ describe("Paystack Deep Typesafety", () => {
       paystackClient: {} as PaystackClientLike,
       secretKey: "test_key",
       webhook: {
-        secret: "test_secret",
+        verifyIP: true,
       },
       subscription: {
         enabled: true,
@@ -83,9 +83,6 @@ describe("Paystack Deep Typesafety", () => {
     const options = {
       paystackClient: sdkClient,
       secretKey: "sk_test_123",
-      webhook: {
-        secret: "whsec_test",
-      },
     } satisfies PaystackOptions<typeof sdkClient>;
 
     expectTypeOf(options.paystackClient).toEqualTypeOf<typeof sdkClient>();

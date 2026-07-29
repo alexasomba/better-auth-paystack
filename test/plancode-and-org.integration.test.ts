@@ -22,7 +22,6 @@ import type { Member } from "../src/types";
 describe("planCode and organization referenceId tests", () => {
   beforeEach(() => {
     process.env.PAYSTACK_SECRET_KEY = "sk_test_123";
-    process.env.PAYSTACK_WEBHOOK_SECRET = "whsec_test";
   });
 
   describe("planCode subscription flow", () => {
@@ -72,7 +71,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -178,7 +176,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -278,7 +275,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [
@@ -390,7 +386,6 @@ describe("planCode and organization referenceId tests", () => {
           paystack<any>({
             paystackClient: paystackSdk,
             secretKey: "sk_test_123",
-            webhook: { secret: "whsec_test" },
             subscription: {
               enabled: true,
               plans: [

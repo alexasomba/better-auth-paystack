@@ -233,8 +233,7 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    */
   secretKey: string;
   /**
-   * Deprecated alias for `webhook.secret`.
-   * Use `webhook.secret` for new code.
+   * @deprecated Paystack signs webhooks with `secretKey`; this option is ignored.
    */
   paystackWebhookSecret?: string;
   /**
@@ -247,7 +246,7 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    */
   webhook?: {
     /**
-     * Webhook secret for signature verification
+     * @deprecated Paystack signs webhooks with `secretKey`; this option is ignored.
      */
     secret?: string;
     /**

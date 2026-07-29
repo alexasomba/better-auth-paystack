@@ -28,9 +28,6 @@ describe("Local Custom Subscriptions", () => {
   const options = {
     paystackClient: sdkClient,
     secretKey: "test_key",
-    webhook: {
-      secret: "whsec_test",
-    },
     subscription: {
       enabled: true,
       plans: [

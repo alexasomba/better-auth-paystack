@@ -133,10 +133,7 @@ const createPaystackPlugin = <
 ): PaystackPluginInstance<O> => {
   const routeOptions = {
     ...(options as unknown as AnyPaystackOptions),
-    webhook: {
-      ...options.webhook,
-      secret: options.webhook?.secret ?? options.paystackWebhookSecret,
-    },
+    webhook: options.webhook,
   } satisfies AnyPaystackOptions;
   return {
     id: "paystack",

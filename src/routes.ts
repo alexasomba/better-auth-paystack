@@ -137,9 +137,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
         });
       }
 
-      const webhookSecret =
-        options.webhook?.secret ?? options.paystackWebhookSecret ?? options.secretKey;
-      const expected = await hmacSha512Hex(webhookSecret, payload);
+      const expected = await hmacSha512Hex(options.secretKey, payload);
       if (expected !== signature) {
         throw new APIError("UNAUTHORIZED", {
           message: "Invalid Paystack webhook signature",
