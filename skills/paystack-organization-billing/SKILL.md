@@ -4,7 +4,7 @@ description: >
   Configure organization billing in @alexasomba/better-auth-paystack. Use for organization.enabled, Better Auth organization plugin setup, owner/admin default billing authorization, organization.billingRoles, subscription.authorizeReference, organization Paystack customers, seats, invitations, members, and team limits.
 type: core
 library: "@alexasomba/better-auth-paystack"
-library_version: "3.1.0" # x-release-please-version
+library_version: "3.1.1" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; @alexasomba/better-auth-paystack >=3.0.0 <4.0.0"
 sources:
