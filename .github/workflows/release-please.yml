@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to publish to npmjs (for example, v3.0.1)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -25,16 +30,17 @@ jobs:
     steps:
       - name: Create or update release
         id: release
+        if: ${{ inputs.release_tag == '' }}
         uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
       - name: Resolve release tag
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' || inputs.release_tag != '' }}
         shell: bash
         run: |
-          TAG="${{ steps.release.outputs.tag_name }}"
+          TAG="${{ inputs.release_tag || steps.release.outputs.tag_name }}"
           if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error ::Release Please returned unexpected tag '$TAG'. Expected vX.Y.Z."
             exit 1
@@ -44,41 +50,41 @@ jobs:
           echo "release_version=${TAG#v}" >> "$GITHUB_ENV"
 
       - name: Checkout release tag
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ steps.release.outputs.tag_name }}
+          ref: ${{ env.release_tag }}
 
       - name: Enable Corepack
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         run: corepack enable
 
       - name: Setup Node
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: "24.x"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         run: pnpm install --frozen-lockfile
 
       - name: Check
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         run: pnpm exec vp check
 
       - name: Test
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         run: pnpm exec vp test
 
       - name: Build package
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         run: pnpm exec vp pack
 
       - name: Pack and inspect release tarball
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         id: pack
         shell: bash
         run: |
@@ -111,7 +117,7 @@ jobs:
           echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
 
       - name: Check npmjs version
-        if: ${{ steps.release.outputs.release_created == 'true' }}
+        if: ${{ env.release_tag != '' }}
         id: npmjs
         shell: bash
         run: |
@@ -123,5 +129,5 @@ jobs:
           fi
 
       - name: Publish to npmjs with provenance
-        if: ${{ steps.release.outputs.release_created == 'true' && steps.npmjs.outputs.exists != 'true' }}
+        if: ${{ env.release_tag != '' && steps.npmjs.outputs.exists != 'true' }}
         run: npm publish "${{ steps.pack.outputs.tarball }}" --access public --provenance --tag latest
