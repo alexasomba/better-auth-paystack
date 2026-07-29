@@ -1,6 +1,6 @@
 import { APIError, createAuthMiddleware, type AuthMiddleware } from "better-auth/api";
 
-import type { PaystackOptions, Session, User } from "./types";
+import type { PaystackOptions } from "./types";
 import {
   authorizeBillingReference,
   type BillingReferenceAction,
@@ -14,10 +14,7 @@ export const referenceMiddleware = (
   action: BillingReferenceAction,
 ): AuthMiddleware =>
   createAuthMiddleware(async (ctx) => {
-    const session = ctx.context.session as {
-      user: User;
-      session: Session;
-    } | null;
+    const session = ctx.context.session;
 
     if (session === null || session === undefined) {
       throw new APIError("UNAUTHORIZED");

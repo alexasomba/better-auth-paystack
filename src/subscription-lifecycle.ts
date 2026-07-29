@@ -210,10 +210,10 @@ export async function resolveCheckoutTargetEmail(
     return targetEmail;
   }
 
-  const ownerUser = (await ctx.context.adapter.findOne({
+  const ownerUser = await ctx.context.adapter.findOne<User>({
     model: "user",
     where: [{ field: "id", value: (ownerMember as { userId: string }).userId }],
-  })) as User | null;
+  });
 
   return ownerUser?.email !== undefined && ownerUser.email !== "" ? ownerUser.email : targetEmail;
 }

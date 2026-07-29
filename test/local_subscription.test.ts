@@ -179,7 +179,7 @@ describe("Local Custom Subscriptions", () => {
     });
 
     const operationCtx = { context: await auth.$context } as any;
-    const result = await chargeSubscriptionRenewal(operationCtx, options as any, {
+    const result = await chargeSubscriptionRenewal(operationCtx, options, {
       subscriptionId: sub.id,
     });
 

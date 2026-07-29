@@ -281,10 +281,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
               if (where.length > 0) {
                 const matches = await ctx.context.adapter.findMany<Subscription>({
                   model: "subscription",
-                  where: where as unknown as {
-                    field: string;
-                    value: string | number | boolean | null;
-                  }[],
+                  where: where,
                 });
                 const subscription = matches?.find((candidate) =>
                   groupIdFromMetadata === null

@@ -99,7 +99,7 @@ export function createBillingStore(ctx: GenericEndpointContext): BillingStore {
 
 export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
   const findOne = async <T>(model: string, where: WhereClause): Promise<T | null> =>
-    ((await adapter.findOne<T>({ model, where })) ?? null) as T | null;
+    (await adapter.findOne<T>({ model, where })) ?? null;
 
   const findMany = async <T>(model: string, where?: WhereClause): Promise<T[]> =>
     (await adapter.findMany<T>({ model, ...(where ? { where } : {}) })) ?? [];

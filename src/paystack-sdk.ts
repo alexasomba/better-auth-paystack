@@ -153,7 +153,7 @@ export function createPaystackAdapter(client?: PaystackClientLike): PaystackAdap
       body: CustomerUpdatePayload & { email?: string },
     ): Promise<unknown> {
       const raw = await requireClient().customer?.update(emailOrCode, {
-        body: body as CustomerUpdatePayload,
+        body: body,
       });
       return unwrapSdkResult(raw);
     },

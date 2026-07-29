@@ -19,7 +19,6 @@ import type {
   PaystackOptions,
   PaystackClientLike,
   PaystackUser,
-  PaystackPlan,
   PaystackResponse,
   PaystackCustomerResponse,
 } from "../src/types";
@@ -685,7 +684,7 @@ describe("paystack", () => {
         paystackSubscriptionCode: "SUB_list_123",
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as unknown as Subscription,
+      },
     });
 
     const res = await authClient.subscription.list({}, { headers });
@@ -791,7 +790,7 @@ describe("paystack", () => {
             amount: 1000,
             currency: "NGN",
             interval: "monthly",
-          } as PaystackPlan,
+          },
         ],
       },
       secretKey: "sk_test_123",
@@ -889,7 +888,7 @@ describe("paystack", () => {
             amount: 1000,
             currency: "NGN",
             interval: "monthly",
-          } as PaystackPlan,
+          },
         ],
       },
       secretKey: "sk_test_123",
@@ -2353,10 +2352,7 @@ describe("paystack", () => {
       plugins: [paystack<PaystackClientLike>(options)],
     });
 
-    const json = await syncPaystackProducts(
-      { context: await auth.$context } as any,
-      options as any,
-    );
+    const json = await syncPaystackProducts({ context: await auth.$context } as any, options);
     expect(json.status).toBe("success");
     expect(json.count).toBe(1);
 

@@ -1,5 +1,3 @@
-import type { CustomerCreatePayload } from "@alexasomba/paystack-node";
-
 import { createBillingStoreFromAdapter } from "./billing-store";
 import { parsePaystackMetadata, stringifyPaystackMetadata } from "./metadata";
 import type {
@@ -81,8 +79,7 @@ export async function resolvePaystackCustomer(input: {
       : await store.findOrganization(reference.id);
   const existingCode =
     reference.paystackCustomerCode ??
-    (persisted as ((User | PaystackOrganization) & { paystackCustomerCode?: string | null }) | null)
-      ?.paystackCustomerCode;
+    (persisted as { paystackCustomerCode?: string | null } | null)?.paystackCustomerCode;
   if (typeof existingCode === "string" && existingCode !== "") return null;
 
   const sdk = createPaystackAdapter(client);
@@ -130,7 +127,7 @@ export async function resolvePaystackCustomer(input: {
     email: reference.email,
     first_name: reference.name ?? undefined,
     metadata: ownershipMetadata(reference),
-  } as CustomerCreatePayload)) as PaystackCustomerResponse;
+  })) as PaystackCustomerResponse;
   const code = customerCode(customer);
   if (code === undefined) return null;
   await store.saveCustomerCode(reference.id, code, reference.type === "organization");

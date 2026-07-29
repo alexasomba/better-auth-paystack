@@ -249,7 +249,7 @@ const createPaystackPlugin = <
                   );
                   const customerCode =
                     user.paystackCustomerCode ??
-                    (persisted as (User & { paystackCustomerCode?: string | null }) | null)
+                    (persisted as { paystackCustomerCode?: string | null } | null)
                       ?.paystackCustomerCode;
                   if (
                     typeof customerCode !== "string" ||
@@ -259,9 +259,10 @@ const createPaystackPlugin = <
                   )
                     return;
                   try {
-                    await createPaystackAdapter(
-                      options.paystackClient as PaystackClientLike,
-                    ).updateCustomer(customerCode, { email: user.email });
+                    await createPaystackAdapter(options.paystackClient).updateCustomer(
+                      customerCode,
+                      { email: user.email },
+                    );
                   } catch (error: unknown) {
                     ctx.logger.error("Failed to synchronize Paystack customer email", error);
                   }
@@ -284,7 +285,7 @@ const createPaystackPlugin = <
                                     org: Record<string, unknown>,
                                     hookCtx: GenericEndpointContext,
                                   ) => Promise<Record<string, unknown>>
-                                )(org as Record<string, unknown>, hookCtx!)
+                                )(org, hookCtx!)
                               : {};
 
                           let targetEmail = org.email;
@@ -376,17 +377,18 @@ const createPaystackPlugin = <
                             typeof configured.email === "string" && configured.email !== ""
                               ? configured.email
                               : undefined;
-                          await createPaystackAdapter(
-                            options.paystackClient as PaystackClientLike,
-                          ).updateCustomer(customerCode, {
-                            ...(configuredEmail !== undefined ||
-                            (typeof org.email === "string" && org.email !== "")
-                              ? { email: configuredEmail ?? org.email ?? undefined }
-                              : {}),
-                            ...(typeof org.name === "string" && org.name !== ""
-                              ? { first_name: org.name }
-                              : {}),
-                          });
+                          await createPaystackAdapter(options.paystackClient).updateCustomer(
+                            customerCode,
+                            {
+                              ...(configuredEmail !== undefined ||
+                              (typeof org.email === "string" && org.email !== "")
+                                ? { email: configuredEmail ?? org.email ?? undefined }
+                                : {}),
+                              ...(typeof org.name === "string" && org.name !== ""
+                                ? { first_name: org.name }
+                                : {}),
+                            },
+                          );
                         } catch (error: unknown) {
                           ctx.logger.error(
                             "Failed to synchronize Paystack organization customer",
@@ -418,7 +420,7 @@ const createPaystackPlugin = <
                         if (typeof customerCode !== "string" || customerCode === "") return;
                         try {
                           const customer = (await createPaystackAdapter(
-                            options.paystackClient as PaystackClientLike,
+                            options.paystackClient,
                           ).fetchCustomer(customerCode)) as {
                             subscriptions?: { status?: string }[];
                           };
@@ -566,7 +568,7 @@ const createPaystackPlugin = <
       };
     }) as PaystackPluginInit,
     $ERROR_CODES: INTERNAL_ERROR_CODES,
-    options: options as NoInfer<O>,
+    options: options,
   } satisfies BetterAuthPlugin;
 };
 
