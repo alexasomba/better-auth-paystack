@@ -1,6 +1,6 @@
 library:
   name: better-auth-paystack
-  version: 3.1.2
+  version: 3.2.0
   repository: https://github.com/alexasomba/better-auth-paystack
   license: MIT
   compatibility: >-

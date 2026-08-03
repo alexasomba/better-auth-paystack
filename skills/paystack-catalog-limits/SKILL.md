@@ -4,7 +4,7 @@ description: >
   Configure products, Paystack-native plans, local-managed plans, free trials, seat billing, resource limits, and catalog sync in better-auth-paystack. Use when tasks mention planCode, freeTrial, trial eligibility, seatAmount, seatPlanCode, limits, products, syncPaystackProducts, or syncPaystackPlans.
 type: core
 library: "better-auth-paystack"
-library_version: "3.1.2" # x-release-please-version
+library_version: "3.2.0" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:

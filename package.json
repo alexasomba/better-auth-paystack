@@ -1,6 +1,6 @@
 {
   "name": "better-auth-paystack",
-  "version": "4.0.0",
+  "version": "3.2.0",
   "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "keywords": [
     "africa",
