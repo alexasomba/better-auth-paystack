@@ -16,6 +16,7 @@ describe("paystack regressions", () => {
     account: [],
     subscription: [],
     paystackTransaction: [],
+    paystackWebhookEvent: [],
   };
   const memory = memoryAdapter(data);
 
@@ -26,6 +27,7 @@ describe("paystack regressions", () => {
     data.account = [];
     data.subscription = [];
     data.paystackTransaction = [];
+    data.paystackWebhookEvent = [];
     vi.clearAllMocks();
   });
 

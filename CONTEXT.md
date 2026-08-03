@@ -25,3 +25,9 @@ The workflow that turns checkout, verification, trials, proration, renewals, and
 ### Trusted Operation
 
 A server-only billing operation that must not be exposed as a browser-triggered auth endpoint. Catalog sync and local subscription renewal are trusted operations.
+
+### Webhook Event Record
+
+A provider-namespaced record of a verified raw webhook payload. Paystack uses a stable payload hash
+as its event identity, persists pending processing state, and acknowledges already-processed
+duplicate deliveries without repeating billing side effects.

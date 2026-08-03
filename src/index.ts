@@ -601,4 +601,5 @@ export type {
   PaystackClientLike,
   ChargeRecurringSubscriptionResult,
   PaystackSyncResult,
+  PaystackWebhookEventRecord,
 } from "./types";

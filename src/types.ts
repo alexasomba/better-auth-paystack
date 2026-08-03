@@ -68,6 +68,18 @@ export interface PaystackTransaction {
   updatedAt: Date;
 }
 
+export interface PaystackWebhookEventRecord {
+  id: string;
+  eventId: string;
+  eventType: string;
+  reference?: string | null;
+  payload: string;
+  status: string;
+  processedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface PaystackProduct {
   id?: string;
   name: string;

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { HIDE_METADATA } from "better-auth";
 import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
 import { createAuthEndpoint } from "better-auth/api";
@@ -148,6 +149,47 @@ export const paystackWebhook = <P extends string = "/webhook">(
       const event = JSON.parse(payload) as PaystackWebhookPayload;
       const eventName = event.event;
       const data = event.data;
+      const reference = (data as { reference?: string | null })?.reference;
+      const eventId = createHash("sha256").update(payload).digest("hex");
+      const store = createBillingStore(ctx);
+      let webhookEventsAvailable = true;
+      let existingEvent = null;
+
+      try {
+        existingEvent = await store.findWebhookEvent(eventId);
+      } catch {
+        // Keep legacy/custom schemas working until the new table is migrated.
+        webhookEventsAvailable = false;
+      }
+
+      if (webhookEventsAvailable && existingEvent?.status === "processed") {
+        return ctx.json({ received: true });
+      }
+
+      if (webhookEventsAvailable && existingEvent === null) {
+        try {
+          await store.createWebhookEvent({
+            eventId,
+            eventType: eventName,
+            reference: reference ?? null,
+            payload,
+            status: "pending",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        } catch {
+          // A concurrent delivery may have inserted the same event first.
+          try {
+            existingEvent = await store.findWebhookEvent(eventId);
+            if (existingEvent?.status === "processed") {
+              return ctx.json({ received: true });
+            }
+          } catch {
+            // The event table may be missing in a legacy schema.
+          }
+          webhookEventsAvailable = false;
+        }
+      }
 
       // Core Transaction Status Sync (Applies to both one-time and recurring)
       if (eventName === "charge.success") {
@@ -479,6 +521,13 @@ export const paystackWebhook = <P extends string = "/webhook">(
       }
 
       await options.onEvent?.(event);
+      if (webhookEventsAvailable) {
+        await store.updateWebhookEvent(eventId, {
+          status: "processed",
+          processedAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
       return ctx.json({ received: true });
     },
   );

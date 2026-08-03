@@ -79,6 +79,7 @@ describe("reconcilePaystackTransaction", () => {
     paystackCustomer: [],
     paystackSubscription: [],
     paystackPlan: [],
+    paystackWebhookEvent: [],
   };
 
   beforeEach(() => {

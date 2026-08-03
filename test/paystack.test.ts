@@ -123,6 +123,12 @@ describe("paystack type", () => {
     const schema = getSchema(options);
     expect(schema.paystackProduct).toBeDefined();
     expect(schema.paystackPlan).toBeDefined();
+    expect(schema.paystackWebhookEvent).toMatchObject({
+      fields: {
+        eventId: { type: "string", unique: true },
+        status: { type: "string", defaultValue: "pending" },
+      },
+    });
     expect(schema.subscription?.fields).toMatchObject({
       cancelAt: { type: "date", required: false },
       canceledAt: { type: "date", required: false },
@@ -164,6 +170,7 @@ describe("paystack", () => {
     paystackCustomer: [],
     paystackSubscription: [],
     paystackPlan: [],
+    paystackWebhookEvent: [],
   };
   const memory = memoryAdapter(data);
 
@@ -180,6 +187,7 @@ describe("paystack", () => {
     data.paystackCustomer = [];
     data.paystackSubscription = [];
     data.paystackPlan = [];
+    data.paystackWebhookEvent = [];
     vi.clearAllMocks();
   });
 

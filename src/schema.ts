@@ -27,6 +27,18 @@ type TransactionsSchema = PluginSchemaTable<
   | "updatedAt"
 >;
 
+type WebhookEventsSchema = PluginSchemaTable<
+  "paystackWebhookEvent",
+  | "eventId"
+  | "eventType"
+  | "reference"
+  | "payload"
+  | "status"
+  | "processedAt"
+  | "createdAt"
+  | "updatedAt"
+>;
+
 type SubscriptionsSchema = PluginSchemaTable<
   "subscription",
   | "plan"
@@ -90,7 +102,8 @@ export type PaystackPluginSchema = SubscriptionsSchema &
   UserSchema &
   OrganizationSchema &
   ProductsSchema &
-  PlansSchema;
+  PlansSchema &
+  WebhookEventsSchema;
 
 const transactionsSchema: TransactionsSchema = {
   paystackTransaction: {
@@ -391,6 +404,52 @@ const plansSchema: PlansSchema = {
 
 export const plans: typeof plansSchema = plansSchema;
 
+const webhookEventsSchema: WebhookEventsSchema = {
+  paystackWebhookEvent: {
+    fields: {
+      eventId: {
+        type: "string",
+        required: true,
+        unique: true,
+      },
+      eventType: {
+        type: "string",
+        required: true,
+        index: true,
+      },
+      reference: {
+        type: "string",
+        required: false,
+        index: true,
+      },
+      payload: {
+        type: "string",
+        required: true,
+      },
+      status: {
+        type: "string",
+        required: true,
+        defaultValue: "pending",
+        index: true,
+      },
+      processedAt: {
+        type: "date",
+        required: false,
+      },
+      createdAt: {
+        type: "date",
+        required: true,
+      },
+      updatedAt: {
+        type: "date",
+        required: true,
+      },
+    },
+  },
+} satisfies BetterAuthPluginDBSchema;
+
+export const webhookEvents: typeof webhookEventsSchema = webhookEventsSchema;
+
 const paystackPluginSchemaDefinition: PaystackPluginSchema = {
   ...subscriptions,
   ...transactions,
@@ -398,6 +457,7 @@ const paystackPluginSchemaDefinition: PaystackPluginSchema = {
   ...organization,
   ...products,
   ...plans,
+  ...webhookEvents,
 } satisfies BetterAuthPluginDBSchema;
 
 export const paystackPluginSchema: typeof paystackPluginSchemaDefinition =
@@ -414,6 +474,7 @@ export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema =>
       ...user,
       ...products,
       ...plans,
+      ...webhookEvents,
     };
   } else {
     baseSchema = {
@@ -421,6 +482,7 @@ export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema =>
       ...transactions,
       ...products,
       ...plans,
+      ...webhookEvents,
     };
   }
 

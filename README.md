@@ -411,6 +411,11 @@ If a subscription payment is later verified with a disallowed channel, the plugi
 
 ### Webhook Security
 
+Webhook deliveries are persisted in the provider-specific `paystackWebhookEvent` table using a
+stable hash of the verified raw payload. Duplicate deliveries that were already processed are
+acknowledged without running billing side effects again. Failed or interrupted deliveries remain
+pending for later reconciliation or replay handling.
+
 The plugin automatically verifies the `x-paystack-signature` header to ensure events are authentic. For an extra layer of security, you can enable **IP Whitelisting** to restrict processing to Paystack's official servers.
 
 ```ts
@@ -727,6 +732,21 @@ The plugin extends your database with the following fields and tables.
 | `metadata`    | `string`  | No       | JSON string of extra product metadata.   |
 | `createdAt`   | `Date`    | Yes      | Product creation timestamp.              |
 | `updatedAt`   | `Date`    | Yes      | Product last update timestamp.           |
+
+### `paystackWebhookEvent`
+
+The plugin records verified webhook deliveries with their event type, raw payload, reference (when
+available), processing status, and processed timestamp. This table is provider-namespaced so the
+Paystack and Flutterwave plugins can be installed together without sharing webhook state.
+
+| Field         | Type      | Required | Description                               |
+| :------------ | :-------- | :------- | :---------------------------------------- |
+| `eventId`     | `string`  | Yes      | Stable hash of the exact verified payload. |
+| `eventType`   | `string`  | Yes      | Paystack event name.                      |
+| `reference`   | `string`  | No       | Transaction reference when available.     |
+| `payload`     | `string`  | Yes      | Exact raw webhook payload.                |
+| `status`      | `string`  | Yes      | `pending` or `processed`.                 |
+| `processedAt` | `Date`    | No       | Processing completion timestamp.          |
 
 ---
 

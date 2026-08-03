@@ -6,6 +6,7 @@ import type {
   PaystackPlan,
   PaystackProduct,
   PaystackTransaction,
+  PaystackWebhookEventRecord,
   Subscription,
   User,
 } from "./types";
@@ -45,6 +46,14 @@ export interface BillingStore {
     reference: string,
     update: Partial<PaystackTransaction> & Record<string, unknown>,
   ): Promise<PaystackTransaction | null>;
+  createWebhookEvent(
+    data: Partial<PaystackWebhookEventRecord> & Record<string, unknown>,
+  ): Promise<PaystackWebhookEventRecord>;
+  findWebhookEvent(eventId: string): Promise<PaystackWebhookEventRecord | null>;
+  updateWebhookEvent(
+    eventId: string,
+    update: Partial<PaystackWebhookEventRecord> & Record<string, unknown>,
+  ): Promise<PaystackWebhookEventRecord | null>;
   listTransactions(referenceId: string): Promise<PaystackTransaction[]>;
   listProducts(): Promise<PaystackProduct[]>;
   findProductByName(name: string): Promise<PaystackProduct | null>;
@@ -185,6 +194,21 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
         model: "paystackTransaction",
         update,
         where: [{ field: "reference", value: reference }],
+      }),
+    createWebhookEvent: (data) =>
+      adapter.create({
+        model: "paystackWebhookEvent",
+        data,
+      }) as Promise<PaystackWebhookEventRecord>,
+    findWebhookEvent: (eventId) =>
+      findOne<PaystackWebhookEventRecord>("paystackWebhookEvent", [
+        { field: "eventId", value: eventId },
+      ]),
+    updateWebhookEvent: (eventId, update) =>
+      adapter.update<PaystackWebhookEventRecord>({
+        model: "paystackWebhookEvent",
+        update,
+        where: [{ field: "eventId", value: eventId }],
       }),
     async listTransactions(referenceId) {
       const transactions = await findMany<PaystackTransaction>("paystackTransaction", [

@@ -52,6 +52,7 @@ describe("Local Custom Subscriptions", () => {
     session: [],
     subscription: [],
     paystackTransaction: [],
+    paystackWebhookEvent: [],
     verification: [],
     account: [],
   };
@@ -77,6 +78,7 @@ describe("Local Custom Subscriptions", () => {
     data.session = [];
     data.subscription = [];
     data.paystackTransaction = [];
+    data.paystackWebhookEvent = [];
     vi.clearAllMocks();
   });
 

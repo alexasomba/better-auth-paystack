@@ -66,6 +66,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     session: [],
     subscription: [],
     paystackTransaction: [],
+    paystackWebhookEvent: [],
     organization: [],
     member: [],
     invitation: [],
@@ -92,6 +93,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     data.session = [];
     data.subscription = [];
     data.paystackTransaction = [];
+    data.paystackWebhookEvent = [];
     data.organization = [];
     data.member = [];
     data.invitation = [];
@@ -230,6 +232,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         session: [],
         subscription: [],
         paystackTransaction: [],
+        paystackWebhookEvent: [],
         organization: [],
         member: [],
         invitation: [],
@@ -768,6 +771,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         session: [],
         subscription: [],
         paystackTransaction: [],
+        paystackWebhookEvent: [],
         organization: [],
         member: [],
         invitation: [],
