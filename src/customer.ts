@@ -1,11 +1,6 @@
 import { createBillingStoreFromAdapter } from "./billing-store";
 import { parsePaystackMetadata, stringifyPaystackMetadata } from "./metadata";
-import type {
-  PaystackClientLike,
-  PaystackCustomerResponse,
-  PaystackOrganization,
-  User,
-} from "./types";
+import type { PaystackClientLike, PaystackCustomerResponse } from "./types";
 import { createPaystackAdapter } from "./paystack-sdk";
 
 interface Logger {
@@ -73,14 +68,25 @@ export async function resolvePaystackCustomer(input: {
 }): Promise<{ customer: PaystackCustomerResponse; created: boolean } | null> {
   const { adapter, client, logger, reference } = input;
   const store = createBillingStoreFromAdapter(adapter);
-  const persisted: User | PaystackOrganization | null =
-    reference.type === "user"
-      ? await store.findUser(reference.id)
-      : await store.findOrganization(reference.id);
-  const existingCode =
-    reference.paystackCustomerCode ??
-    (persisted as { paystackCustomerCode?: string | null } | null)?.paystackCustomerCode;
-  if (typeof existingCode === "string" && existingCode !== "") return null;
+  const persisted = await store.findCustomerByReference(reference.type, reference.id);
+  let legacyCode: string | undefined;
+  try {
+    const legacy = await adapter.findOne<{ paystackCustomerCode?: string | null }>({
+      model: reference.type,
+      where: [{ field: "id", value: reference.id }],
+      select: ["paystackCustomerCode"],
+    });
+    legacyCode = legacy?.paystackCustomerCode ?? undefined;
+  } catch {
+    // The legacy column is optional after the v4 schema migration.
+  }
+  const existingCode = reference.paystackCustomerCode ?? persisted?.customerCode ?? legacyCode;
+  if (typeof existingCode === "string" && existingCode !== "") {
+    if (persisted === null) {
+      await store.saveCustomer(reference.type, reference.id, existingCode, reference.email);
+    }
+    return null;
+  }
 
   const sdk = createPaystackAdapter(client);
   let existing: PaystackCustomerResponse | null = null;
@@ -118,7 +124,7 @@ export async function resolvePaystackCustomer(input: {
         metadata: ownershipMetadata(reference, existingMetadata),
       });
     }
-    await store.saveCustomerCode(reference.id, code, reference.type === "organization");
+    await store.saveCustomer(reference.type, reference.id, code, reference.email);
     return { customer: existing, created: false };
   }
 
@@ -130,6 +136,6 @@ export async function resolvePaystackCustomer(input: {
   })) as PaystackCustomerResponse;
   const code = customerCode(customer);
   if (code === undefined) return null;
-  await store.saveCustomerCode(reference.id, code, reference.type === "organization");
+  await store.saveCustomer(reference.type, reference.id, code, reference.email);
   return { customer, created: true };
 }

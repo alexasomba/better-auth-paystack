@@ -80,6 +80,26 @@ export interface PaystackWebhookEventRecord {
   updatedAt: Date;
 }
 
+export interface PaystackCustomer {
+  id: string;
+  referenceType: "user" | "organization";
+  referenceId: string;
+  /** Internal unique key used to enforce referenceType/referenceId uniqueness. */
+  referenceKey: string;
+  customerCode: string;
+  email?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Public credential metadata. Plaintext and encrypted values are intentionally omitted. */
+export interface PaystackPaymentCredential {
+  id: string;
+  subscriptionId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface PaystackProduct {
   id?: string;
   name: string;
@@ -105,13 +125,8 @@ export interface InputPaystackProduct {
 /**
  * Enhanced Better Auth Models with Paystack Fields
  */
-export interface PaystackUser extends User {
-  paystackCustomerCode?: string;
-}
-
-export interface PaystackOrganization extends Organization {
-  paystackCustomerCode?: string;
-}
+export type PaystackUser = User;
+export type PaystackOrganization = Organization;
 
 export interface PaystackPlan {
   id?: string;
@@ -245,6 +260,11 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
    */
   secretKey: string;
   /**
+   * Key used to encrypt Paystack payment credentials with AES-256-GCM.
+   * Recommended for production. `secretKey` is used as a compatibility fallback.
+   */
+  credentialEncryptionKey?: string;
+  /**
    * @deprecated Paystack signs webhooks with `secretKey`; this option is ignored.
    */
   paystackWebhookSecret?: string;
@@ -323,21 +343,19 @@ export interface PaystackOptions<TPaystackClient extends PaystackClientLike = Pa
   schema?: InferOptionSchema<PaystackPluginSchema>;
 }
 
-export interface Subscription {
+export interface PaystackSubscription {
   id: string;
   userId: string;
   organizationId?: string;
   plan: string;
-  pendingPlan?: string | null;
-  paystackSubscriptionCode?: string;
-  paystackCustomerCode?: string;
-  paystackPlanCode?: string;
-  paystackAuthorizationCode?: string;
-  paystackTransactionReference?: string;
-  paystackEmailToken?: string;
-  status: string;
-  seats: number;
   referenceId: string;
+  customerCode?: string | null;
+  subscriptionCode?: string | null;
+  transactionReference?: string | null;
+  planCode?: string | null;
+  pendingPlan?: string | null;
+  status: string;
+  seats?: number | null;
   periodStart?: Date | null;
   periodEnd?: Date | null;
   cancelAtPeriodEnd: boolean;
@@ -351,6 +369,21 @@ export interface Subscription {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * @deprecated Use `PaystackSubscription`. These aliases are retained for source
+ * compatibility while storage uses provider-local canonical field names.
+ */
+export type Subscription = PaystackSubscription & {
+  /** @deprecated Use `subscriptionCode`. */
+  paystackSubscriptionCode?: string | null;
+  /** @deprecated Use `customerCode`. */
+  paystackCustomerCode?: string | null;
+  /** @deprecated Use `planCode`. */
+  paystackPlanCode?: string | null;
+  /** @deprecated Use `transactionReference`. */
+  paystackTransactionReference?: string | null;
+};
 
 export interface ChargeRecurringSubscriptionInput {
   subscriptionId: string;

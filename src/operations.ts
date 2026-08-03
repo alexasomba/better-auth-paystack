@@ -12,6 +12,7 @@ import type {
   PaystackSyncResult,
   PaystackChargeAuthorizationResponse,
 } from "./types";
+import { readPaystackPaymentCredentials } from "./payment-credentials";
 
 export async function syncPaystackProducts(
   ctx: GenericEndpointContext,
@@ -119,11 +120,12 @@ export async function chargeSubscriptionRenewal(
     throw new APIError("NOT_FOUND", { message: "Subscription not found" });
   }
 
-  if (
-    subscription.paystackAuthorizationCode === undefined ||
-    subscription.paystackAuthorizationCode === null ||
-    subscription.paystackAuthorizationCode === ""
-  ) {
+  const credentials = await readPaystackPaymentCredentials(
+    ctx.context.adapter,
+    options,
+    subscription.id,
+  );
+  if (!credentials?.authorizationCode) {
     throw new APIError("BAD_REQUEST", {
       message: "No authorization code found for this subscription",
     });
@@ -183,7 +185,7 @@ export async function chargeSubscriptionRenewal(
   const chargeData = await paystack.chargeAuthorization({
     email,
     amount,
-    authorization_code: subscription.paystackAuthorizationCode,
+    authorization_code: credentials.authorizationCode,
     reference: `rec_${subscription.id}_${Date.now()}`,
     metadata: serializedRenewalMetadata,
   });
@@ -214,7 +216,7 @@ export async function chargeSubscriptionRenewal(
       periodStart: now,
       periodEnd: nextPeriodEnd,
       updatedAt: now,
-      paystackTransactionReference: typedChargeData.reference,
+      transactionReference: typedChargeData.reference,
     });
 
     return { status: "success", data: typedChargeData };

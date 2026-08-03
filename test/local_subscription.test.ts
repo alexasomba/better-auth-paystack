@@ -8,6 +8,10 @@ import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 
 import { chargeSubscriptionRenewal, paystack } from "../src/index.ts";
 import { paystackClient as createPaystackClient } from "../src/client.ts";
+import {
+  readPaystackPaymentCredentials,
+  savePaystackPaymentCredentials,
+} from "../src/payment-credentials.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("Local Custom Subscriptions", () => {
@@ -50,9 +54,10 @@ describe("Local Custom Subscriptions", () => {
   const data = {
     user: [],
     session: [],
-    subscription: [],
+    paystackSubscription: [],
     paystackTransaction: [],
     paystackWebhookEvent: [],
+    paystackPaymentCredential: [],
     verification: [],
     account: [],
   };
@@ -76,9 +81,10 @@ describe("Local Custom Subscriptions", () => {
   beforeEach(() => {
     data.user = [];
     data.session = [];
-    data.subscription = [];
+    data.paystackSubscription = [];
     data.paystackTransaction = [];
     data.paystackWebhookEvent = [];
+    data.paystackPaymentCredential = [];
     vi.clearAllMocks();
   });
 
@@ -131,12 +137,12 @@ describe("Local Custom Subscriptions", () => {
 
     // Also create an incomplete subscription record
     const subRecord = await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "local-starter",
         referenceId: signUp.user.id,
         status: "incomplete",
-        paystackTransactionReference: "ref_local_123",
+        transactionReference: "ref_local_123",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -144,11 +150,13 @@ describe("Local Custom Subscriptions", () => {
 
     await authClient.paystack.verifyTransaction({ reference: "ref_local_123" }, { headers });
 
-    const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
+    const sub = data.paystackSubscription.find((s) => (s as any).id === subRecord.id) as any;
 
     expect(sub.status).toBe("active");
-    expect(sub.paystackAuthorizationCode).toBe("AUTH_local_token_123");
-    expect(sub.paystackSubscriptionCode).toBe("LOC_ref_local_123");
+    await expect(
+      readPaystackPaymentCredentials(ctx.adapter as any, options, subRecord.id),
+    ).resolves.toMatchObject({ authorizationCode: "AUTH_local_token_123" });
+    expect(sub.subscriptionCode).toBe("LOC_ref_local_123");
   });
 
   it("should process recurring charge successfully", async () => {
@@ -158,16 +166,18 @@ describe("Local Custom Subscriptions", () => {
 
     const ctx = await auth.$context;
     const sub = await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "local-starter",
         referenceId: userId,
         status: "active",
-        paystackAuthorizationCode: "AUTH_stored_123",
         periodEnd: new Date(Date.now() - 1000), // expired
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+    });
+    await savePaystackPaymentCredentials(ctx.adapter as any, options, sub.id, {
+      authorizationCode: "AUTH_stored_123",
     });
 
     (paystackSdk.transaction.chargeAuthorization as any).mockResolvedValue({
@@ -187,8 +197,8 @@ describe("Local Custom Subscriptions", () => {
 
     expect(result.status).toBe("success");
 
-    const updatedSub = data.subscription.find((s) => (s as any).id === sub.id) as any;
-    expect(updatedSub.paystackTransactionReference).toBe("ref_recurring_456");
+    const updatedSub = data.paystackSubscription.find((s) => (s as any).id === sub.id) as any;
+    expect(updatedSub.transactionReference).toBe("ref_recurring_456");
     expect(new Date(updatedSub.periodEnd).getTime()).toBeGreaterThan(Date.now());
   });
 
@@ -198,16 +208,18 @@ describe("Local Custom Subscriptions", () => {
 
     const ctx = await auth.$context;
     const sub = await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "local-starter",
         referenceId: signUp.user.id,
         status: "active",
-        paystackAuthorizationCode: "AUTH_min_123",
         periodEnd: new Date(Date.now() - 1000),
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+    });
+    await savePaystackPaymentCredentials(ctx.adapter as any, options, sub.id, {
+      authorizationCode: "AUTH_min_123",
     });
 
     // Local starter is 500000 kobo (5000 NGN).
@@ -271,12 +283,12 @@ describe("Local Custom Subscriptions", () => {
     });
 
     const subRecord = await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "local-starter",
         referenceId: signUp.user.id,
         status: "incomplete",
-        paystackTransactionReference: "ref_local_trial_123",
+        transactionReference: "ref_local_trial_123",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -284,10 +296,10 @@ describe("Local Custom Subscriptions", () => {
 
     await authClient.paystack.verifyTransaction({ reference: "ref_local_trial_123" }, { headers });
 
-    const sub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
+    const sub = data.paystackSubscription.find((s) => (s as any).id === subRecord.id) as any;
 
     expect(sub.status).toBe("trialing");
-    expect(sub.paystackSubscriptionCode).toBe("LOC_ref_local_trial_123");
+    expect(sub.subscriptionCode).toBe("LOC_ref_local_trial_123");
     expect(sub.trialStart).toBeDefined();
     expect(new Date(sub.trialEnd).toISOString()).toBe(trialEndDate);
     expect(new Date(sub.periodEnd).toISOString()).toBe(trialEndDate);
@@ -306,13 +318,12 @@ describe("Local Custom Subscriptions", () => {
 
     const ctx = await auth.$context;
     const subRecord = await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "local-starter",
         referenceId: userId,
         status: "active",
-        paystackSubscriptionCode: "LOC_ref_999",
-        paystackAuthorizationCode: "AUTH_cancel_999",
+        subscriptionCode: "LOC_ref_999",
         periodEnd: new Date(Date.now() + 86_400_000),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -337,7 +348,7 @@ describe("Local Custom Subscriptions", () => {
 
     expect(paystackSdk.subscription.disable).not.toHaveBeenCalled();
 
-    const updatedSub = data.subscription.find((s) => (s as any).id === subRecord.id) as any;
+    const updatedSub = data.paystackSubscription.find((s) => (s as any).id === subRecord.id) as any;
     expect(updatedSub.status).toBe("active");
     expect(updatedSub.cancelAtPeriodEnd).toBe(true);
     expect(updatedSub.cancelAt).toBeInstanceOf(Date);

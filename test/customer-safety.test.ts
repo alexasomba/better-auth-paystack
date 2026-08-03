@@ -10,14 +10,15 @@ function setup(options: Record<string, unknown> = {}) {
   const records = {
     user: new Map<string, Record<string, unknown>>(),
     organization: new Map<string, Record<string, unknown>>(),
-    subscription: [] as Record<string, unknown>[],
+    paystackSubscription: [] as Record<string, unknown>[],
+    paystackCustomer: [] as Record<string, unknown>[],
     member: [] as Record<string, unknown>[],
   };
   const adapter = {
     findOne: vi.fn(async ({ model, where }: any) => {
       const values =
-        model === "member" || model === "subscription"
-          ? records[model as "member" | "subscription"]
+        model === "member" || model === "paystackSubscription" || model === "paystackCustomer"
+          ? records[model as "member" | "paystackSubscription" | "paystackCustomer"]
           : [...records[model as "user" | "organization"].values()];
       return (
         values.find((row) => where.every((item: any) => row[item.field] === item.value)) ?? null
@@ -25,8 +26,8 @@ function setup(options: Record<string, unknown> = {}) {
     }),
     findMany: vi.fn(async ({ model, where }: any) => {
       const values =
-        model === "member" || model === "subscription"
-          ? records[model as "member" | "subscription"]
+        model === "member" || model === "paystackSubscription" || model === "paystackCustomer"
+          ? records[model as "member" | "paystackSubscription" | "paystackCustomer"]
           : [...records[model as "user" | "organization"].values()];
       return where
         ? values.filter((row) => where.every((item: any) => row[item.field] === item.value))
@@ -35,6 +36,11 @@ function setup(options: Record<string, unknown> = {}) {
     update: vi.fn(async ({ model, where, update }: any) => {
       const record = await adapter.findOne({ model, where });
       if (record) Object.assign(record, update);
+      return record;
+    }),
+    create: vi.fn(async ({ model, data }: any) => {
+      const record = { id: data.id ?? `${model}_${Math.random()}`, ...data };
+      records[model as "paystackCustomer" | "paystackSubscription"].push(record);
       return record;
     }),
   };
@@ -111,7 +117,9 @@ describe("customer safety hooks", () => {
         metadata: JSON.stringify({ customerType: "user", userId: "user_1" }),
       },
     });
-    expect(records.user.get("user_1")?.paystackCustomerCode).toBe("CUS_existing");
+    expect(records.paystackCustomer.find((row) => row.referenceId === "user_1")?.customerCode).toBe(
+      "CUS_existing",
+    );
   });
 
   it("does not link a Paystack customer owned by another reference", async () => {
@@ -129,7 +137,7 @@ describe("customer safety hooks", () => {
     await hooks.user.create.after(user, {} as any);
 
     expect(client.customer.create).not.toHaveBeenCalled();
-    expect(records.user.get(user.id)?.paystackCustomerCode).toBeUndefined();
+    expect(records.paystackCustomer.find((row) => row.referenceId === user.id)).toBeUndefined();
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining("belongs to another billing reference"),
     );
@@ -186,11 +194,17 @@ describe("customer safety hooks", () => {
   });
 
   it("synchronizes user email changes after local persistence", async () => {
-    const { client, hooks } = setup();
+    const { client, hooks, records } = setup();
+    records.paystackCustomer.push({
+      id: "customer_1",
+      referenceType: "user",
+      referenceId: "user_1",
+      referenceKey: "user:user_1",
+      customerCode: "CUS_1",
+    });
     await hooks.user.update.after({
       id: "user_1",
       email: "new@example.com",
-      paystackCustomerCode: "CUS_1",
     });
     expect(client.customer.update).toHaveBeenCalledWith("CUS_1", {
       body: { email: "new@example.com" },
@@ -199,37 +213,50 @@ describe("customer safety hooks", () => {
 
   it("synchronizes organization details and blocks deletion with an active subscription", async () => {
     const { client, hooks, records } = setup({ organization: { enabled: true } });
-    records.subscription.push({
+    records.paystackSubscription.push({
       id: "sub_1",
       referenceId: "org_1",
       status: "active",
     });
 
+    records.paystackCustomer.push({
+      id: "customer_org",
+      referenceType: "organization",
+      referenceId: "org_1",
+      referenceKey: "organization:org_1",
+      customerCode: "CUS_org",
+    });
     await hooks.organization.update.after({
       id: "org_1",
       name: "Renamed",
       email: "billing@example.com",
-      paystackCustomerCode: "CUS_org",
     });
     expect(client.customer.update).toHaveBeenCalledWith("CUS_org", {
       body: { email: "billing@example.com", first_name: "Renamed" },
     });
 
-    await expect(
-      hooks.organization.delete.before({ id: "org_1", paystackCustomerCode: "CUS_org" }),
-    ).rejects.toBeInstanceOf(APIError);
+    await expect(hooks.organization.delete.before({ id: "org_1" })).rejects.toBeInstanceOf(
+      APIError,
+    );
     expect(client.customer.fetch).not.toHaveBeenCalled();
   });
 
   it("blocks organization deletion when Paystack reports an active subscription", async () => {
-    const { client, hooks } = setup({ organization: { enabled: true } });
+    const { client, hooks, records } = setup({ organization: { enabled: true } });
+    records.paystackCustomer.push({
+      id: "customer_org",
+      referenceType: "organization",
+      referenceId: "org_1",
+      referenceKey: "organization:org_1",
+      customerCode: "CUS_org",
+    });
     vi.mocked(client.customer.fetch).mockResolvedValue({
       status: true,
       data: { customer_code: "CUS_org", subscriptions: [{ status: "trialing" }] },
     } as any);
 
-    await expect(
-      hooks.organization.delete.before({ id: "org_1", paystackCustomerCode: "CUS_org" }),
-    ).rejects.toBeInstanceOf(APIError);
+    await expect(hooks.organization.delete.before({ id: "org_1" })).rejects.toBeInstanceOf(
+      APIError,
+    );
   });
 });
