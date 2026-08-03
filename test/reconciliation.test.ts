@@ -5,6 +5,7 @@ import { memoryAdapter } from "better-auth/adapters/memory";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { paystack, reconcilePaystackTransaction } from "../src/index.ts";
+import { readPaystackPaymentCredentials } from "../src/payment-credentials.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types.ts";
 
 type MockPaystackClient = PaystackClientLike & {
@@ -73,12 +74,13 @@ describe("reconcilePaystackTransaction", () => {
     account: [],
     organization: [],
     member: [],
-    subscription: [],
+    paystackSubscription: [],
     paystackProduct: [],
     paystackTransaction: [],
     paystackCustomer: [],
-    paystackSubscription: [],
+    paystackPaymentCredential: [],
     paystackPlan: [],
+    paystackWebhookEvent: [],
   };
 
   beforeEach(() => {
@@ -169,11 +171,11 @@ describe("reconcilePaystackTransaction", () => {
     expect(tx.status).toBe("success");
     expect(tx.paystackId).toBe("123");
 
-    const user = await ctx.context.adapter.findOne({
-      model: "user",
-      where: [{ field: "id", value: "user_reconcile_success" }],
+    const customer = await ctx.context.adapter.findOne({
+      model: "paystackCustomer",
+      where: [{ field: "referenceKey", value: "user:user_reconcile_success" }],
     });
-    expect(user.paystackCustomerCode).toBe("CUS_success");
+    expect(customer.customerCode).toBe("CUS_success");
   });
 
   it.each(["failed", "pending"])(
@@ -276,12 +278,12 @@ describe("reconcilePaystackTransaction", () => {
       },
     });
     const subscription = await ctx.context.adapter.create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "native-starter",
         referenceId: "user_trial",
         status: "incomplete",
-        paystackTransactionReference: "ref_trial",
+        transactionReference: "ref_trial",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -334,12 +336,14 @@ describe("reconcilePaystackTransaction", () => {
     expect(paystackClient.subscription.create).toHaveBeenCalledTimes(1);
 
     const updatedSubscription = await ctx.context.adapter.findOne({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [{ field: "id", value: subscription.id }],
     });
     expect(updatedSubscription.status).toBe("trialing");
-    expect(updatedSubscription.paystackSubscriptionCode).toBe("SUB_trial");
-    expect(updatedSubscription.paystackAuthorizationCode).toBe("AUTH_trial");
+    expect(updatedSubscription.subscriptionCode).toBe("SUB_trial");
+    await expect(
+      readPaystackPaymentCredentials(ctx.context.adapter, options, subscription.id),
+    ).resolves.toMatchObject({ authorizationCode: "AUTH_trial" });
   });
 
   it("applies proration metadata during trusted reconciliation", async () => {
@@ -357,13 +361,13 @@ describe("reconcilePaystackTransaction", () => {
     } satisfies PaystackOptions<PaystackClientLike>;
     const ctx = await createAuthContext(options);
     const subscription = await ctx.context.adapter.create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "team-plan",
         referenceId: "user_proration",
         status: "active",
         seats: 1,
-        paystackSubscriptionCode: "LOC_ref_old",
+        subscriptionCode: "LOC_ref_old",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -425,12 +429,14 @@ describe("reconcilePaystackTransaction", () => {
     expect(result.subscription.prorationApplied).toBe(true);
 
     const updatedSubscription = await ctx.context.adapter.findOne({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [{ field: "id", value: subscription.id }],
     });
     expect(updatedSubscription.plan).toBe("business-plan");
     expect(updatedSubscription.seats).toBe(3);
-    expect(updatedSubscription.paystackTransactionReference).toBe("ref_proration");
-    expect(updatedSubscription.paystackAuthorizationCode).toBe("AUTH_proration");
+    expect(updatedSubscription.transactionReference).toBe("ref_proration");
+    await expect(
+      readPaystackPaymentCredentials(ctx.context.adapter, options, subscription.id),
+    ).resolves.toMatchObject({ authorizationCode: "AUTH_proration" });
   });
 });

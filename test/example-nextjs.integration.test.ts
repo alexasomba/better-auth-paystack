@@ -22,7 +22,7 @@ describe("examples/nextjs integration - paystack flow", () => {
       session: [],
       verification: [],
       account: [],
-      subscription: [],
+      paystackSubscription: [],
     };
     const memory = memoryAdapter(data);
 
@@ -114,9 +114,9 @@ describe("examples/nextjs integration - paystack flow", () => {
     if (verify.error) throw new Error("Verification failed");
     expect(verify.data.status).toBe("success");
 
-    const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
+    const subscriptions = await ctx.adapter.findMany({ model: "paystackSubscription" });
     expect(subscriptions?.length).toBeGreaterThan(0);
-    const sub = subscriptions?.find((s: any) => s.paystackTransactionReference === reference);
+    const sub = subscriptions?.find((s: any) => s.transactionReference === reference);
     expect(sub).toBeDefined();
     expect(sub.status).toBe("active");
 

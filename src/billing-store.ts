@@ -2,13 +2,16 @@ import type { GenericEndpointContext } from "better-auth";
 
 import type {
   Member,
+  PaystackCustomer,
   PaystackOrganization,
   PaystackPlan,
   PaystackProduct,
   PaystackTransaction,
+  PaystackWebhookEventRecord,
   Subscription,
   User,
 } from "./types";
+import { PAYSTACK_MODELS } from "./models";
 
 type Adapter = GenericEndpointContext["context"]["adapter"];
 type WhereValue = string | number | boolean | null;
@@ -37,6 +40,17 @@ export interface BillingStore {
     subscriptionCode: string,
     update: Partial<Subscription> & Record<string, unknown>,
   ): Promise<Subscription | null>;
+  findCustomerByReference(
+    referenceType: "user" | "organization",
+    referenceId: string,
+  ): Promise<PaystackCustomer | null>;
+  findCustomerByCode(customerCode: string): Promise<PaystackCustomer | null>;
+  saveCustomer(
+    referenceType: "user" | "organization",
+    referenceId: string,
+    customerCode: string,
+    email?: string | null,
+  ): Promise<PaystackCustomer>;
   createTransaction(
     data: Partial<PaystackTransaction> & Record<string, unknown>,
   ): Promise<PaystackTransaction>;
@@ -45,6 +59,14 @@ export interface BillingStore {
     reference: string,
     update: Partial<PaystackTransaction> & Record<string, unknown>,
   ): Promise<PaystackTransaction | null>;
+  createWebhookEvent(
+    data: Partial<PaystackWebhookEventRecord> & Record<string, unknown>,
+  ): Promise<PaystackWebhookEventRecord>;
+  findWebhookEvent(eventId: string): Promise<PaystackWebhookEventRecord | null>;
+  updateWebhookEvent(
+    eventId: string,
+    update: Partial<PaystackWebhookEventRecord> & Record<string, unknown>,
+  ): Promise<PaystackWebhookEventRecord | null>;
   listTransactions(referenceId: string): Promise<PaystackTransaction[]>;
   listProducts(): Promise<PaystackProduct[]>;
   findProductByName(name: string): Promise<PaystackProduct | null>;
@@ -73,6 +95,7 @@ export interface BillingStore {
     referenceId: string,
     customerCode: string,
     isOrganization: boolean,
+    email?: string | null,
   ): Promise<void>;
 }
 
@@ -98,21 +121,34 @@ export function createBillingStore(ctx: GenericEndpointContext): BillingStore {
 }
 
 export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
-  const findOne = async <T>(model: string, where: WhereClause): Promise<T | null> =>
-    (await adapter.findOne<T>({ model, where })) ?? null;
+  const findOne = async <T>(model: string, where: WhereClause): Promise<T | null> => {
+    try {
+      return (await adapter.findOne<T>({ model, where })) ?? null;
+    } catch {
+      // Adapters such as the in-memory adapter create provider tables lazily.
+      return null;
+    }
+  };
 
-  const findMany = async <T>(model: string, where?: WhereClause): Promise<T[]> =>
-    (await adapter.findMany<T>({ model, ...(where ? { where } : {}) })) ?? [];
+  const findMany = async <T>(model: string, where?: WhereClause): Promise<T[]> => {
+    try {
+      return (await adapter.findMany<T>({ model, ...(where ? { where } : {}) })) ?? [];
+    } catch {
+      return [];
+    }
+  };
 
   return {
     findSubscriptionById: (id) =>
-      findOne<Subscription>("subscription", [{ field: "id", value: id }]),
+      findOne<Subscription>(PAYSTACK_MODELS.subscription, [{ field: "id", value: id }]),
     findSubscriptionByCode: (subscriptionCode) =>
-      findOne<Subscription>("subscription", [
-        { field: "paystackSubscriptionCode", value: subscriptionCode },
+      findOne<Subscription>(PAYSTACK_MODELS.subscription, [
+        { field: "subscriptionCode", value: subscriptionCode },
       ]),
     findSubscriptionsByReference: (referenceId) =>
-      findMany<Subscription>("subscription", [{ field: "referenceId", value: referenceId }]),
+      findMany<Subscription>(PAYSTACK_MODELS.subscription, [
+        { field: "referenceId", value: referenceId },
+      ]),
     async findCurrentSubscription(referenceId, groupId) {
       const subscriptions = await this.findSubscriptionsByReference(referenceId);
       const scoped =
@@ -151,96 +187,111 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
       }
     },
     findSubscriptionsByTransactionReference: (reference) =>
-      findMany<Subscription>("subscription", [
-        { field: "paystackTransactionReference", value: reference },
+      findMany<Subscription>(PAYSTACK_MODELS.subscription, [
+        { field: "transactionReference", value: reference },
       ]),
     createSubscription: async (data) =>
       await adapter.create({
-        model: "subscription",
+        model: PAYSTACK_MODELS.subscription,
         data: data as Omit<Subscription, "id">,
       }),
     updateSubscription: (id, update) =>
       adapter.update<Subscription>({
-        model: "subscription",
+        model: PAYSTACK_MODELS.subscription,
         update,
         where: [{ field: "id", value: id }],
       }),
     updateSubscriptionByCode: (subscriptionCode, update) =>
       adapter.update<Subscription>({
-        model: "subscription",
+        model: PAYSTACK_MODELS.subscription,
         update,
-        where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+        where: [{ field: "subscriptionCode", value: subscriptionCode }],
       }),
     createTransaction: async (data) =>
       await adapter.create({
-        model: "paystackTransaction",
+        model: PAYSTACK_MODELS.transaction,
         data: data as Omit<PaystackTransaction, "id">,
       }),
     findTransactionByReference: (reference) =>
-      findOne<PaystackTransaction>("paystackTransaction", [
+      findOne<PaystackTransaction>(PAYSTACK_MODELS.transaction, [
         { field: "reference", value: reference },
       ]),
     updateTransactionByReference: (reference, update) =>
       adapter.update<PaystackTransaction>({
-        model: "paystackTransaction",
+        model: PAYSTACK_MODELS.transaction,
         update,
         where: [{ field: "reference", value: reference }],
       }),
+    createWebhookEvent: (data) =>
+      adapter.create({
+        model: PAYSTACK_MODELS.webhookEvent,
+        data,
+      }) as Promise<PaystackWebhookEventRecord>,
+    findWebhookEvent: (eventId) =>
+      findOne<PaystackWebhookEventRecord>(PAYSTACK_MODELS.webhookEvent, [
+        { field: "eventId", value: eventId },
+      ]),
+    updateWebhookEvent: (eventId, update) =>
+      adapter.update<PaystackWebhookEventRecord>({
+        model: PAYSTACK_MODELS.webhookEvent,
+        update,
+        where: [{ field: "eventId", value: eventId }],
+      }),
     async listTransactions(referenceId) {
-      const transactions = await findMany<PaystackTransaction>("paystackTransaction", [
+      const transactions = await findMany<PaystackTransaction>(PAYSTACK_MODELS.transaction, [
         { field: "referenceId", value: referenceId },
       ]);
       return transactions.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
     async listProducts() {
-      const products = await findMany<PaystackProduct>("paystackProduct");
+      const products = await findMany<PaystackProduct>(PAYSTACK_MODELS.product);
       return products.sort((a, b) => a.name.localeCompare(b.name));
     },
     findProductByName: (name) =>
-      findOne<PaystackProduct>("paystackProduct", [{ field: "name", value: name }]),
+      findOne<PaystackProduct>(PAYSTACK_MODELS.product, [{ field: "name", value: name }]),
     findProductBySlug: (slug) =>
-      findOne<PaystackProduct>("paystackProduct", [{ field: "slug", value: slug }]),
+      findOne<PaystackProduct>(PAYSTACK_MODELS.product, [{ field: "slug", value: slug }]),
     async updateProduct(id, update) {
       await adapter.update({
-        model: "paystackProduct",
+        model: PAYSTACK_MODELS.product,
         update,
         where: [{ field: "id", value: id }],
       });
     },
     async upsertProductByPaystackId(paystackId, data) {
-      const existing = await findOne<PaystackProduct>("paystackProduct", [
+      const existing = await findOne<PaystackProduct>(PAYSTACK_MODELS.product, [
         { field: "paystackId", value: paystackId },
       ]);
       if (existing?.id !== undefined) {
         const { createdAt: _createdAt, ...update } = data;
         await adapter.update({
-          model: "paystackProduct",
+          model: PAYSTACK_MODELS.product,
           update,
           where: [{ field: "id", value: String(existing.id) }],
         });
         return;
       }
-      await adapter.create({ model: "paystackProduct", data });
+      await adapter.create({ model: PAYSTACK_MODELS.product, data });
     },
-    listPlans: () => findMany<PaystackPlan>("paystackPlan"),
+    listPlans: () => findMany<PaystackPlan>(PAYSTACK_MODELS.plan),
     findPlanByName: (name) =>
-      findOne<PaystackPlan>("paystackPlan", [{ field: "name", value: name }]),
+      findOne<PaystackPlan>(PAYSTACK_MODELS.plan, [{ field: "name", value: name }]),
     findPlanByCode: (planCode) =>
-      findOne<PaystackPlan>("paystackPlan", [{ field: "planCode", value: planCode }]),
+      findOne<PaystackPlan>(PAYSTACK_MODELS.plan, [{ field: "planCode", value: planCode }]),
     async upsertPlanByPaystackId(paystackId, data) {
-      const existing = await findOne<PaystackPlan>("paystackPlan", [
+      const existing = await findOne<PaystackPlan>(PAYSTACK_MODELS.plan, [
         { field: "paystackId", value: paystackId },
       ]);
       if (existing?.id !== undefined) {
         const { createdAt: _createdAt, ...update } = data;
         await adapter.update({
-          model: "paystackPlan",
+          model: PAYSTACK_MODELS.plan,
           update,
           where: [{ field: "id", value: existing.id }],
         });
         return;
       }
-      await adapter.create({ model: "paystackPlan", data });
+      await adapter.create({ model: PAYSTACK_MODELS.plan, data });
     },
     findUser: (id) => findOne<User>("user", [{ field: "id", value: id }]),
     findOrganization: (id) =>
@@ -254,12 +305,50 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
       findMany<Member>("member", [{ field: "organizationId", value: organizationId }]),
     listTeams: (organizationId) =>
       findMany("team", [{ field: "organizationId", value: organizationId }]),
-    async saveCustomerCode(referenceId, customerCode, isOrganization) {
-      await adapter.update({
-        model: isOrganization ? "organization" : "user",
-        update: { paystackCustomerCode: customerCode },
-        where: [{ field: "id", value: referenceId }],
+    findCustomerByReference: (referenceType, referenceId) =>
+      findOne<PaystackCustomer>(PAYSTACK_MODELS.customer, [
+        { field: "referenceKey", value: `${referenceType}:${referenceId}` },
+      ]),
+    findCustomerByCode: (customerCode) =>
+      findOne<PaystackCustomer>(PAYSTACK_MODELS.customer, [
+        { field: "customerCode", value: customerCode },
+      ]),
+    async saveCustomer(referenceType, referenceId, customerCode, email) {
+      const referenceKey = `${referenceType}:${referenceId}`;
+      const existing = await findOne<PaystackCustomer>(PAYSTACK_MODELS.customer, [
+        { field: "referenceKey", value: referenceKey },
+      ]);
+      const now = new Date();
+      if (existing) {
+        const updated = await adapter.update<PaystackCustomer>({
+          model: PAYSTACK_MODELS.customer,
+          update: { customerCode, ...(email ? { email } : {}), updatedAt: now },
+          where: [{ field: "id", value: existing.id }],
+        });
+        return (
+          updated ?? { ...existing, customerCode, email: email ?? existing.email, updatedAt: now }
+        );
+      }
+      return adapter.create({
+        model: PAYSTACK_MODELS.customer,
+        data: {
+          referenceType,
+          referenceId,
+          referenceKey,
+          customerCode,
+          ...(email ? { email } : {}),
+          createdAt: now,
+          updatedAt: now,
+        },
       });
+    },
+    async saveCustomerCode(referenceId, customerCode, isOrganization, email) {
+      await this.saveCustomer(
+        isOrganization ? "organization" : "user",
+        referenceId,
+        customerCode,
+        email,
+      );
     },
   };
 }

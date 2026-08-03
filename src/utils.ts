@@ -50,28 +50,25 @@ export function isLocalSubscriptionCode(subscriptionCode: string | undefined | n
 }
 
 export function isLocallyManagedSubscription(
-  subscription: Pick<Subscription, "paystackSubscriptionCode" | "paystackPlanCode">,
+  subscription: Pick<Subscription, "subscriptionCode" | "planCode">,
 ): boolean {
-  if (isLocalSubscriptionCode(subscription.paystackSubscriptionCode)) {
+  if (isLocalSubscriptionCode(subscription.subscriptionCode)) {
     return true;
   }
 
-  if (
-    typeof subscription.paystackSubscriptionCode === "string" &&
-    subscription.paystackSubscriptionCode !== ""
-  ) {
+  if (typeof subscription.subscriptionCode === "string" && subscription.subscriptionCode !== "") {
     return false;
   }
 
   return (
-    subscription.paystackPlanCode === undefined ||
-    subscription.paystackPlanCode === null ||
-    subscription.paystackPlanCode === ""
+    subscription.planCode === undefined ||
+    subscription.planCode === null ||
+    subscription.planCode === ""
   );
 }
 
 export function assertLocallyManagedSubscription(
-  subscription: Pick<Subscription, "paystackSubscriptionCode" | "paystackPlanCode">,
+  subscription: Pick<Subscription, "subscriptionCode" | "planCode">,
   action: string,
 ): void {
   if (!isLocallyManagedSubscription(subscription)) {
@@ -310,9 +307,9 @@ export async function syncSubscriptionSeats(
   const quantity = members.length;
   for (const subscription of seatSubscriptions) {
     if (
-      subscription.paystackSubscriptionCode === undefined ||
-      subscription.paystackSubscriptionCode === null ||
-      subscription.paystackSubscriptionCode === ""
+      subscription.subscriptionCode === undefined ||
+      subscription.subscriptionCode === null ||
+      subscription.subscriptionCode === ""
     )
       continue;
     try {

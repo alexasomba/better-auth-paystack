@@ -18,7 +18,6 @@ import type {
   Subscription,
   PaystackOptions,
   PaystackClientLike,
-  PaystackUser,
   PaystackResponse,
   PaystackCustomerResponse,
 } from "../src/types";
@@ -123,7 +122,13 @@ describe("paystack type", () => {
     const schema = getSchema(options);
     expect(schema.paystackProduct).toBeDefined();
     expect(schema.paystackPlan).toBeDefined();
-    expect(schema.subscription?.fields).toMatchObject({
+    expect(schema.paystackWebhookEvent).toMatchObject({
+      fields: {
+        eventId: { type: "string", unique: true },
+        status: { type: "string", defaultValue: "pending" },
+      },
+    });
+    expect(schema.paystackSubscription?.fields).toMatchObject({
       cancelAt: { type: "date", required: false },
       canceledAt: { type: "date", required: false },
       endedAt: { type: "date", required: false },
@@ -158,12 +163,12 @@ describe("paystack", () => {
     account: [],
     member: [],
     organization: [],
-    subscription: [],
+    paystackSubscription: [],
     paystackProduct: [],
     paystackTransaction: [],
     paystackCustomer: [],
-    paystackSubscription: [],
     paystackPlan: [],
+    paystackWebhookEvent: [],
   };
   const memory = memoryAdapter(data);
 
@@ -174,12 +179,12 @@ describe("paystack", () => {
     data.account = [];
     data.member = [];
     data.organization = [];
-    data.subscription = [];
+    data.paystackSubscription = [];
     data.paystackProduct = [];
     data.paystackTransaction = [];
     data.paystackCustomer = [];
-    data.paystackSubscription = [];
     data.paystackPlan = [];
+    data.paystackWebhookEvent = [];
     vi.clearAllMocks();
   });
 
@@ -365,11 +370,11 @@ describe("paystack", () => {
     expect(res.user.id).toBeDefined();
     expect(createCustomer).toHaveBeenCalledTimes(1);
 
-    const dbUser = await (ctx.adapter as unknown as DBAdapter).findOne({
-      model: "user",
-      where: [{ field: "id", value: res.user.id }],
+    const dbCustomer = await (ctx.adapter as unknown as DBAdapter).findOne({
+      model: "paystackCustomer",
+      where: [{ field: "referenceKey", value: `user:${res.user.id}` }],
     });
-    expect((dbUser as PaystackUser | null)?.paystackCustomerCode).toBe("CUS_test_123");
+    expect((dbCustomer as { customerCode?: string } | null)?.customerCode).toBe("CUS_test_123");
   });
 
   it("should sync products via the trusted server operation", async () => {
@@ -676,12 +681,12 @@ describe("paystack", () => {
     // Manually create a subscription in DB
     const ctx = await auth.$context;
     await (ctx.adapter as unknown as DBAdapter).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "starter",
         referenceId: signUpRes.user.id,
         status: "active",
-        paystackSubscriptionCode: "SUB_list_123",
+        subscriptionCode: "SUB_list_123",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -691,7 +696,7 @@ describe("paystack", () => {
 
     if (res.error) throw new Error(`API Error: ${JSON.stringify(res.error)}`);
     expect(res.data?.subscriptions).toHaveLength(1);
-    expect(res.data?.subscriptions[0].paystackSubscriptionCode).toBe("SUB_list_123");
+    expect(res.data?.subscriptions[0].subscriptionCode).toBe("SUB_list_123");
   });
 
   it("should get billing portal link", async () => {
@@ -979,10 +984,10 @@ describe("paystack", () => {
 
     const subA0 = (
       await (ctx.adapter as unknown as DBAdapter).findMany({
-        model: "subscription",
+        model: "paystackSubscription",
         where: [
           { field: "referenceId", value: aRes.user.id },
-          { field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+          { field: "transactionReference", value: "REF_unique_isolated_123" },
         ],
       })
     )?.[0] as Subscription | undefined;
@@ -1011,10 +1016,10 @@ describe("paystack", () => {
 
     const subA1 = (
       await (ctx.adapter as unknown as DBAdapter).findMany({
-        model: "subscription",
+        model: "paystackSubscription",
         where: [
           { field: "referenceId", value: aRes.user.id },
-          { field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+          { field: "transactionReference", value: "REF_unique_isolated_123" },
         ],
       })
     )?.[0] as Subscription | undefined;
@@ -1042,10 +1047,10 @@ describe("paystack", () => {
 
     const subA2 = (
       await (ctx.adapter as unknown as DBAdapter).findMany({
-        model: "subscription",
+        model: "paystackSubscription",
         where: [
           { field: "referenceId", value: aRes.user.id },
-          { field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+          { field: "transactionReference", value: "REF_unique_isolated_123" },
         ],
       })
     )?.[0] as Subscription | undefined;
@@ -1054,10 +1059,10 @@ describe("paystack", () => {
     // Sanity: user B doesn't have a subscription row for this reference.
     const subB = (
       await (ctx.adapter as unknown as DBAdapter).findMany({
-        model: "subscription",
+        model: "paystackSubscription",
         where: [
           { field: "referenceId", value: bRes.user.id },
-          { field: "paystackTransactionReference", value: "REF_unique_isolated_123" },
+          { field: "transactionReference", value: "REF_unique_isolated_123" },
         ],
       })
     )?.[0] as Subscription | undefined;
@@ -1478,12 +1483,12 @@ describe("paystack", () => {
       id: "sub_123",
       plan: "pro",
       referenceId: "user_1",
-      paystackSubscriptionCode: "SUB_ABC",
+      subscriptionCode: "SUB_ABC",
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await ctx.adapter.create({ model: "subscription", data: sub as any });
+    await ctx.adapter.create({ model: "paystackSubscription", data: sub as any });
 
     const payload = JSON.stringify({
       event: "subscription.disable",
@@ -1503,8 +1508,8 @@ describe("paystack", () => {
     await auth.handler(req);
 
     const updatedSub = await (ctx.adapter as any).findOne({
-      model: "subscription",
-      where: [{ field: "paystackSubscriptionCode", value: "SUB_ABC" }],
+      model: "paystackSubscription",
+      where: [{ field: "subscriptionCode", value: "SUB_ABC" }],
     });
     expect(updatedSub?.status).toBe("canceled");
   });
@@ -1542,7 +1547,7 @@ describe("paystack", () => {
     // Create an incomplete subscription (as if init was called)
     // Must match via referenceId (in webhook metadata) and plan name
     await ctx.adapter.create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "pro",
         referenceId: "user_hook_123",
@@ -1578,7 +1583,7 @@ describe("paystack", () => {
         event: expect.anything(),
         subscription: expect.objectContaining({
           status: "active",
-          paystackSubscriptionCode: "SUB_HOOK_123",
+          subscriptionCode: "SUB_HOOK_123",
         }),
         plan: expect.objectContaining({ name: "pro" }),
       }),
@@ -1615,12 +1620,15 @@ describe("paystack", () => {
       id: "sub_cancel_test",
       plan: "pro",
       referenceId: "user_cancel",
-      paystackSubscriptionCode: "SUB_CANCEL_123",
+      subscriptionCode: "SUB_CANCEL_123",
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const createdSub = await ctx.adapter.create({ model: "subscription", data: sub as any });
+    const createdSub = await ctx.adapter.create({
+      model: "paystackSubscription",
+      data: sub as any,
+    });
 
     const payload = JSON.stringify({
       event: "subscription.disable",
@@ -1644,7 +1652,7 @@ describe("paystack", () => {
     expect(onSubscriptionCancel).toHaveBeenCalledWith(
       expect.objectContaining({
         subscription: expect.objectContaining({
-          paystackSubscriptionCode: "SUB_CANCEL_123",
+          subscriptionCode: "SUB_CANCEL_123",
           status: "canceled",
           canceledAt: expect.any(Date),
           endedAt: expect.any(Date),
@@ -1663,7 +1671,7 @@ describe("paystack", () => {
       expect.any(Object),
     );
     const persisted = await ctx.adapter.findOne({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [{ field: "id", value: createdSub.id }],
     });
     expect(persisted).toMatchObject({
@@ -1733,7 +1741,7 @@ describe("paystack", () => {
 
     // Create a previous trial subscription for this user
     await ctx.adapter.create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         id: "prev_trial_sub",
         plan: "starter",
@@ -1760,10 +1768,10 @@ describe("paystack", () => {
 
     // Check the subscription was created without trial dates
     const newSub = await (ctx.adapter as any).findOne({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [
         { field: "referenceId", value: signUpRes.user.id },
-        { field: "paystackTransactionReference", value: "REF_TRIAL_ABUSE" },
+        { field: "transactionReference", value: "REF_TRIAL_ABUSE" },
       ],
     });
     expect(newSub?.trialStart).toBeUndefined();
@@ -2012,10 +2020,10 @@ describe("paystack", () => {
 
     // Check subscription has trial dates
     const sub = await (ctx.adapter as any).findOne({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [
         { field: "referenceId", value: signUpRes.user.id },
-        { field: "paystackTransactionReference", value: "REF_FIRST_TRIAL" },
+        { field: "transactionReference", value: "REF_FIRST_TRIAL" },
       ],
     });
     expect(sub?.trialStart).toBeDefined();
@@ -2089,13 +2097,12 @@ describe("paystack", () => {
       null,
     );
 
-    const updatedOrg = await ctx.adapter.findOne({
-      model: "organization",
-      where: [{ field: "id", value: orgData.id }],
-    });
-
     expect(paystackSdk.customer.create).toHaveBeenCalledTimes(1);
-    expect((updatedOrg as { paystackCustomerCode?: string } | null)?.paystackCustomerCode).toBe(
+    const providerCustomer = await ctx.adapter.findOne({
+      model: "paystackCustomer",
+      where: [{ field: "referenceId", value: orgData.id }],
+    });
+    expect((providerCustomer as { customerCode?: string } | null)?.customerCode).toBe(
       "CUS_org_123",
     );
   });

@@ -10,6 +10,7 @@ import { setCookieToHeader } from "better-auth/cookies";
 
 import { paystack } from "../src/index.ts";
 import { paystackClient as createPaystackClient } from "../src/client.ts";
+import { savePaystackPaymentCredentials } from "../src/payment-credentials.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 import {
   expectCheckoutResult,
@@ -64,8 +65,10 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
   const data = {
     user: [],
     session: [],
-    subscription: [],
+    paystackSubscription: [],
     paystackTransaction: [],
+    paystackWebhookEvent: [],
+    paystackPaymentCredential: [],
     organization: [],
     member: [],
     invitation: [],
@@ -90,8 +93,10 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
   beforeEach(() => {
     data.user = [];
     data.session = [];
-    data.subscription = [];
+    data.paystackSubscription = [];
     data.paystackTransaction = [];
+    data.paystackWebhookEvent = [];
+    data.paystackPaymentCredential = [];
     data.organization = [];
     data.member = [];
     data.invitation = [];
@@ -228,8 +233,9 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       database: memoryAdapter({
         user: [],
         session: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
+        paystackWebhookEvent: [],
         organization: [],
         member: [],
         invitation: [],
@@ -295,7 +301,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
     const ctx = await auth.$context;
     await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "old-plan",
         referenceId: signUp.user.id,
@@ -329,7 +335,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     expect(json.status).toBe("success");
     expect(json.scheduled).toBe(true);
 
-    const subs = await (ctx.adapter as any).findMany({ model: "subscription" });
+    const subs = await (ctx.adapter as any).findMany({ model: "paystackSubscription" });
     const sub = subs[0];
     expect(sub.pendingPlan).toBe("team-plan");
   });
@@ -337,11 +343,11 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
   it("should transition pendingPlan in webhook charge.success", async () => {
     const ctx = await auth.$context;
     const sub = await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "old-plan",
         referenceId: "user-id",
-        paystackSubscriptionCode: "SUB_123",
+        subscriptionCode: "SUB_123",
         status: "active",
         pendingPlan: "team-plan",
         createdAt: new Date(),
@@ -389,7 +395,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     expect(res.status).toBe(200);
 
     const updatedSub = await (ctx.adapter as any).findOne({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [{ field: "id", value: sub.id }],
     });
     expect(updatedSub.plan).toBe("team-plan");
@@ -407,11 +413,11 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
 
     const ctx = await auth.$context;
     await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "team-plan",
         referenceId: testUser.email,
-        paystackSubscriptionCode: "SUB_IMMEDIATE",
+        subscriptionCode: "SUB_IMMEDIATE",
         status: "active",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -452,8 +458,8 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     expect(json.status).toBe("success");
 
     const updatedSub = await (ctx.adapter as any).findOne({
-      model: "subscription",
-      where: [{ field: "paystackSubscriptionCode", value: "SUB_IMMEDIATE" }],
+      model: "paystackSubscription",
+      where: [{ field: "subscriptionCode", value: "SUB_IMMEDIATE" }],
     });
     expect(updatedSub.status).toBe("canceled");
     expect(updatedSub.cancelAtPeriodEnd).toBe(false);
@@ -477,8 +483,8 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const periodStart = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
     const periodEnd = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
 
-    await (ctx.adapter as any).create({
-      model: "subscription",
+    const proratingSubscription = await (ctx.adapter as any).create({
+      model: "paystackSubscription",
       data: {
         plan: "team-plan",
         referenceId: signUp.user.id,
@@ -486,11 +492,13 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         seats: 1, // 1 seat currently
         periodStart,
         periodEnd,
-        paystackAuthorizationCode: "AUTH_abc123",
-        paystackSubscriptionCode: "LOC_sub_abc123",
+        subscriptionCode: "LOC_sub_abc123",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+    });
+    await savePaystackPaymentCredentials(ctx.adapter as any, options, proratingSubscription.id, {
+      authorizationCode: "AUTH_abc123",
     });
 
     (paystackSdk.transaction.chargeAuthorization as any).mockResolvedValue({
@@ -536,7 +544,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     );
 
     const subs = await (ctx.adapter as any).findMany({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [{ field: "referenceId", value: signUp.user.id }],
     });
     expect(subs[0].seats).toBe(3);
@@ -560,7 +568,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const ctx = await auth.$context;
     const now = new Date();
     await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "team-plan",
         referenceId: signUp.user.id,
@@ -568,8 +576,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         seats: 1,
         periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
         periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
-        paystackAuthorizationCode: "",
-        paystackSubscriptionCode: "LOC_sub_transfer",
+        subscriptionCode: "LOC_sub_transfer",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -615,8 +622,8 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     );
 
     const unchanged = await (ctx.adapter as any).findOne({
-      model: "subscription",
-      where: [{ field: "paystackSubscriptionCode", value: "LOC_sub_transfer" }],
+      model: "paystackSubscription",
+      where: [{ field: "subscriptionCode", value: "LOC_sub_transfer" }],
     });
     expect(unchanged.plan).toBe("team-plan");
     expect(unchanged.seats).toBe(1);
@@ -645,7 +652,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const ctx = await auth.$context;
     const now = new Date();
     const createdSubscription = await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "team-plan",
         referenceId: signUp.user.id,
@@ -654,8 +661,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         seats: 1,
         periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
         periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
-        paystackAuthorizationCode: "",
-        paystackSubscriptionCode: "LOC_sub_verify_transfer",
+        subscriptionCode: "LOC_sub_verify_transfer",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -730,11 +736,11 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     expect(json.status).toBe("success");
 
     const updatedSubscription = await (ctx.adapter as any).findOne({
-      model: "subscription",
+      model: "paystackSubscription",
       where: [{ field: "id", value: createdSubscription.id }],
     });
     expect(updatedSubscription.plan).toBe("business-plan");
-    expect(updatedSubscription.paystackTransactionReference).toBe("ref_verify_proration");
+    expect(updatedSubscription.transactionReference).toBe("ref_verify_proration");
 
     const updatedTransaction = await (ctx.adapter as any).findOne({
       model: "paystackTransaction",
@@ -766,8 +772,9 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
       database: memoryAdapter({
         user: [],
         session: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
+        paystackWebhookEvent: [],
         organization: [],
         member: [],
         invitation: [],
@@ -802,7 +809,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     const ctx = await authWithoutUpdate.$context;
     const now = new Date();
     await (ctx.adapter as any).create({
-      model: "subscription",
+      model: "paystackSubscription",
       data: {
         plan: "team-plan",
         referenceId: signUp.user.id,
@@ -810,9 +817,8 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         seats: 1,
         periodStart: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
         periodEnd: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
-        paystackAuthorizationCode: "AUTH_missing_update",
-        paystackSubscriptionCode: "SUB_missing_update",
-        paystackPlanCode: "PLN_remote_team",
+        subscriptionCode: "SUB_missing_update",
+        planCode: "PLN_remote_team",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
@@ -840,8 +846,8 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
     expect(json.message).toContain("Paystack-managed subscriptions do not support");
 
     const unchanged = await (ctx.adapter as any).findOne({
-      model: "subscription",
-      where: [{ field: "paystackSubscriptionCode", value: "SUB_missing_update" }],
+      model: "paystackSubscription",
+      where: [{ field: "subscriptionCode", value: "SUB_missing_update" }],
     });
     expect(unchanged.seats).toBe(1);
   });

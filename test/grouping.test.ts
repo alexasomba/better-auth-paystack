@@ -30,11 +30,11 @@ function subscription(
 function createAdapter(rows: Subscription[]) {
   return {
     findMany: vi.fn(({ model }: { model: string }) =>
-      Promise.resolve(model === "subscription" ? rows : []),
+      Promise.resolve(model === "paystackSubscription" ? rows : []),
     ),
     findOne: vi.fn(({ model, where }: { model: string; where: { value: unknown }[] }) =>
       Promise.resolve(
-        model === "subscription"
+        model === "paystackSubscription"
           ? (rows.find((candidate) => candidate.id === where[0]?.value) ?? null)
           : null,
       ),
