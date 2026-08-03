@@ -4,6 +4,13 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.2.0](https://github.com/alexasomba/better-auth-paystack/compare/v3.1.2...v3.2.0) (2026-08-03)
+
+
+### Features
+
+* Paystack billing schema and webhook events ([b4af9e7](https://github.com/alexasomba/better-auth-paystack/commit/b4af9e71d3c47af12680a100ff26e3919945ae83))
+
 ## [3.1.2](https://github.com/alexasomba/better-auth-paystack/compare/v3.1.1...v3.1.2) (2026-07-29)
 
 
