@@ -31,7 +31,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
       };
       const memory = memoryAdapter(data);
@@ -139,7 +139,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
       };
       const memory = memoryAdapter(data);
@@ -234,7 +234,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
         organization: [],
         member: [],
@@ -349,7 +349,7 @@ describe("planCode and organization referenceId tests", () => {
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_org_123");
 
-      const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
+      const subscriptions = await ctx.adapter.findMany({ model: "paystackSubscription" });
       expect(subscriptions?.length).toBeGreaterThan(0);
       const sub = subscriptions?.find((s: any) => s.referenceId === orgId);
       expect(sub).toBeDefined();
@@ -361,7 +361,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
         organization: [],
         member: [],

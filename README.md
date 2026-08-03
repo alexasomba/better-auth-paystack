@@ -79,9 +79,9 @@ npm install better-auth-paystack
 Then update imports from `@alexasomba/better-auth-paystack` to `better-auth-paystack` and from
 `@alexasomba/better-auth-paystack/client` to `better-auth-paystack/client`.
 
-This is a package-name migration only. The plugin API, configuration, routes, and database schema
-are unchanged, so no database migration or configuration changes are required. Do not install both
-package names simultaneously: they expose the same Better Auth plugin and schema.
+This is a package-name migration. The v4 release also moves Paystack billing data into
+provider-owned tables. Existing client route names remain compatible, but a database migration
+and the trusted migration operation described below are required.
 
 #### Optional: Browser SDK (for Popup Modals)
 
@@ -327,7 +327,7 @@ Transactions below these thresholds will be rejected with a `BAD_REQUEST` error.
 
 Enable `organization.enabled` to bill organizations instead of users.
 
-- **Auto Customer**: Organizations get their own `paystackCustomerCode`.
+- **Auto Customer**: Organizations get their own provider-owned `paystackCustomer` record.
 - **Authorization**: Organization owners and admins can manage billing by default. Use `organization.billingRoles` to extend the trusted role list, or `subscription.authorizeReference` when you need fully custom authorization.
 
 ```ts
@@ -669,36 +669,63 @@ type cancelSubscription = {
 
 The plugin extends your database with the following fields and tables.
 
-### `user`
+### `user` and `organization`
 
-| Field                  | Type     | Required | Description                                   |
-| :--------------------- | :------- | :------- | :-------------------------------------------- |
-| `paystackCustomerCode` | `string` | No       | The unique customer identifier from Paystack. |
+Paystack customer codes are no longer added to Better Auth auth tables. Organization `email`
+remains available for billing fallback.
 
-### `organization`
+| Field   | Type     | Required | Description                                                                        |
+| :------ | :------- | :------- | :--------------------------------------------------------------------------------- |
+| `email` | `string` | No       | The billing email for the organization. Falls back to the owner's email if absent. |
 
-| Field                  | Type     | Required | Description                                                                                |
-| :--------------------- | :------- | :------- | :----------------------------------------------------------------------------------------- |
-| `paystackCustomerCode` | `string` | No       | The unique customer identifier for the organization.                                       |
-| `email`                | `string` | No       | The billing email for the organization. fallsback to organization owner's email if absent. |
+### `paystackCustomer`
 
-### `subscription`
+| Field           | Type     | Required | Description                          |
+| :-------------- | :------- | :------- | :----------------------------------- |
+| `referenceType` | `string` | Yes      | `user` or `organization`.            |
+| `referenceId`   | `string` | Yes      | Owning Better Auth identifier.       |
+| `referenceKey`  | `string` | Yes      | Unique provider-owned reference key. |
+| `customerCode`  | `string` | Yes      | Paystack customer code.              |
+| `email`         | `string` | No       | Billing email.                       |
 
-| Field                          | Type      | Required | Description                                                          |
-| :----------------------------- | :-------- | :------- | :------------------------------------------------------------------- |
-| `plan`                         | `string`  | Yes      | Lowercased name of the active plan.                                  |
-| `referenceId`                  | `string`  | Yes      | Associated User ID or Organization ID.                               |
-| `paystackCustomerCode`         | `string`  | No       | The Paystack customer code for this subscription.                    |
-| `paystackSubscriptionCode`     | `string`  | No       | The unique code for the subscription (e.g., `SUB_...` or `LOC_...`). |
-| `paystackTransactionReference` | `string`  | No       | The reference of the transaction that started the subscription.      |
-| `paystackAuthorizationCode`    | `string`  | No       | Stored card authorization code for recurring charges (local plans).  |
-| `status`                       | `string`  | Yes      | `active`, `trialing`, `canceled`, `incomplete`.                      |
-| `periodStart`                  | `Date`    | No       | Start date of the current billing period.                            |
-| `periodEnd`                    | `Date`    | No       | End date of the current billing period.                              |
-| `trialStart`                   | `Date`    | No       | Start date of the trial period.                                      |
-| `trialEnd`                     | `Date`    | No       | End date of the trial period.                                        |
-| `cancelAtPeriodEnd`            | `boolean` | No       | Whether to cancel at the end of the current period.                  |
-| `seats`                        | `number`  | No       | Purchased seat count for team billing.                               |
+### `paystackPaymentCredential`
+
+Payment credentials are stored separately as AES-256-GCM ciphertext. Plaintext values are not
+returned by subscription APIs, callbacks, logs, or client actions. Set `credentialEncryptionKey`
+to a dedicated production secret; the plugin falls back to `secretKey` for compatibility.
+
+| Field                        | Type     | Required | Description                               |
+| :--------------------------- | :------- | :------- | :---------------------------------------- |
+| `subscriptionId`             | `string` | Yes      | Unique Paystack subscription ID.          |
+| `authorizationCodeEncrypted` | `string` | No       | Encrypted recurring-charge authorization. |
+| `emailTokenEncrypted`        | `string` | No       | Encrypted subscription-management token.  |
+
+### `paystackSubscription`
+
+| Field                  | Type      | Required | Description                                                          |
+| :--------------------- | :-------- | :------- | :------------------------------------------------------------------- |
+| `plan`                 | `string`  | Yes      | Lowercased name of the active plan.                                  |
+| `referenceId`          | `string`  | Yes      | Associated User ID or Organization ID.                               |
+| `userId`               | `string`  | Yes      | User who initiated the subscription checkout.                        |
+| `customerCode`         | `string`  | No       | The Paystack customer code for this subscription.                    |
+| `subscriptionCode`     | `string`  | No       | The unique code for the subscription (e.g., `SUB_...` or `LOC_...`). |
+| `transactionReference` | `string`  | No       | The reference of the transaction that started the subscription.      |
+| `planCode`             | `string`  | No       | The Paystack plan code, when Paystack manages the subscription.      |
+| `status`               | `string`  | Yes      | `active`, `trialing`, `canceled`, `incomplete`.                      |
+| `periodStart`          | `Date`    | No       | Start date of the current billing period.                            |
+| `periodEnd`            | `Date`    | No       | End date of the current billing period.                              |
+| `trialStart`           | `Date`    | No       | Start date of the trial period.                                      |
+| `trialEnd`             | `Date`    | No       | End date of the trial period.                                        |
+| `cancelAtPeriodEnd`    | `boolean` | No       | Whether to cancel at the end of the current period.                  |
+| `cancelAt`             | `Date`    | No       | Scheduled cancellation timestamp.                                    |
+| `canceledAt`           | `Date`    | No       | Cancellation timestamp.                                              |
+| `endedAt`              | `Date`    | No       | Subscription end timestamp.                                          |
+| `billingInterval`      | `string`  | No       | Billing interval used by the plan.                                   |
+| `groupId`              | `string`  | No       | Optional subscription group.                                         |
+| `pendingPlan`          | `string`  | No       | Plan pending a future lifecycle change.                              |
+| `seats`                | `number`  | No       | Purchased seat count for team billing.                               |
+| `createdAt`            | `Date`    | Yes      | Record creation timestamp.                                           |
+| `updatedAt`            | `Date`    | Yes      | Record update timestamp.                                             |
 
 ### `paystackTransaction`
 
@@ -739,14 +766,43 @@ The plugin records verified webhook deliveries with their event type, raw payloa
 available), processing status, and processed timestamp. This table is provider-namespaced so the
 Paystack and Flutterwave plugins can be installed together without sharing webhook state.
 
-| Field         | Type      | Required | Description                               |
-| :------------ | :-------- | :------- | :---------------------------------------- |
-| `eventId`     | `string`  | Yes      | Stable hash of the exact verified payload. |
-| `eventType`   | `string`  | Yes      | Paystack event name.                      |
-| `reference`   | `string`  | No       | Transaction reference when available.     |
-| `payload`     | `string`  | Yes      | Exact raw webhook payload.                |
-| `status`      | `string`  | Yes      | `pending` or `processed`.                 |
-| `processedAt` | `Date`    | No       | Processing completion timestamp.          |
+| Field         | Type     | Required | Description                                |
+| :------------ | :------- | :------- | :----------------------------------------- |
+| `eventId`     | `string` | Yes      | Stable hash of the exact verified payload. |
+| `eventType`   | `string` | Yes      | Paystack event name.                       |
+| `reference`   | `string` | No       | Transaction reference when available.      |
+| `payload`     | `string` | Yes      | Exact raw webhook payload.                 |
+| `status`      | `string` | Yes      | `pending` or `processed`.                  |
+| `processedAt` | `Date`   | No       | Processing completion timestamp.           |
+
+### v4 schema migration
+
+After upgrading the package, generate/apply the Better Auth schema first, then run the trusted
+server-only operation:
+
+```ts
+import { migratePaystackSubscriptionSchema } from "better-auth-paystack";
+
+const report = await migratePaystackSubscriptionSchema(ctx, {
+  secretKey: process.env.PAYSTACK_SECRET_KEY!,
+  credentialEncryptionKey: process.env.PAYSTACK_CREDENTIAL_ENCRYPTION_KEY,
+});
+```
+
+Run it in this order:
+
+1. Upgrade the package.
+2. Run Better Auth schema generation/migration.
+3. Run `migratePaystackSubscriptionSchema()` from a trusted server job.
+4. Verify migration counts and billing behavior.
+5. Remove legacy columns/tables manually only after verification.
+
+The operation preserves legacy rows, keeps original subscription IDs where possible, skips already
+migrated records, encrypts legacy authorization/email tokens, and reports partial failures so a
+later run can retry them.
+
+During the compatibility window, customer resolution can still read legacy auth-table customer
+codes. Remove those legacy columns manually after the migration has been verified.
 
 ---
 
@@ -769,8 +825,9 @@ columns are nullable; historical rows are populated as future lifecycle events a
 The following fields are indexed:
 
 - **`paystackTransaction`**: `reference` (unique), `userId`, `referenceId`.
-- **`subscription`**: `paystackSubscriptionCode` (unique), `referenceId`, `paystackTransactionReference`, `paystackCustomerCode`, `plan`.
-- **`user` & `organization`**: `paystackCustomerCode`.
+- **`paystackSubscription`**: `subscriptionCode` (unique), `referenceId`, `transactionReference`, `customerCode`, `plan`.
+- **`paystackCustomer`**: `referenceKey` (unique), `referenceId`, `customerCode` (unique).
+- **`paystackPaymentCredential`**: `subscriptionId` (unique).
 - **`paystackProduct`**: `slug` (unique), `paystackId` (unique).
 
 Proration upgrades and trusted renewal charges also persist `paystackTransaction` rows, so local transaction history stays aligned with successful off-session charges.
