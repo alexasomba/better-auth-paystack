@@ -306,9 +306,6 @@ importers:
 
   examples/tanstack:
     dependencies:
-      'better-auth-paystack':
-        specifier: workspace:*
-        version: link:../..
       '@alexasomba/paystack-node':
         specifier: 'catalog:'
         version: 1.10.8
@@ -357,6 +354,9 @@ importers:
       better-auth:
         specifier: 'catalog:'
         version: 1.6.25(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.18(@voidzero-dev/vite-plus-core@0.2.6(@arethetypeswrong/core@0.18.4)(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(publint@0.3.21)(tsx@4.22.4)(typescript@6.0.3)(yaml@2.9.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(better-sqlite3@12.10.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.10)(vitest@4.1.10)
+      better-auth-paystack:
+        specifier: workspace:*
+        version: link:../..
       better-sqlite3:
         specifier: 'catalog:'
         version: 12.10.0
