@@ -4,6 +4,16 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.2.1](https://github.com/alexasomba/better-auth-paystack/compare/v3.2.0...v3.2.1) (2026-08-05)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump @arethetypeswrong/cli from 0.18.4 to 0.18.5 ([#171](https://github.com/alexasomba/better-auth-paystack/issues/171)) ([7abeb47](https://github.com/alexasomba/better-auth-paystack/commit/7abeb4768c394cc9270a562c6fbbde5ccede1a99))
+* **deps:** bump @playwright/test from 1.60.0 to 1.62.1 ([#172](https://github.com/alexasomba/better-auth-paystack/issues/172)) ([5d959db](https://github.com/alexasomba/better-auth-paystack/commit/5d959dbf5f5f7c7566adb2159aa709471653a8a9))
+* **deps:** bump @rollup/rollup-linux-x64-gnu from 4.62.2 to 4.62.4 ([#170](https://github.com/alexasomba/better-auth-paystack/issues/170)) ([2b32e67](https://github.com/alexasomba/better-auth-paystack/commit/2b32e67ede4d04ca73a453a90cb3de4df3d7f226))
+* **deps:** bump tailwindcss from 4.3.0 to 4.3.3 ([#174](https://github.com/alexasomba/better-auth-paystack/issues/174)) ([5427f87](https://github.com/alexasomba/better-auth-paystack/commit/5427f872f1432496f4ad2a01f67fccddd6961d78))
+
 ## [3.2.0](https://github.com/alexasomba/better-auth-paystack/compare/v3.1.2...v3.2.0) (2026-08-03)
 
 
