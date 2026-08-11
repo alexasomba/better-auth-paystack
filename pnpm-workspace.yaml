@@ -73,7 +73,7 @@ catalog:
   "vite": "npm:@voidzero-dev/vite-plus-core@^0.2.6"
   "vite-plus": "^0.2.6"
   "vitest": "^4.1.10"
-  "web-vitals": "^5.3.0"
+  "web-vitals": "^6.1.0"
   "wrangler": "^4.95.0"
   "zod": "^4.4.3"
 
