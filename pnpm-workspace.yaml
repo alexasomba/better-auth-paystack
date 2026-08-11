@@ -18,7 +18,7 @@ catalog:
   "@playwright/test": "^1.60.0"
   "@rollup/rollup-linux-x64-gnu": "^4.62.2"
   "@tailwindcss/vite": "^4.3.0"
-  "@tanstack/devtools-vite": "^0.6.1"
+  "@tanstack/devtools-vite": "^0.8.3"
   "@tanstack/eslint-config": "^0.4.0"
   "@tanstack/eslint-plugin-query": "^5.100.14"
   "@tanstack/eslint-plugin-router": "^1.161.6"
