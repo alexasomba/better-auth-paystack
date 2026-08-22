@@ -4,7 +4,7 @@ description: >
   Modify or review better-auth-paystack database schema behavior. Use for paystackProduct, paystackPlan, paystackTransaction, subscription, user.paystackCustomerCode, organization.paystackCustomerCode/email, Better Auth schema overrides, mergeSchema behavior, migrations, indexes, unique fields, and backward-compatible table or field changes.
 type: core
 library: "better-auth-paystack"
-library_version: "3.2.1" # x-release-please-version
+library_version: "3.3.0" # x-release-please-version
 license: "MIT"
 compatibility: "Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x; better-auth-paystack >=3.0.0 <4.0.0"
 sources:
