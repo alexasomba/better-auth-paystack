@@ -1,4 +1,5 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
+
 import { createSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/billing")({

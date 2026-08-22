@@ -35,7 +35,7 @@ export function TrustedServerOperations({
   onChargeRenewal,
 }: TrustedServerOperationsProps) {
   return (
-    <div className="rounded-2xl border border-dashed p-5 space-y-4 bg-muted/20">
+    <div className="space-y-4 rounded-2xl border border-dashed bg-muted/20 p-5">
       <div>
         <h3 className="text-lg font-semibold">Trusted Server Operations</h3>
         <p className="text-xs text-muted-foreground">
@@ -45,7 +45,7 @@ export function TrustedServerOperations({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border bg-background p-4 space-y-3">
+        <div className="space-y-3 rounded-xl border bg-background p-4">
           <p className="text-sm font-medium">Catalog Sync</p>
           <p className="text-xs text-muted-foreground">
             Local cache: {nativeProducts.length} synced products, {nativePlans.length} synced plans.
@@ -72,7 +72,7 @@ export function TrustedServerOperations({
           </div>
         </div>
 
-        <div className="rounded-xl border bg-background p-4 space-y-3">
+        <div className="space-y-3 rounded-xl border bg-background p-4">
           <p className="text-sm font-medium">Manual Renewal Charge</p>
           <p className="text-xs text-muted-foreground">
             Demonstrates the trusted renewal helper for locally managed subscriptions with a saved

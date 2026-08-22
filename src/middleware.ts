@@ -1,11 +1,11 @@
 import { APIError, createAuthMiddleware, type AuthMiddleware } from "better-auth/api";
 
-import type { PaystackOptions } from "./types";
 import {
   authorizeBillingReference,
   type BillingReferenceAction,
   resolveBillingReferenceId,
 } from "./reference-access";
+import type { PaystackOptions } from "./types";
 
 export { hasBillingRole } from "./reference-access";
 

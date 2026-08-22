@@ -12,7 +12,9 @@ The authorization decision for a billing reference and billing action. Reference
 
 ### Billing Store
 
-The persistence module for Paystack billing records stored through the Better Auth adapter. It owns subscription lookup, transaction recording, catalog persistence, customer-code writes, and current subscription selection.
+The persistence module for Paystack billing records stored through the Better Auth adapter. It owns
+provider-namespaced subscription lookup, transaction recording, catalog persistence, Paystack
+customer records, and current subscription selection.
 
 ### Paystack Adapter
 
@@ -31,3 +33,15 @@ A server-only billing operation that must not be exposed as a browser-triggered 
 A provider-namespaced record of a verified raw webhook payload. Paystack uses a stable payload hash
 as its event identity, persists pending processing state, and acknowledges already-processed
 duplicate deliveries without repeating billing side effects.
+
+### Payment Credential Service
+
+The server-only boundary that encrypts and decrypts Paystack authorization codes and email tokens.
+Credentials live in `paystackPaymentCredential`, never in `paystackSubscription`, and are never
+returned through client-facing APIs or callbacks.
+
+### Schema Migration
+
+`migratePaystackSubscriptionSchema` copies legacy `subscription` rows and auth-table customer
+codes into Paystack-owned models without deleting legacy data. It is idempotent and reports retryable
+partial failures.

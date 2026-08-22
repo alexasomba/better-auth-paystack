@@ -3,16 +3,16 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
-import { bearer } from "better-auth/plugins";
-import { organization } from "better-auth/plugins";
 import { organizationClient } from "better-auth/client/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
+import { bearer } from "better-auth/plugins";
+import { organization } from "better-auth/plugins";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src/index.ts";
 import { paystackClient } from "../src/client.ts";
-import { expectCheckoutResult } from "./helpers/paystack-results";
+import { paystack } from "../src/index.ts";
 import type { Member } from "../src/types";
+import { expectCheckoutResult } from "./helpers/paystack-results";
 
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
 
@@ -31,7 +31,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
       };
       const memory = memoryAdapter(data);
@@ -139,7 +139,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
       };
       const memory = memoryAdapter(data);
@@ -234,7 +234,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
         organization: [],
         member: [],
@@ -349,7 +349,7 @@ describe("planCode and organization referenceId tests", () => {
       expect(init.data.url).toBe("https://paystack/checkout");
       expect(init.data.reference).toBe("ref_org_123");
 
-      const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
+      const subscriptions = await ctx.adapter.findMany({ model: "paystackSubscription" });
       expect(subscriptions?.length).toBeGreaterThan(0);
       const sub = subscriptions?.find((s: any) => s.referenceId === orgId);
       expect(sub).toBeDefined();
@@ -361,7 +361,7 @@ describe("planCode and organization referenceId tests", () => {
         session: [],
         verification: [],
         account: [],
-        subscription: [],
+        paystackSubscription: [],
         paystackTransaction: [],
         organization: [],
         member: [],

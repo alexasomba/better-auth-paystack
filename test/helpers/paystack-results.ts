@@ -1,4 +1,5 @@
-import { expect } from "vitest";
+import { expect } from "vite-plus/test";
+
 import type { PaystackInitializeResult } from "../../src";
 
 export type CheckoutInitializeResult = Extract<PaystackInitializeResult, { kind: "checkout" }>;

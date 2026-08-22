@@ -1,4 +1,3 @@
-import { APIError } from "better-auth/api";
 import {
   PaystackError,
   PaystackResponse,
@@ -6,6 +5,8 @@ import {
   type CustomerUpdatePayload,
 } from "@alexasomba/paystack-node";
 import type { components } from "@alexasomba/paystack-node";
+import { APIError } from "better-auth/api";
+
 import type { PaystackClientLike } from "./types";
 
 /**

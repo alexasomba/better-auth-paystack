@@ -1,17 +1,13 @@
+import type { components } from "@alexasomba/paystack-node";
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
-import type { components } from "@alexasomba/paystack-node";
 
 import { createBillingStore } from "./billing-store";
 import { getOrganizationSubscription } from "./limits";
+import { createProrationMetadata, stringifyPaystackMetadata } from "./metadata";
+import { PAYSTACK_MODELS } from "./models";
+import { readPaystackPaymentCredentials } from "./payment-credentials";
 import { createPaystackAdapter } from "./paystack-sdk";
-import {
-  assertLocallyManagedSubscription,
-  calculatePlanAmount,
-  getPlanByName,
-  getPlanSeatAmount,
-  normalizeSubscriptionGroup,
-} from "./utils";
 import type {
   AnyPaystackOptions,
   PaystackChargeAuthorizationResponse,
@@ -21,7 +17,13 @@ import type {
   Subscription,
   User,
 } from "./types";
-import { createProrationMetadata, stringifyPaystackMetadata } from "./metadata";
+import {
+  assertLocallyManagedSubscription,
+  calculatePlanAmount,
+  getPlanByName,
+  getPlanSeatAmount,
+  normalizeSubscriptionGroup,
+} from "./utils";
 
 export type ProratedUpgradeOutcome =
   | Extract<PaystackInitializeResult, { kind: "prorated" }>
@@ -60,7 +62,7 @@ export async function scheduleSubscriptionLifecycleChange(
         : await createBillingStore(ctx).findSubscriptionById(input.subscriptionId);
     if (existingSub?.status === "active") {
       await ctx.context.adapter.update({
-        model: "subscription",
+        model: PAYSTACK_MODELS.subscription,
         where: [{ field: "id", value: existingSub.id }],
         update: {
           pendingPlan: input.plan.name,
@@ -87,7 +89,7 @@ export async function scheduleSubscriptionLifecycleChange(
         : await createBillingStore(ctx).findSubscriptionById(input.subscriptionId);
     if (existingSub?.status === "active") {
       await ctx.context.adapter.update({
-        model: "subscription",
+        model: PAYSTACK_MODELS.subscription,
         where: [{ field: "id", value: existingSub.id }],
         update: {
           cancelAtPeriodEnd: true,
@@ -130,7 +132,7 @@ export async function resolveTrialLifecycle(
   }
 
   const previousTrials = await ctx.context.adapter.findMany<Subscription>({
-    model: "subscription",
+    model: PAYSTACK_MODELS.subscription,
     where: [{ field: "referenceId", value: input.referenceId }],
   });
   const hadTrial = previousTrials?.some(
@@ -243,9 +245,9 @@ export async function handleProratedUpgrade(
       : await store.findSubscriptionById(input.subscriptionId);
   if (
     existingSub?.status !== "active" ||
-    existingSub.paystackSubscriptionCode === undefined ||
-    existingSub.paystackSubscriptionCode === null ||
-    existingSub.paystackSubscriptionCode === "" ||
+    existingSub.subscriptionCode === undefined ||
+    existingSub.subscriptionCode === null ||
+    existingSub.subscriptionCode === "" ||
     existingSub.periodEnd === undefined ||
     existingSub.periodEnd === null ||
     existingSub.periodStart === undefined ||
@@ -273,7 +275,7 @@ export async function handleProratedUpgrade(
       (await getPlanByName(options, existingSub.plan)) ??
       (await store.findPlanByName(existingSub.plan));
     if (oldPlan !== undefined && oldPlan !== null) {
-      oldAmount = calculatePlanAmount(oldPlan, existingSub.seats);
+      oldAmount = calculatePlanAmount(oldPlan, existingSub.seats ?? 1);
     }
   }
 
@@ -317,15 +319,20 @@ export async function handleProratedUpgrade(
     }
 
     const paystack = createPaystackAdapter(options.paystackClient);
+    const credentials = await readPaystackPaymentCredentials(
+      ctx.context.adapter,
+      options,
+      existingSub.id,
+    );
     if (
-      existingSub.paystackAuthorizationCode !== undefined &&
-      existingSub.paystackAuthorizationCode !== null &&
-      existingSub.paystackAuthorizationCode !== ""
+      credentials?.authorizationCode !== undefined &&
+      credentials.authorizationCode !== null &&
+      credentials.authorizationCode !== ""
     ) {
       const sdkRes = (await paystack.chargeAuthorization({
         email: input.targetEmail,
         amount: proratedAmount,
-        authorization_code: existingSub.paystackAuthorizationCode,
+        authorization_code: credentials.authorizationCode,
         reference: `upg_${existingSub.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         metadata: serializedProrationMetadata,
       })) as PaystackChargeAuthorizationResponse;
@@ -389,7 +396,7 @@ export async function handleProratedUpgrade(
     plan: input.plan.name,
     seats: newSeatCount,
     ...(completedProrationReference !== undefined
-      ? { paystackTransactionReference: completedProrationReference }
+      ? { transactionReference: completedProrationReference }
       : {}),
     updatedAt: new Date(),
   });

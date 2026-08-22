@@ -1,6 +1,4 @@
 "use client";
-import * as React from "react";
-import { useEffect, useState } from "react";
 import {
   Buildings,
   Check,
@@ -12,11 +10,14 @@ import {
   UserCircle,
   Users,
 } from "@phosphor-icons/react";
-import { authClient } from "@/lib/auth-client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import * as React from "react";
+import { useEffect, useState } from "react";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
 
 interface Organization {
   id: string;
@@ -63,9 +64,9 @@ export default function OrganizationManager() {
     try {
       const result = await authClient.organization.list();
       if (result.data !== null && result.data !== undefined) {
-        setOrganizations(result.data as Organization[]);
+        setOrganizations(result.data);
         if (result.data.length > 0 && activeOrg === null) {
-          setActiveOrg(result.data[0] as Organization);
+          setActiveOrg(result.data[0]);
         }
       }
     } catch (_) {
@@ -81,7 +82,7 @@ export default function OrganizationManager() {
       await authClient.organization.setActive({ organizationId: orgId });
       const result = await authClient.organization.getFullOrganization();
       if (result.data?.members !== null && result.data?.members !== undefined) {
-        setMembers(result.data.members as Member[]);
+        setMembers(result.data.members);
       }
     } catch (_) {
       // Silently fail
@@ -127,7 +128,7 @@ export default function OrganizationManager() {
 
       if (result.data !== null && result.data !== undefined) {
         await loadOrganizations();
-        setActiveOrg(result.data as Organization);
+        setActiveOrg(result.data);
         setOrgName("");
         setOrgSlug("");
         setShowCreateForm(false);
@@ -267,8 +268,8 @@ export default function OrganizationManager() {
       {organizations.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Buildings weight="duotone" size={48} className="text-muted-foreground mb-4" />
-            <p className="text-muted-foreground mb-2">No organizations yet</p>
+            <Buildings weight="duotone" size={48} className="mb-4 text-muted-foreground" />
+            <p className="mb-2 text-muted-foreground">No organizations yet</p>
             <p className="text-sm text-muted-foreground">
               Create an organization to enable team billing with referenceId
             </p>
@@ -280,7 +281,7 @@ export default function OrganizationManager() {
             <Card
               key={org.id}
               className={`cursor-pointer transition-all ${
-                activeOrg?.id === org.id ? "ring-2 ring-primary shadow-md" : "hover:shadow-sm"
+                activeOrg?.id === org.id ? "shadow-md ring-2 ring-primary" : "hover:shadow-sm"
               }`}
               onClick={() => {
                 setActiveOrg(org);
@@ -325,10 +326,10 @@ export default function OrganizationManager() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-xs text-muted-foreground space-y-1">
+                <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">ID:</span>
-                    <code className="bg-muted px-1 rounded text-[10px]">{org.id}</code>
+                    <code className="rounded bg-muted px-1 text-[10px]">{org.id}</code>
                   </div>
                   {org.paystackCustomerCode !== null &&
                     org.paystackCustomerCode !== undefined &&
@@ -336,13 +337,13 @@ export default function OrganizationManager() {
                       <div className="flex items-center gap-2 text-green-600">
                         <CreditCard size={12} weight="duotone" />
                         <span className="font-medium">Paystack:</span>
-                        <code className="bg-green-50 px-1 rounded text-[10px]">
+                        <code className="rounded bg-green-50 px-1 text-[10px]">
                           {org.paystackCustomerCode}
                         </code>
                       </div>
                     )}
                   <p className="text-[10px] text-muted-foreground/70">
-                    Use this ID as <code className="bg-muted px-1 rounded">referenceId</code> for
+                    Use this ID as <code className="rounded bg-muted px-1">referenceId</code> for
                     org billing
                   </p>
                 </div>
@@ -372,7 +373,7 @@ export default function OrganizationManager() {
                 {members.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50"
+                    className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2"
                   >
                     <div className="flex items-center gap-3">
                       {getRoleIcon(member.role)}
@@ -383,7 +384,7 @@ export default function OrganizationManager() {
                         <p className="text-xs text-muted-foreground">{member.user?.email}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-medium capitalize px-2 py-1 rounded bg-background">
+                    <span className="rounded bg-background px-2 py-1 text-xs font-medium capitalize">
                       {member.role}
                     </span>
                   </div>
@@ -396,10 +397,10 @@ export default function OrganizationManager() {
 
       {/* Billing Info Card */}
       {activeOrg !== null && (
-        <Card className="bg-muted/30 border-dashed">
+        <Card className="border-dashed bg-muted/30">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="rounded-lg bg-primary/10 p-2">
                 <Buildings weight="duotone" size={24} className="text-primary" />
               </div>
               <div className="space-y-1">
@@ -407,10 +408,10 @@ export default function OrganizationManager() {
                 <p className="text-sm text-muted-foreground">
                   To bill this organization, use the following referenceId:
                 </p>
-                <code className="inline-block mt-2 px-3 py-2 rounded-lg bg-background font-mono text-sm">
+                <code className="mt-2 inline-block rounded-lg bg-background px-3 py-2 font-mono text-sm">
                   referenceId: "{activeOrg.id}"
                 </code>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Choose a "team" or "enterprise" plan when subscribing to bill against this
                   organization.
                 </p>

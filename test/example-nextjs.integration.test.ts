@@ -3,12 +3,12 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
-import { bearer } from "better-auth/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
+import { bearer } from "better-auth/plugins";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src/index.ts";
 import { paystackClient } from "../src/client.ts";
+import { paystack } from "../src/index.ts";
 import { expectCheckoutResult } from "./helpers/paystack-results";
 
 describe("examples/nextjs integration - paystack flow", () => {
@@ -22,7 +22,7 @@ describe("examples/nextjs integration - paystack flow", () => {
       session: [],
       verification: [],
       account: [],
-      subscription: [],
+      paystackSubscription: [],
     };
     const memory = memoryAdapter(data);
 
@@ -114,9 +114,9 @@ describe("examples/nextjs integration - paystack flow", () => {
     if (verify.error) throw new Error("Verification failed");
     expect(verify.data.status).toBe("success");
 
-    const subscriptions = await ctx.adapter.findMany({ model: "subscription" });
+    const subscriptions = await ctx.adapter.findMany({ model: "paystackSubscription" });
     expect(subscriptions?.length).toBeGreaterThan(0);
-    const sub = subscriptions?.find((s: any) => s.paystackTransactionReference === reference);
+    const sub = subscriptions?.find((s: any) => s.transactionReference === reference);
     expect(sub).toBeDefined();
     expect(sub.status).toBe("active");
 

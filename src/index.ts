@@ -7,6 +7,10 @@ import {
 import { APIError } from "better-auth/api";
 import { defu } from "defu";
 
+import { createBillingStoreFromAdapter } from "./billing-store";
+import { resolvePaystackCustomer } from "./customer";
+import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits";
+import { createPaystackAdapter } from "./paystack-sdk";
 import {
   disablePaystackSubscription,
   enablePaystackSubscription,
@@ -26,13 +30,9 @@ import {
   listPlans,
 } from "./routes";
 import { getSchema } from "./schema";
-import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits";
-import { syncSubscriptionSeats } from "./utils";
 import type { PaystackClientLike, PaystackOptions, AnyPaystackOptions, User } from "./types";
-import { createPaystackAdapter } from "./paystack-sdk";
+import { syncSubscriptionSeats } from "./utils";
 import { PACKAGE_VERSION } from "./version";
-import { createBillingStoreFromAdapter } from "./billing-store";
-import { resolvePaystackCustomer } from "./customer";
 
 export {
   createCheckoutMetadata,
@@ -188,7 +188,6 @@ const createPaystackPlugin = <
                     email?: string | null;
                     name?: string | null;
                     emailVerified?: boolean;
-                    paystackCustomerCode?: string | null;
                   },
                   hookCtx?: GenericEndpointContext | null,
                 ) {
@@ -212,7 +211,8 @@ const createPaystackPlugin = <
                         email: user.email,
                         name: user.name,
                         emailVerified: user.emailVerified,
-                        paystackCustomerCode: user.paystackCustomerCode,
+                        paystackCustomerCode: (user as Record<string, unknown>)
+                          .paystackCustomerCode as string | null | undefined,
                       },
                     });
                     const customerCode = result?.customer.customer_code;
@@ -239,18 +239,13 @@ const createPaystackPlugin = <
                 },
               },
               update: {
-                async after(user: {
-                  id: string;
-                  email?: string | null;
-                  paystackCustomerCode?: string | null;
-                }) {
-                  const persisted = await createBillingStoreFromAdapter(ctx.adapter).findUser(
-                    user.id,
-                  );
-                  const customerCode =
-                    user.paystackCustomerCode ??
-                    (persisted as { paystackCustomerCode?: string | null } | null)
-                      ?.paystackCustomerCode;
+                async after(user: { id: string; email?: string | null }) {
+                  const customerCode = (
+                    await createBillingStoreFromAdapter(ctx.adapter).findCustomerByReference(
+                      "user",
+                      user.id,
+                    )
+                  )?.customerCode;
                   if (
                     typeof customerCode !== "string" ||
                     customerCode === "" ||
@@ -347,15 +342,18 @@ const createPaystackPlugin = <
                           id: string;
                           name?: string | null;
                           email?: string | null;
-                          paystackCustomerCode?: string | null;
                         },
                         hookCtx?: GenericEndpointContext | null,
                       ) {
                         const persisted = await createBillingStoreFromAdapter(
                           ctx.adapter,
                         ).findOrganization(org.id);
-                        const customerCode =
-                          org.paystackCustomerCode ?? persisted?.paystackCustomerCode;
+                        const customerCode = (
+                          await createBillingStoreFromAdapter(ctx.adapter).findCustomerByReference(
+                            "organization",
+                            org.id,
+                          )
+                        )?.customerCode;
                         if (typeof customerCode !== "string" || customerCode === "") return;
                         try {
                           const configured =
@@ -398,7 +396,7 @@ const createPaystackPlugin = <
                       },
                     },
                     delete: {
-                      async before(org: { id: string; paystackCustomerCode?: string | null }) {
+                      async before(org: { id: string }) {
                         const store = createBillingStoreFromAdapter(ctx.adapter);
                         const subscriptions = await store.findSubscriptionsByReference(org.id);
                         if (
@@ -414,9 +412,9 @@ const createPaystackPlugin = <
                           });
                         }
 
-                        const persisted = await store.findOrganization(org.id);
-                        const customerCode =
-                          org.paystackCustomerCode ?? persisted?.paystackCustomerCode;
+                        const customerCode = (
+                          await store.findCustomerByReference("organization", org.id)
+                        )?.customerCode;
                         if (typeof customerCode !== "string" || customerCode === "") return;
                         try {
                           const customer = (await createPaystackAdapter(
@@ -582,6 +580,7 @@ export type PaystackPlugin<
 export { chargeSubscriptionRenewal, syncPaystackPlans, syncPaystackProducts } from "./operations";
 export { getOrganizationEntitlements } from "./limits";
 export { reconcilePaystackTransaction } from "./reconciliation";
+export { migratePaystackSubscriptionSchema } from "./migrations";
 export type {
   PaystackReconciliationError,
   PaystackReconciliationSource,
@@ -593,6 +592,9 @@ export type {
 } from "./reconciliation";
 export type {
   Subscription,
+  PaystackSubscription,
+  PaystackCustomer,
+  PaystackPaymentCredential,
   SubscriptionOptions,
   PaystackPlan,
   PaystackOptions,
@@ -603,3 +605,4 @@ export type {
   PaystackSyncResult,
   PaystackWebhookEventRecord,
 } from "./types";
+export type { PaystackSchemaMigrationFailure, PaystackSchemaMigrationReport } from "./migrations";

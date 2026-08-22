@@ -18,7 +18,7 @@ describe("Issue #60 Reproduction", () => {
       session: [],
       account: [],
       verification: [],
-      subscription: [],
+      paystackSubscription: [],
     });
     const nextPaymentDate = new Date();
     nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);

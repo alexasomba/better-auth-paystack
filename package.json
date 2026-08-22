@@ -1,6 +1,6 @@
 {
   "name": "better-auth-paystack",
-  "version": "3.1.2",
+  "version": "4.0.0",
   "description": "Production-ready Paystack billing plugin for Better Auth. Supports subscriptions, one-time payments, organization billing, secure webhooks and more",
   "keywords": [
     "africa",
@@ -70,18 +70,19 @@
     "build": "vp pack",
     "dev": "vp pack --watch",
     "test": "vp test run",
-    "test:integration": "RUN_INTEGRATION_TESTS=1 vp test run",
+    "test:integration": "RUN_INTEGRATION_TESTS=true vp test run",
     "coverage": "vp test run --coverage",
     "lint": "vp lint src",
     "lint:package": "publint run --strict",
     "lint:types": "node scripts/lint-types-packed.mjs",
+    "typecheck:nextjs": "tsc -p examples/nextjs/tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "skills:install": "skills-npm --cwd examples/tanstack --yes --force",
     "skills:dry-run": "skills-npm --cwd examples/tanstack --dry-run --yes --agents universal --force"
   },
   "dependencies": {
     "@alexasomba/paystack-node": "catalog:",
-    "better-call": "catalog:",
+    "better-call": "1.3.8",
     "defu": "catalog:",
     "zod": "catalog:"
   },
@@ -90,24 +91,16 @@
     "@better-fetch/fetch": "catalog:",
     "@commitlint/cli": "catalog:",
     "@commitlint/config-conventional": "catalog:",
-    "@eslint/compat": "catalog:",
-    "@eslint/js": "catalog:",
     "@tanstack/intent": "catalog:",
     "@types/node": "catalog:",
-    "@typescript-eslint/eslint-plugin": "catalog:",
-    "@typescript-eslint/parser": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "better-auth": "catalog:",
-    "eslint-plugin-import-x": "catalog:",
-    "eslint-plugin-promise": "catalog:",
-    "eslint-plugin-react-hooks": "catalog:",
-    "eslint-plugin-unicorn": "catalog:",
     "publint": "catalog:",
     "skills-npm": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.9",
     "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "4.1.11"
   },
   "peerDependencies": {
     "better-auth": "catalog:"
@@ -118,5 +111,5 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "packageManager": "pnpm@11.8.0"
+  "packageManager": "pnpm@11.22.0"
 }

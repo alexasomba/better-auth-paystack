@@ -40,14 +40,14 @@ type WebhookEventsSchema = PluginSchemaTable<
 >;
 
 type SubscriptionsSchema = PluginSchemaTable<
-  "subscription",
+  "paystackSubscription",
   | "plan"
   | "referenceId"
-  | "paystackCustomerCode"
-  | "paystackSubscriptionCode"
-  | "paystackTransactionReference"
-  | "paystackAuthorizationCode"
-  | "paystackEmailToken"
+  | "userId"
+  | "customerCode"
+  | "subscriptionCode"
+  | "transactionReference"
+  | "planCode"
   | "status"
   | "periodStart"
   | "periodEnd"
@@ -61,11 +61,33 @@ type SubscriptionsSchema = PluginSchemaTable<
   | "groupId"
   | "seats"
   | "pendingPlan"
+  | "createdAt"
+  | "updatedAt"
 >;
 
-type UserSchema = PluginSchemaTable<"user", "paystackCustomerCode">;
+type CustomerSchema = PluginSchemaTable<
+  "paystackCustomer",
+  | "referenceType"
+  | "referenceId"
+  | "referenceKey"
+  | "customerCode"
+  | "email"
+  | "createdAt"
+  | "updatedAt"
+>;
 
-type OrganizationSchema = PluginSchemaTable<"organization", "paystackCustomerCode" | "email">;
+type PaymentCredentialsSchema = PluginSchemaTable<
+  "paystackPaymentCredential",
+  | "subscriptionId"
+  | "authorizationCodeEncrypted"
+  | "emailTokenEncrypted"
+  | "createdAt"
+  | "updatedAt"
+>;
+
+type UserSchema = PluginSchemaTable<"user", never>;
+
+type OrganizationSchema = PluginSchemaTable<"organization", "email">;
 
 type ProductsSchema = PluginSchemaTable<
   "paystackProduct",
@@ -99,6 +121,8 @@ type PlansSchema = PluginSchemaTable<
 
 export type PaystackPluginSchema = SubscriptionsSchema &
   TransactionsSchema &
+  CustomerSchema &
+  PaymentCredentialsSchema &
   UserSchema &
   OrganizationSchema &
   ProductsSchema &
@@ -166,7 +190,7 @@ const transactionsSchema: TransactionsSchema = {
 export const transactions: typeof transactionsSchema = transactionsSchema;
 
 const subscriptionsSchema: SubscriptionsSchema = {
-  subscription: {
+  paystackSubscription: {
     fields: {
       plan: {
         type: "string",
@@ -178,26 +202,27 @@ const subscriptionsSchema: SubscriptionsSchema = {
         required: true,
         index: true,
       },
-      paystackCustomerCode: {
+      userId: {
+        type: "string",
+        required: true,
+        index: true,
+      },
+      customerCode: {
         type: "string",
         required: false,
         index: true,
       },
-      paystackSubscriptionCode: {
+      subscriptionCode: {
         type: "string",
         required: false,
         unique: true,
       },
-      paystackTransactionReference: {
+      transactionReference: {
         type: "string",
         required: false,
         index: true,
       },
-      paystackAuthorizationCode: {
-        type: "string",
-        required: false,
-      },
-      paystackEmailToken: {
+      planCode: {
         type: "string",
         required: false,
       },
@@ -254,21 +279,55 @@ const subscriptionsSchema: SubscriptionsSchema = {
         type: "string",
         required: false,
       },
+      createdAt: {
+        type: "date",
+        required: true,
+      },
+      updatedAt: {
+        type: "date",
+        required: true,
+      },
     },
   },
 } satisfies BetterAuthPluginDBSchema;
 
 export const subscriptions: typeof subscriptionsSchema = subscriptionsSchema;
 
+const customersSchema: CustomerSchema = {
+  paystackCustomer: {
+    fields: {
+      referenceType: { type: "string", required: true },
+      referenceId: { type: "string", required: true, index: true },
+      // Better Auth schema generation cannot express a portable composite unique
+      // index, so this provider-owned key enforces (type, id) uniqueness.
+      referenceKey: { type: "string", required: true, unique: true },
+      customerCode: { type: "string", required: true, unique: true },
+      email: { type: "string", required: false },
+      createdAt: { type: "date", required: true },
+      updatedAt: { type: "date", required: true },
+    },
+  },
+} satisfies BetterAuthPluginDBSchema;
+
+export const customers: typeof customersSchema = customersSchema;
+
+const paymentCredentialsSchema: PaymentCredentialsSchema = {
+  paystackPaymentCredential: {
+    fields: {
+      subscriptionId: { type: "string", required: true, unique: true, index: true },
+      authorizationCodeEncrypted: { type: "string", required: false },
+      emailTokenEncrypted: { type: "string", required: false },
+      createdAt: { type: "date", required: true },
+      updatedAt: { type: "date", required: true },
+    },
+  },
+} satisfies BetterAuthPluginDBSchema;
+
+export const paymentCredentials: typeof paymentCredentialsSchema = paymentCredentialsSchema;
+
 const userSchema: UserSchema = {
   user: {
-    fields: {
-      paystackCustomerCode: {
-        type: "string",
-        required: false,
-        index: true,
-      },
-    },
+    fields: {},
   },
 } satisfies BetterAuthPluginDBSchema;
 
@@ -277,11 +336,6 @@ export const user: typeof userSchema = userSchema;
 const organizationSchema: OrganizationSchema = {
   organization: {
     fields: {
-      paystackCustomerCode: {
-        type: "string",
-        required: false,
-        index: true,
-      },
       email: {
         type: "string",
         required: false,
@@ -453,6 +507,8 @@ export const webhookEvents: typeof webhookEventsSchema = webhookEventsSchema;
 const paystackPluginSchemaDefinition: PaystackPluginSchema = {
   ...subscriptions,
   ...transactions,
+  ...customers,
+  ...paymentCredentials,
   ...user,
   ...organization,
   ...products,
@@ -471,6 +527,8 @@ export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema =>
     baseSchema = {
       ...subscriptions,
       ...transactions,
+      ...customers,
+      ...paymentCredentials,
       ...user,
       ...products,
       ...plans,
@@ -480,6 +538,8 @@ export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema =>
     baseSchema = {
       ...user,
       ...transactions,
+      ...customers,
+      ...paymentCredentials,
       ...products,
       ...plans,
       ...webhookEvents,
@@ -494,11 +554,7 @@ export const getSchema = (options: PaystackOptions): BetterAuthPluginDBSchema =>
     };
   }
 
-  if (
-    options.schema !== undefined &&
-    options.subscription?.enabled !== true &&
-    "subscription" in options.schema
-  ) {
+  if (options.schema !== undefined && "subscription" in options.schema) {
     const { subscription: _subscription, ...restSchema } = optionSchema ?? {};
     return mergeSchema(baseSchema, restSchema);
   }

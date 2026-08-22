@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import * as z from "zod/v4";
 import type { GenericEndpointContext } from "better-auth";
 import {
   chargeSubscriptionRenewal,
@@ -8,6 +7,8 @@ import {
   syncPaystackProducts,
   type Subscription,
 } from "better-auth-paystack";
+import * as z from "zod/v4";
+
 import { auth, paystackOptions } from "@/lib/auth";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
@@ -89,21 +90,21 @@ async function getAuthenticatedContext() {
 }
 
 export const syncProductsServerFn = createServerFn({ method: "POST" })
-  .inputValidator(z.void())
+  .validator(z.void())
   .handler(async () => {
     const { ctx } = await getAuthenticatedContext();
     return syncPaystackProducts(ctx, requirePaystackOptions());
   });
 
 export const syncPlansServerFn = createServerFn({ method: "POST" })
-  .inputValidator(z.void())
+  .validator(z.void())
   .handler(async () => {
     const { ctx } = await getAuthenticatedContext();
     return syncPaystackPlans(ctx, requirePaystackOptions());
   });
 
 export const chargeRenewalServerFn = createServerFn({ method: "POST" })
-  .inputValidator(renewalInputSchema)
+  .validator(renewalInputSchema)
   .handler(async (serverCtx) => {
     const input = serverCtx.data;
     const { ctx, session } = await getAuthenticatedContext();
@@ -146,7 +147,7 @@ export const chargeRenewalServerFn = createServerFn({ method: "POST" })
   });
 
 export const verifyPaystackCallbackServerFn = createServerFn({ method: "POST" })
-  .inputValidator(verifyCallbackInputSchema)
+  .validator(verifyCallbackInputSchema)
   .handler(async ({ data }) => {
     const headers = getRequestHeaders();
     let lastError: unknown;

@@ -1,6 +1,6 @@
-import { afterEach, expect, vi } from "vite-plus/test";
 import * as matchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
+import { afterEach, expect, vi } from "vite-plus/test";
 
 // Extend expect with jest-dom matchers
 expect.extend(matchers);
@@ -38,4 +38,4 @@ class MockResizeObserver {
   disconnect = vi.fn();
 }
 
-global.ResizeObserver = MockResizeObserver as typeof ResizeObserver;
+global.ResizeObserver = MockResizeObserver;

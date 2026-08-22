@@ -1,12 +1,48 @@
 import { defineConfig, type UserConfig } from "vite-plus";
 
+const runIntegrationTests = /^(1|true)$/i.test(process.env.RUN_INTEGRATION_TESTS ?? "");
+
 const config: UserConfig = defineConfig({
   staged: {
     "*.{js,ts,tsx,vue,svelte}": "vp check --fix",
   },
   fmt: {
     // Release Please serializes these files and owns their formatting.
-    ignorePatterns: ["CHANGELOG.md", "_artifacts/skill_tree.yaml"],
+    ignorePatterns: ["CHANGELOG.md", "_artifacts/skill_tree.yaml", "**/routeTree.gen.ts"],
+    endOfLine: "lf",
+    semi: true,
+    singleQuote: false,
+    tabWidth: 2,
+    useTabs: false,
+    trailingComma: "all",
+    printWidth: 100,
+    bracketSpacing: true,
+    arrowParens: "always",
+    insertFinalNewline: true,
+    sortImports: {
+      customGroups: [
+        {
+          elementNamePattern: ["@workspace/**"],
+          groupName: "@workspace",
+        },
+      ],
+      groups: [
+        "builtin",
+        "external",
+        "@workspace",
+        ["internal", "subpath"],
+        ["parent", "sibling", "index"],
+        "style",
+        "unknown",
+      ],
+      internalPattern: ["@/", "#@/", "~/", "~~/", "#"],
+      sortSideEffects: true,
+    },
+    sortTailwindcss: {
+      stylesheet: "./examples/tanstack/src/styles.css",
+      functions: ["cn", "cva"],
+    },
+    sortPackageJson: true,
   },
   pack: {
     tsconfig: "./tsconfig.build.json",
@@ -33,6 +69,7 @@ const config: UserConfig = defineConfig({
     clearMocks: true,
     globals: true,
     setupFiles: ["./test/vitest.setup.ts"],
+    include: ["test/**/*.test.ts"],
     exclude: [
       "**/*.d.ts",
       "**/*.test.js",
@@ -41,13 +78,13 @@ const config: UserConfig = defineConfig({
       ".agents/**",
       "**/node_modules/**",
       "**/examples/**",
-      ...(process.env.RUN_INTEGRATION_TESTS === "true" ? [] : ["**/*.integration.test.ts"]),
+      ...(runIntegrationTests ? [] : ["**/*.integration.test.ts"]),
     ],
   },
   lint: {
     plugins: ["oxc", "typescript", "unicorn", "react"],
     categories: {
-      correctness: "warn",
+      correctness: "error",
     },
     options: {
       typeAware: true,
@@ -70,7 +107,7 @@ const config: UserConfig = defineConfig({
       "docs/**",
       ".agents/**",
       "scripts/**",
-      "examples/**",
+      "**/src/routeTree.gen.ts",
       "vitest.config.ts",
       "vitest.config.js",
       "vitest.workspace.ts",
@@ -272,8 +309,8 @@ const config: UserConfig = defineConfig({
               checksVoidReturn: false,
             },
           ],
-          "typescript/no-explicit-any": "warn",
-          "typescript/strict-boolean-expressions": "warn",
+          "typescript/no-explicit-any": "error",
+          "typescript/strict-boolean-expressions": "error",
           "typescript/ban-ts-comment": [
             "error",
             {
@@ -336,6 +373,19 @@ const config: UserConfig = defineConfig({
           "typescript/no-unsafe-call": "off",
           "typescript/no-unsafe-member-access": "off",
           "typescript/no-restricted-types": "off",
+        },
+      },
+      {
+        files: ["examples/**"],
+        rules: {
+          "no-console": "off",
+          "typescript/only-throw-error": "off",
+          "typescript/array-type": "warn",
+          "typescript/no-unnecessary-condition": "warn",
+          "typescript/no-unnecessary-type-assertion": "error",
+          "typescript/consistent-type-imports": "error",
+          "react/exhaustive-deps": "warn",
+          "unicorn/prefer-node-protocol": "error",
         },
       },
     ],

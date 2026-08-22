@@ -1,11 +1,11 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { createPaystack } from "@alexasomba/paystack-node";
 import { betterAuth } from "better-auth";
-import { createAuthClient } from "better-auth/react";
-import { memoryAdapter } from "better-auth/adapters/memory";
-import { anonymous, organization } from "better-auth/plugins";
 import { paystack } from "better-auth-paystack";
 import { paystackClient } from "better-auth-paystack/client";
-import { createPaystack } from "@alexasomba/paystack-node";
+import { memoryAdapter } from "better-auth/adapters/memory";
+import { anonymous, organization } from "better-auth/plugins";
+import { createAuthClient } from "better-auth/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 vi.mock("@alexasomba/paystack-node", async (importOriginal) => {
   const actual = await importOriginal<any>();

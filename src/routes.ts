@@ -1,17 +1,52 @@
 import { createHash } from "node:crypto";
-import { HIDE_METADATA } from "better-auth";
-import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
-import { createAuthEndpoint } from "better-auth/api";
-/* oxlint-disable no-restricted-imports */
-import { z } from "zod";
+
 import type { components } from "@alexasomba/paystack-node";
+import { HIDE_METADATA } from "better-auth";
 import type {
   GenericEndpointContext,
   MiddlewareInputContext,
   MiddlewareOptions,
   StrictEndpoint,
 } from "better-auth";
+import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
+/* oxlint-disable no-restricted-imports */
+import { z } from "zod";
 
+import { createBillingStore } from "./billing-store";
+import {
+  createCheckoutMetadata,
+  hasPaystackMetadata,
+  parsePaystackMetadata,
+  stringifyPaystackMetadata,
+} from "./metadata";
+import { referenceMiddleware } from "./middleware";
+import { PAYSTACK_MODELS } from "./models";
+import {
+  readPaystackPaymentCredentials,
+  savePaystackPaymentCredentials,
+} from "./payment-credentials";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { reconcilePaystackTransaction } from "./reconciliation";
+import { authorizeBillingReference } from "./reference-access";
+import { getConfiguredCatalog, listStoredPlans, listStoredProducts } from "./route-modules/catalog";
+import { initializeTransactionBodySchema } from "./route-modules/checkout";
+import {
+  getAllowedSubscriptionChannels,
+  hmacSha512Hex,
+  PAYSTACK_ERROR_CODES,
+} from "./route-modules/shared";
+import {
+  enableDisableBodySchema,
+  tryGetEmailTokenFromSubscriptionManageLink,
+} from "./route-modules/subscriptions";
+import { getWebhookClientIP, getWebhookHeaders, getWebhookRequest } from "./route-modules/webhook";
+import {
+  handleProratedUpgrade,
+  resolveCheckoutTargetEmail,
+  resolveTrialLifecycle,
+  scheduleSubscriptionLifecycleChange,
+} from "./subscription-lifecycle";
 import type {
   InputPaystackProduct,
   PaystackTransaction,
@@ -19,20 +54,12 @@ import type {
   PaystackProduct,
   Subscription,
   Member,
-  PaystackOrganization,
   PaystackPlan,
   PaystackWebhookPayload,
   User,
-  PaystackUser,
   PaystackCheckoutChannel,
   PaystackInitializeResult,
 } from "./types";
-import {
-  createCheckoutMetadata,
-  hasPaystackMetadata,
-  parsePaystackMetadata,
-  stringifyPaystackMetadata,
-} from "./metadata";
 import {
   syncProductQuantityFromPaystack,
   getPlanByName,
@@ -43,29 +70,6 @@ import {
   isLocalSubscriptionCode,
   normalizeSubscriptionGroup,
 } from "./utils";
-import { referenceMiddleware } from "./middleware";
-import { authorizeBillingReference } from "./reference-access";
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
-import { createBillingStore } from "./billing-store";
-import {
-  handleProratedUpgrade,
-  resolveCheckoutTargetEmail,
-  resolveTrialLifecycle,
-  scheduleSubscriptionLifecycleChange,
-} from "./subscription-lifecycle";
-import { reconcilePaystackTransaction } from "./reconciliation";
-import { initializeTransactionBodySchema } from "./route-modules/checkout";
-import { getConfiguredCatalog, listStoredPlans, listStoredProducts } from "./route-modules/catalog";
-import {
-  enableDisableBodySchema,
-  tryGetEmailTokenFromSubscriptionManageLink,
-} from "./route-modules/subscriptions";
-import { getWebhookClientIP, getWebhookHeaders, getWebhookRequest } from "./route-modules/webhook";
-import {
-  getAllowedSubscriptionChannels,
-  hmacSha512Hex,
-  PAYSTACK_ERROR_CODES,
-} from "./route-modules/shared";
 
 export const paystackWebhook = <P extends string = "/webhook">(
   options: AnyPaystackOptions,
@@ -314,7 +318,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
                 customerCode !== null &&
                 customerCode !== ""
               ) {
-                where.push({ field: "paystackCustomerCode", value: customerCode });
+                where.push({ field: "customerCode", value: customerCode });
               }
               if (planName !== undefined && planName !== null && planName !== "") {
                 where.push({ field: "plan", value: planName });
@@ -322,7 +326,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
 
               if (where.length > 0) {
                 const matches = await ctx.context.adapter.findMany<Subscription>({
-                  model: "subscription",
+                  model: PAYSTACK_MODELS.subscription,
                   where: where,
                 });
                 const subscription = matches?.find((candidate) =>
@@ -341,7 +345,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
                   const now = new Date();
                   const persistedSubscription: Subscription = {
                     ...subscription,
-                    paystackSubscriptionCode: subscriptionCode,
+                    subscriptionCode,
                     status: "active",
                     billingInterval: plan?.interval ?? subscription.billingInterval ?? null,
                     periodEnd:
@@ -352,9 +356,9 @@ export const paystackWebhook = <P extends string = "/webhook">(
                     updatedAt: now,
                   };
                   await ctx.context.adapter.update({
-                    model: "subscription",
+                    model: PAYSTACK_MODELS.subscription,
                     update: {
-                      paystackSubscriptionCode: persistedSubscription.paystackSubscriptionCode,
+                      subscriptionCode: persistedSubscription.subscriptionCode,
                       status: persistedSubscription.status,
                       billingInterval: persistedSubscription.billingInterval,
                       periodEnd: persistedSubscription.periodEnd,
@@ -400,8 +404,8 @@ export const paystackWebhook = <P extends string = "/webhook">(
             const subscriptionCode = subscriptionData.subscription_code ?? "";
             if (subscriptionCode !== "") {
               const existing = await ctx.context.adapter.findOne<Subscription>({
-                model: "subscription",
-                where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+                model: PAYSTACK_MODELS.subscription,
+                where: [{ field: "subscriptionCode", value: subscriptionCode }],
               });
 
               let newStatus = "canceled";
@@ -432,7 +436,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
                       updatedAt: now,
                     } as Subscription);
               await ctx.context.adapter.update({
-                model: "subscription",
+                model: PAYSTACK_MODELS.subscription,
                 update: {
                   status: newStatus,
                   cancelAtPeriodEnd: newStatus === "active",
@@ -442,7 +446,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
                   ...(periodEnd ? { periodEnd } : {}),
                   updatedAt: now,
                 },
-                where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+                where: [{ field: "subscriptionCode", value: subscriptionCode }],
               });
 
               if (persistedSubscription !== undefined) {
@@ -492,8 +496,8 @@ export const paystackWebhook = <P extends string = "/webhook">(
 
             if (subscriptionCode !== undefined) {
               const existingSub = await ctx.context.adapter.findOne<Subscription>({
-                model: "subscription",
-                where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+                model: PAYSTACK_MODELS.subscription,
+                where: [{ field: "subscriptionCode", value: subscriptionCode }],
               });
 
               if (
@@ -504,7 +508,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
                 existingSub.pendingPlan !== ""
               ) {
                 await ctx.context.adapter.update({
-                  model: "subscription",
+                  model: PAYSTACK_MODELS.subscription,
                   update: {
                     plan: existingSub.pendingPlan,
                     pendingPlan: null,
@@ -905,7 +909,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
 
       // 6. Record Transaction & Subscription
       await ctx.context.adapter.create({
-        model: "paystackTransaction",
+        model: PAYSTACK_MODELS.transaction,
         data: {
           reference: reference ?? "",
           referenceId,
@@ -924,36 +928,45 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       });
 
       if (plan !== undefined) {
-        let storedCustomerCode = (user as PaystackUser).paystackCustomerCode;
-        if (options.organization?.enabled === true && referenceId !== user.id) {
-          const org = await ctx.context.adapter.findOne({
-            model: "organization",
-            where: [{ field: "id", value: referenceId }],
-          });
-          if (org !== undefined && org !== null) {
-            const paystackOrg = org as PaystackOrganization;
-            if (
-              paystackOrg.paystackCustomerCode !== undefined &&
-              paystackOrg.paystackCustomerCode !== null &&
-              paystackOrg.paystackCustomerCode !== ""
-            ) {
-              storedCustomerCode = paystackOrg.paystackCustomerCode;
+        const store = createBillingStore(ctx);
+        const customer = await store.findCustomerByReference(
+          referenceId === user.id ? "user" : "organization",
+          referenceId,
+        );
+        let customerCode = customer?.customerCode;
+        if (customerCode === undefined) {
+          try {
+            const legacy = await ctx.context.adapter.findOne<{
+              paystackCustomerCode?: string | null;
+            }>({
+              model: referenceId === user.id ? "user" : "organization",
+              where: [{ field: "id", value: referenceId }],
+              select: ["paystackCustomerCode"],
+            });
+            customerCode = legacy?.paystackCustomerCode ?? undefined;
+            if (customerCode !== undefined && customerCode !== null && customerCode !== "") {
+              await store.saveCustomer(
+                referenceId === user.id ? "user" : "organization",
+                referenceId,
+                customerCode,
+              );
             }
+          } catch {
+            // Legacy customer columns are optional after the migration.
           }
         }
 
         const newSubscription = await ctx.context.adapter.create<Subscription>({
-          model: "subscription",
+          model: PAYSTACK_MODELS.subscription,
           data: {
             plan: plan.name.toLowerCase(),
             groupId,
             referenceId,
             userId: user.id,
-            paystackCustomerCode: storedCustomerCode ?? "",
-            paystackSubscriptionCode: "",
-            paystackPlanCode: plan.planCode,
-            paystackAuthorizationCode: "",
-            paystackTransactionReference: reference ?? "",
+            customerCode,
+            subscriptionCode: undefined,
+            planCode: plan.planCode,
+            transactionReference: reference ?? "",
             status: trialStart !== undefined ? "trialing" : "incomplete",
             billingInterval: plan.interval ?? null,
             seats: quantity ?? 1,
@@ -1458,15 +1471,15 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
         const subCode = subscriptionCode;
         if (isLocalSubscriptionCode(subCode)) {
           const sub = await ctx.context.adapter.findOne<Subscription>({
-            model: "subscription",
-            where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+            model: PAYSTACK_MODELS.subscription,
+            where: [{ field: "subscriptionCode", value: subscriptionCode }],
           });
 
           if (sub !== null && sub !== undefined) {
             const now = new Date();
             const immediate = atPeriodEnd === false;
             await ctx.context.adapter.update({
-              model: "subscription",
+              model: PAYSTACK_MODELS.subscription,
               update: {
                 status: immediate ? "canceled" : "active",
                 cancelAtPeriodEnd: !immediate,
@@ -1482,7 +1495,16 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
           throw new APIError("BAD_REQUEST", { message: "Subscription not found" });
         }
 
-        let emailToken = ctx.body.emailToken;
+        const storedSubscription =
+          await createBillingStore(ctx).findSubscriptionByCode(subscriptionCode);
+        const storedCredentials = storedSubscription
+          ? await readPaystackPaymentCredentials(
+              ctx.context.adapter,
+              options,
+              storedSubscription.id,
+            )
+          : null;
+        let emailToken = ctx.body.emailToken ?? storedCredentials?.emailToken;
         let nextPaymentDate: string | undefined;
 
         try {
@@ -1515,6 +1537,17 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
           throw new Error("Could not retrieve email_token for subscription disable.");
         }
 
+        if (storedSubscription) {
+          await savePaystackPaymentCredentials(
+            ctx.context.adapter,
+            options,
+            storedSubscription.id,
+            {
+              emailToken,
+            },
+          );
+        }
+
         await paystack?.subscription?.disable({
           body: { code: subscriptionCode, token: emailToken },
         });
@@ -1525,15 +1558,15 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
             : undefined;
 
         const sub = await ctx.context.adapter.findOne<Subscription>({
-          model: "subscription",
-          where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+          model: PAYSTACK_MODELS.subscription,
+          where: [{ field: "subscriptionCode", value: subscriptionCode }],
         });
 
         if (sub !== undefined && sub !== null) {
           const now = new Date();
           const immediate = atPeriodEnd === false;
           await ctx.context.adapter.update({
-            model: "subscription",
+            model: PAYSTACK_MODELS.subscription,
             update: {
               status: immediate ? "canceled" : "active",
               cancelAtPeriodEnd: !immediate,
@@ -1607,7 +1640,16 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
       const { subscriptionCode } = ctx.body;
       const paystack = getPaystackOps(options.paystackClient);
       try {
-        let emailToken = ctx.body.emailToken;
+        const storedSubscription =
+          await createBillingStore(ctx).findSubscriptionByCode(subscriptionCode);
+        const storedCredentials = storedSubscription
+          ? await readPaystackPaymentCredentials(
+              ctx.context.adapter,
+              options,
+              storedSubscription.id,
+            )
+          : null;
+        let emailToken = ctx.body.emailToken ?? storedCredentials?.emailToken;
         if (emailToken === undefined || emailToken === null || emailToken === "") {
           try {
             const raw = await paystack?.subscription?.fetch(subscriptionCode);
@@ -1640,13 +1682,24 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
           });
         }
 
+        if (storedSubscription) {
+          await savePaystackPaymentCredentials(
+            ctx.context.adapter,
+            options,
+            storedSubscription.id,
+            {
+              emailToken,
+            },
+          );
+        }
+
         await paystack?.subscription?.enable({
           body: { code: subscriptionCode, token: emailToken },
         });
 
         // Update local status immediately
         await ctx.context.adapter.update({
-          model: "subscription",
+          model: PAYSTACK_MODELS.subscription,
           update: {
             status: "active",
             cancelAtPeriodEnd: false,
@@ -1655,7 +1708,7 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
             endedAt: null,
             updatedAt: new Date(),
           },
-          where: [{ field: "paystackSubscriptionCode", value: subscriptionCode }],
+          where: [{ field: "subscriptionCode", value: subscriptionCode }],
         });
 
         return ctx.json({ status: "success" });

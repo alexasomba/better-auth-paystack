@@ -1,9 +1,6 @@
-/* eslint-disable no-console */
-import { betterAuth } from "better-auth";
-import { memoryAdapter } from "better-auth/adapters/memory";
-import { anonymous, organization, admin } from "better-auth/plugins";
+import { createPaystack } from "@alexasomba/paystack-node";
 import { dash } from "@better-auth/infra";
-import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { betterAuth } from "better-auth";
 import {
   paystack,
   type Subscription,
@@ -11,7 +8,9 @@ import {
   type PaystackProduct,
   type PaystackOptions,
 } from "better-auth-paystack";
-import { createPaystack } from "@alexasomba/paystack-node";
+import { memoryAdapter } from "better-auth/adapters/memory";
+import { anonymous, organization, admin } from "better-auth/plugins";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 export const data: Record<string, unknown[]> = {
   user: [],
@@ -234,7 +233,7 @@ export const auth = betterAuth({
               },
             },
             products: {
-              products: productCatalog as PaystackProduct[],
+              products: productCatalog,
             },
           }),
         ]

@@ -1,17 +1,17 @@
+import type { components } from "@alexasomba/paystack-node";
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
-import type { components } from "@alexasomba/paystack-node";
 
 import { createBillingStore } from "./billing-store";
-import { authorizeBillingReference } from "./reference-access";
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
-import { getPlans, syncProductQuantityFromPaystack } from "./utils";
 import {
   getMetadataBoolean,
   getMetadataNumber,
   getMetadataString,
   parsePaystackMetadata,
 } from "./metadata";
+import { savePaystackPaymentCredentials } from "./payment-credentials";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { authorizeBillingReference } from "./reference-access";
 import type {
   AnyPaystackOptions,
   PaystackCheckoutChannel,
@@ -22,6 +22,7 @@ import type {
   Subscription,
   User,
 } from "./types";
+import { getPlans, syncProductQuantityFromPaystack } from "./utils";
 
 export type PaystackReconciliationSource = "webhook" | "queue" | "admin" | "server" | "browser";
 
@@ -374,7 +375,12 @@ export async function reconcilePaystackTransaction(
       isOrganization = organization !== null;
     }
 
-    await store.saveCustomerCode(referenceId, paystackCustomerCodeFromPaystack, isOrganization);
+    await store.saveCustomerCode(
+      referenceId,
+      paystackCustomerCodeFromPaystack,
+      isOrganization,
+      data.customer?.email,
+    );
     summary.customer.saved = true;
     summary.customer.referenceId = referenceId;
     summary.customer.customerCode = paystackCustomerCodeFromPaystack;
@@ -426,10 +432,7 @@ export async function reconcilePaystackTransaction(
       const updatedSubscription = await store.updateSubscription(subscriptionId, {
         plan: newPlan,
         ...(typeof newSeatCount === "number" ? { seats: newSeatCount } : {}),
-        paystackTransactionReference: reference,
-        ...(authorizationCode !== undefined && authorizationCode !== null
-          ? { paystackAuthorizationCode: authorizationCode }
-          : {}),
+        transactionReference: reference,
         updatedAt: new Date(),
       });
       summary.subscription.found = updatedSubscription !== null;
@@ -437,6 +440,16 @@ export async function reconcilePaystackTransaction(
       summary.subscription.id = updatedSubscription?.id ?? subscriptionId;
       summary.subscription.status = updatedSubscription?.status;
       summary.subscription.prorationApplied = updatedSubscription !== null;
+      if (
+        updatedSubscription !== null &&
+        authorizationCode !== undefined &&
+        authorizationCode !== null &&
+        authorizationCode !== ""
+      ) {
+        await savePaystackPaymentCredentials(ctx.context.adapter, options, updatedSubscription.id, {
+          authorizationCode,
+        });
+      }
     }
 
     return {
@@ -449,7 +462,7 @@ export async function reconcilePaystackTransaction(
     };
   }
 
-  let paystackSubscriptionCode: string | undefined;
+  let subscriptionCode: string | undefined;
   const existingSubs = await store.findSubscriptionsByTransactionReference(reference);
   const targetSub = existingSubs.find(
     (subscription) =>
@@ -471,13 +484,13 @@ export async function reconcilePaystackTransaction(
         planConfig.planCode === null ||
         planConfig.planCode === "")
     ) {
-      paystackSubscriptionCode = `LOC_${reference}`;
+      subscriptionCode = `LOC_${reference}`;
     } else if (
-      targetSub?.paystackSubscriptionCode !== undefined &&
-      targetSub.paystackSubscriptionCode !== null &&
-      targetSub.paystackSubscriptionCode !== ""
+      targetSub?.subscriptionCode !== undefined &&
+      targetSub.subscriptionCode !== null &&
+      targetSub.subscriptionCode !== ""
     ) {
-      paystackSubscriptionCode = targetSub.paystackSubscriptionCode;
+      subscriptionCode = targetSub.subscriptionCode;
     } else if (
       authorizationCode !== undefined &&
       authorizationCode !== null &&
@@ -498,7 +511,7 @@ export async function reconcilePaystackTransaction(
       });
       const subRes =
         unwrapSdkResult<components["schemas"]["SubscriptionListResponseArray"]>(subResRaw);
-      paystackSubscriptionCode = subRes?.subscription_code;
+      subscriptionCode = subRes?.subscription_code;
     }
   } else if (isTrial === false) {
     const planCodeFromPaystack = (data as { plan?: { plan_code?: string | null } }).plan?.plan_code;
@@ -507,9 +520,9 @@ export async function reconcilePaystackTransaction(
       planCodeFromPaystack === null ||
       planCodeFromPaystack === ""
     ) {
-      paystackSubscriptionCode = `LOC_${reference}`;
+      subscriptionCode = `LOC_${reference}`;
     } else {
-      paystackSubscriptionCode =
+      subscriptionCode =
         (data as { subscription?: { subscription_code?: string | null } }).subscription
           ?.subscription_code ?? undefined;
     }
@@ -533,14 +546,21 @@ export async function reconcilePaystackTransaction(
             periodEnd: new Date(trialEnd),
           }
         : {}),
-      ...(paystackSubscriptionCode !== undefined ? { paystackSubscriptionCode } : {}),
-      ...(authorizationCode !== undefined && authorizationCode !== null
-        ? { paystackAuthorizationCode: authorizationCode }
-        : {}),
+      ...(subscriptionCode !== undefined ? { subscriptionCode } : {}),
     });
     summary.subscription.updated = updatedSubscription !== null;
     summary.subscription.id = updatedSubscription?.id ?? targetSub.id;
     summary.subscription.status = updatedSubscription?.status ?? targetSub.status;
+    if (
+      authorizationCode !== undefined &&
+      authorizationCode !== null &&
+      authorizationCode !== "" &&
+      updatedSubscription !== null
+    ) {
+      await savePaystackPaymentCredentials(ctx.context.adapter, options, updatedSubscription.id, {
+        authorizationCode,
+      });
+    }
     if (
       updatedSubscription !== null &&
       (updatedSubscription.status === "active" || updatedSubscription.status === "trialing")

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+
 import { getOpenApiDocument, getOrigin } from "@/lib/agent-discovery";
 
 export const Route = createFileRoute("/openapi.json")({
