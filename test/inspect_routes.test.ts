@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
+import { describe, expect, it } from "vite-plus/test";
 
 import { paystack } from "../src/index.ts";
 

@@ -3,12 +3,12 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
-import { bearer } from "better-auth/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
+import { bearer } from "better-auth/plugins";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src/index.ts";
 import { paystackClient } from "../src/client.ts";
+import { paystack } from "../src/index.ts";
 import { expectCheckoutResult } from "./helpers/paystack-results";
 
 describe("examples/nextjs integration - paystack flow", () => {

@@ -1,17 +1,52 @@
 import { createHash } from "node:crypto";
-import { HIDE_METADATA } from "better-auth";
-import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
-import { createAuthEndpoint } from "better-auth/api";
-/* oxlint-disable no-restricted-imports */
-import { z } from "zod";
+
 import type { components } from "@alexasomba/paystack-node";
+import { HIDE_METADATA } from "better-auth";
 import type {
   GenericEndpointContext,
   MiddlewareInputContext,
   MiddlewareOptions,
   StrictEndpoint,
 } from "better-auth";
+import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
+/* oxlint-disable no-restricted-imports */
+import { z } from "zod";
 
+import { createBillingStore } from "./billing-store";
+import {
+  createCheckoutMetadata,
+  hasPaystackMetadata,
+  parsePaystackMetadata,
+  stringifyPaystackMetadata,
+} from "./metadata";
+import { referenceMiddleware } from "./middleware";
+import { PAYSTACK_MODELS } from "./models";
+import {
+  readPaystackPaymentCredentials,
+  savePaystackPaymentCredentials,
+} from "./payment-credentials";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { reconcilePaystackTransaction } from "./reconciliation";
+import { authorizeBillingReference } from "./reference-access";
+import { getConfiguredCatalog, listStoredPlans, listStoredProducts } from "./route-modules/catalog";
+import { initializeTransactionBodySchema } from "./route-modules/checkout";
+import {
+  getAllowedSubscriptionChannels,
+  hmacSha512Hex,
+  PAYSTACK_ERROR_CODES,
+} from "./route-modules/shared";
+import {
+  enableDisableBodySchema,
+  tryGetEmailTokenFromSubscriptionManageLink,
+} from "./route-modules/subscriptions";
+import { getWebhookClientIP, getWebhookHeaders, getWebhookRequest } from "./route-modules/webhook";
+import {
+  handleProratedUpgrade,
+  resolveCheckoutTargetEmail,
+  resolveTrialLifecycle,
+  scheduleSubscriptionLifecycleChange,
+} from "./subscription-lifecycle";
 import type {
   InputPaystackProduct,
   PaystackTransaction,
@@ -26,12 +61,6 @@ import type {
   PaystackInitializeResult,
 } from "./types";
 import {
-  createCheckoutMetadata,
-  hasPaystackMetadata,
-  parsePaystackMetadata,
-  stringifyPaystackMetadata,
-} from "./metadata";
-import {
   syncProductQuantityFromPaystack,
   getPlanByName,
   getPlans,
@@ -41,34 +70,6 @@ import {
   isLocalSubscriptionCode,
   normalizeSubscriptionGroup,
 } from "./utils";
-import { referenceMiddleware } from "./middleware";
-import { authorizeBillingReference } from "./reference-access";
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
-import { createBillingStore } from "./billing-store";
-import {
-  handleProratedUpgrade,
-  resolveCheckoutTargetEmail,
-  resolveTrialLifecycle,
-  scheduleSubscriptionLifecycleChange,
-} from "./subscription-lifecycle";
-import { reconcilePaystackTransaction } from "./reconciliation";
-import { initializeTransactionBodySchema } from "./route-modules/checkout";
-import { getConfiguredCatalog, listStoredPlans, listStoredProducts } from "./route-modules/catalog";
-import {
-  enableDisableBodySchema,
-  tryGetEmailTokenFromSubscriptionManageLink,
-} from "./route-modules/subscriptions";
-import { getWebhookClientIP, getWebhookHeaders, getWebhookRequest } from "./route-modules/webhook";
-import { PAYSTACK_MODELS } from "./models";
-import {
-  readPaystackPaymentCredentials,
-  savePaystackPaymentCredentials,
-} from "./payment-credentials";
-import {
-  getAllowedSubscriptionChannels,
-  hmacSha512Hex,
-  PAYSTACK_ERROR_CODES,
-} from "./route-modules/shared";
 
 export const paystackWebhook = <P extends string = "/webhook">(
   options: AnyPaystackOptions,
@@ -943,7 +944,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
               select: ["paystackCustomerCode"],
             });
             customerCode = legacy?.paystackCustomerCode ?? undefined;
-            if (customerCode) {
+            if (customerCode !== undefined && customerCode !== null && customerCode !== "") {
               await store.saveCustomer(
                 referenceId === user.id ? "user" : "organization",
                 referenceId,

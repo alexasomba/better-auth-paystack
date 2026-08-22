@@ -22,34 +22,30 @@ jobs:
       NPM_CONFIG_OPTIONAL: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.16.1
         with:
-          node-version: "24.x"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          node-version: "24"
+          cache: true
+          run-install: true
 
       - name: Check
-        run: pnpm exec vp check
+        run: vp check
 
       - name: Test
-        run: pnpm exec vp test
+        run: vp test
 
       - name: Build package
-        run: pnpm exec vp pack
+        run: vp pack
 
       - name: Inspect packed package manifest
         shell: bash
         run: |
           PACK_DIR="$RUNNER_TEMP/npm-pack"
           mkdir -p "$PACK_DIR"
-          pnpm pack --pack-destination "$PACK_DIR"
+          vp pm pack --pack-destination "$PACK_DIR"
 
           TARBALL="$(find "$PACK_DIR" -maxdepth 1 -name '*.tgz' -print -quit)"
           if [[ -z "$TARBALL" ]]; then
@@ -66,19 +62,16 @@ jobs:
           node -e 'const fs = require("node:fs"); const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (pkg.pnpm?.patchedDependencies || pkg.patchedDependencies) { console.error("::error ::Packed package.json contains publish-time patch metadata."); process.exit(1); }' "$PACK_DIR/package.json"
 
       - name: Lint package metadata
-        run: pnpm run lint:package
+        run: vp run lint:package
 
       - name: Lint package types
-        run: pnpm run lint:types
-
-      - name: TanStack example check
-        run: pnpm --dir examples/tanstack run check:ci
+        run: vp run lint:types
 
       - name: TanStack example test
-        run: pnpm --dir examples/tanstack run test
+        run: vp -C examples/tanstack test run
 
       - name: TanStack example build
-        run: pnpm --dir examples/tanstack run build
+        run: vp -C examples/tanstack build
 
       - name: TanStack example Wrangler dry-run
-        run: pnpm --dir examples/tanstack run wrangler:dry-run
+        run: vp -C examples/tanstack run wrangler:dry-run

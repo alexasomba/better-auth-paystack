@@ -1,15 +1,15 @@
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
 
-import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 import { betterAuth } from "better-auth";
-import { organization } from "better-auth/plugins";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
 import { organizationClient } from "better-auth/client/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
+import { organization } from "better-auth/plugins";
+import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 
-import { paystack } from "../src/index.ts";
 import { paystackClient as createPaystackClient } from "../src/client.ts";
+import { paystack } from "../src/index.ts";
 import { savePaystackPaymentCredentials } from "../src/payment-credentials.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 import {

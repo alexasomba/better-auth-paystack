@@ -1,5 +1,6 @@
 import type { GenericEndpointContext } from "better-auth";
 
+import { PAYSTACK_MODELS } from "./models";
 import type {
   Member,
   PaystackCustomer,
@@ -11,7 +12,6 @@ import type {
   Subscription,
   User,
 } from "./types";
-import { PAYSTACK_MODELS } from "./models";
 
 type Adapter = GenericEndpointContext["context"]["adapter"];
 type WhereValue = string | number | boolean | null;
@@ -226,7 +226,7 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
       adapter.create({
         model: PAYSTACK_MODELS.webhookEvent,
         data,
-      }) as Promise<PaystackWebhookEventRecord>,
+      }),
     findWebhookEvent: (eventId) =>
       findOne<PaystackWebhookEventRecord>(PAYSTACK_MODELS.webhookEvent, [
         { field: "eventId", value: eventId },
@@ -319,10 +319,11 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
         { field: "referenceKey", value: referenceKey },
       ]);
       const now = new Date();
+      const hasEmail = email !== undefined && email !== null && email !== "";
       if (existing) {
         const updated = await adapter.update<PaystackCustomer>({
           model: PAYSTACK_MODELS.customer,
-          update: { customerCode, ...(email ? { email } : {}), updatedAt: now },
+          update: { customerCode, ...(hasEmail ? { email } : {}), updatedAt: now },
           where: [{ field: "id", value: existing.id }],
         });
         return (
@@ -336,7 +337,7 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
           referenceId,
           referenceKey,
           customerCode,
-          ...(email ? { email } : {}),
+          ...(hasEmail ? { email } : {}),
           createdAt: now,
           updatedAt: now,
         },

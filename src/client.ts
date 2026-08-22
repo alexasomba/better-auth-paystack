@@ -1,5 +1,7 @@
 import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
 import type { BetterAuthClientPlugin } from "better-auth/client";
+
+import type { paystack as paystackServer } from "./index";
 import type {
   PaystackPlan,
   PaystackProduct,
@@ -10,8 +12,6 @@ import type {
   AnyPaystackOptions,
   PaystackInitializeResult,
 } from "./types";
-
-import type { paystack as paystackServer } from "./index";
 import { PACKAGE_VERSION } from "./version";
 
 export { parsePaystackMetadata } from "./metadata";

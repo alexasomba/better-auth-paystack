@@ -1,5 +1,7 @@
 import type { GenericEndpointContext } from "better-auth";
 
+import { createBillingStore } from "./billing-store";
+import { createPaystackAdapter } from "./paystack-sdk";
 import type {
   AnyPaystackOptions,
   PaystackClientLike,
@@ -8,8 +10,6 @@ import type {
   Subscription,
   PaystackProductResponse,
 } from "./types";
-import { createBillingStore } from "./billing-store";
-import { createPaystackAdapter } from "./paystack-sdk";
 
 export function getPlanSeatAmount(plan: PaystackPlan): number | undefined {
   if (plan.seatAmount !== undefined) {

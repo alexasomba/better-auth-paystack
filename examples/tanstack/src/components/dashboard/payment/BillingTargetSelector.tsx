@@ -34,13 +34,13 @@ export function BillingTargetSelector({
   if (organizations.length === 0) return null;
 
   return (
-    <div className="p-4 bg-muted/30 border border-dashed rounded-lg">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="p-2 rounded-lg bg-primary/10">
+    <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="rounded-lg bg-primary/10 p-2">
           <Buildings weight="duotone" size={20} className="text-primary" />
         </div>
         <div>
-          <p className="font-medium text-sm">Bill To</p>
+          <p className="text-sm font-medium">Bill To</p>
           <p className="text-xs text-muted-foreground">
             Choose who will be charged for this subscription
           </p>
@@ -73,8 +73,8 @@ export function BillingTargetSelector({
       </Select>
 
       {selectedBillingTarget !== "personal" && (
-        <div className="mt-4 pt-4 border-t border-dashed">
-          <Label htmlFor="seats" className="text-xs font-medium mb-1.5 block">
+        <div className="mt-4 border-t border-dashed pt-4">
+          <Label htmlFor="seats" className="mb-1.5 block text-xs font-medium">
             Number of Seats
           </Label>
           <div className="flex items-center gap-3">
@@ -85,7 +85,7 @@ export function BillingTargetSelector({
               max={100}
               value={quantity}
               onChange={(event) => onQuantityChange(Math.max(1, parseInt(event.target.value) || 1))}
-              className="w-24 h-9"
+              className="h-9 w-24"
             />
             <p className="text-[10px] text-muted-foreground italic">
               Pricing scales linearly based on seat count.

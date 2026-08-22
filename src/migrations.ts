@@ -64,8 +64,9 @@ async function findManySafely(adapter: Adapter, model: string): Promise<LegacyRe
 function migrationData(legacy: LegacyRecord): Record<string, unknown> {
   const now = new Date();
   const referenceId = asIdentifier(legacy.referenceId) ?? asIdentifier(legacy.userId) ?? "";
+  const id = asIdentifier(legacy.id);
   return {
-    ...(asIdentifier(legacy.id) ? { id: asIdentifier(legacy.id) } : {}),
+    ...(id !== undefined ? { id } : {}),
     plan: asString(legacy.plan) ?? "",
     referenceId,
     userId: asIdentifier(legacy.userId) ?? referenceId,
@@ -104,7 +105,7 @@ async function migrateCustomer(
 ): Promise<void> {
   const customerCode = asString(legacy.paystackCustomerCode) ?? asString(legacy.customerCode);
   const referenceId = asIdentifier(legacy.id);
-  if (!customerCode || !referenceId) return;
+  if (customerCode === undefined || referenceId === undefined) return;
   const referenceKey = `${referenceType}:${referenceId}`;
   try {
     const existing = await adapter.findOne<LegacyRecord>({
@@ -163,7 +164,7 @@ export async function migratePaystackSubscriptionSchema(
   const legacySubscriptions = await findManySafely(adapter, LEGACY_PAYSTACK_MODELS.subscription);
   for (const legacy of legacySubscriptions) {
     const id = asIdentifier(legacy.id);
-    if (!id) continue;
+    if (id === undefined) continue;
     try {
       const existing = await adapter.findOne<LegacyRecord>({
         model: PAYSTACK_MODELS.subscription,
@@ -192,7 +193,7 @@ export async function migratePaystackSubscriptionSchema(
     const authorizationCode =
       asString(legacy.authorizationCode) ?? asString(legacy.paystackAuthorizationCode);
     const emailToken = asString(legacy.emailToken) ?? asString(legacy.paystackEmailToken);
-    if (authorizationCode || emailToken) {
+    if (authorizationCode !== undefined || emailToken !== undefined) {
       try {
         const existingCredential = await adapter.findOne<LegacyRecord>({
           model: PAYSTACK_MODELS.paymentCredential,

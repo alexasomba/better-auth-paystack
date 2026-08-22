@@ -31,7 +31,7 @@ export default defineConfig({
     process.env.PLAYWRIGHT_SKIP_WEB_SERVER === "1"
       ? undefined
       : {
-          command: "pnpm dev",
+          command: "vp dev",
           url: baseURL,
           reuseExistingServer:
             process.env.CI === undefined || process.env.CI === null || process.env.CI === "",

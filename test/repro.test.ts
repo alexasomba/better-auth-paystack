@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
 import { setCookieToHeader } from "better-auth/cookies";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src/index.ts";
 import { paystackClient } from "../src/client.ts";
+import { paystack } from "../src/index.ts";
 import type { PaystackClientLike, PaystackOptions } from "../src/types";
 
 describe("paystack regressions", () => {

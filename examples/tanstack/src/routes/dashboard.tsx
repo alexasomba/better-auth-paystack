@@ -1,8 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { auth } from "@/lib/auth";
+
 import DashboardContent from "@/components/dashboard/DashboardContent";
+import { auth } from "@/lib/auth";
 import { createSeoHead } from "@/lib/seo";
 
 const getSession = createServerFn({ method: "GET" }).handler(async () => {
@@ -25,7 +26,6 @@ export const Route = createFileRoute("/dashboard")({
     const session = await getSession();
 
     if (session?.user === null || session?.user === undefined) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: "/" });
     }
 

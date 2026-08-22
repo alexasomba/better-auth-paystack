@@ -1,5 +1,3 @@
-import * as React from "react";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
   ArrowSquareOut,
   Buildings,
@@ -8,7 +6,23 @@ import {
   DotsThree,
   Eye,
 } from "@phosphor-icons/react";
+import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef, HeaderGroup, Row, Cell, Header } from "@tanstack/react-table";
+import { parsePaystackMetadata } from "better-auth-paystack/client";
+import * as React from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -19,20 +33,6 @@ import {
 } from "@/components/ui/table";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { parsePaystackMetadata } from "better-auth-paystack/client";
 
 interface Transaction {
   id: string;
@@ -62,8 +62,8 @@ export default function TransactionsTable() {
       cell: ({ row }: { row: Row<Transaction> }) => {
         const reference = row.original.reference;
         return (
-          <div className="flex items-center gap-2 group">
-            <code className="font-mono text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+          <div className="group flex items-center gap-2">
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               {reference.slice(0, 12)}...
             </code>
             <button
@@ -71,7 +71,7 @@ export default function TransactionsTable() {
               onClick={() => {
                 void navigator.clipboard.writeText(reference);
               }}
-              className="p-1 hover:bg-primary/10 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+              className="rounded-md p-1 opacity-0 transition-colors group-hover:opacity-100 hover:bg-primary/10 focus:opacity-100"
               title="Copy Reference"
             >
               <span className="text-primary">
@@ -143,7 +143,7 @@ export default function TransactionsTable() {
                 </span>
                 {orgName === undefined && (
                   <code
-                    className="font-mono text-[9px] text-muted-foreground truncate max-w-20"
+                    className="max-w-20 truncate font-mono text-[9px] text-muted-foreground"
                     title={referenceId ?? ""}
                   >
                     {referenceId?.slice(0, 8)}...
@@ -307,7 +307,7 @@ export default function TransactionsTable() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
-        <div className="text-muted-foreground animate-spin">
+        <div className="animate-spin text-muted-foreground">
           <CircleNotch weight="bold" size={32} />
         </div>
       </div>
@@ -368,8 +368,8 @@ export default function TransactionsTable() {
           </DialogHeader>
           {selectedTransaction !== null && (
             <div className="grid gap-4 py-4">
-              <div className="space-y-1 bg-muted/50 p-3 rounded-lg border border-dashed">
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
+              <div className="space-y-1 rounded-lg border border-dashed bg-muted/50 p-3">
+                <span className="block text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
                   Reference
                 </span>
                 <div className="flex items-center justify-between gap-2">
@@ -428,7 +428,7 @@ export default function TransactionsTable() {
                         {selectedTransaction._orgName ?? "Organization"}
                       </span>
                       {selectedTransaction._orgName === undefined && (
-                        <code className="font-mono text-[9px] text-muted-foreground ml-1">
+                        <code className="ml-1 font-mono text-[9px] text-muted-foreground">
                           {selectedTransaction.referenceId.slice(0, 12)}...
                         </code>
                       )}
@@ -440,7 +440,7 @@ export default function TransactionsTable() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                 <span className="text-sm font-medium text-muted-foreground">Plan/Product</span>
-                <span className="col-span-3 text-right capitalize text-sm">
+                <span className="col-span-3 text-right text-sm capitalize">
                   {selectedTransaction.plan ?? selectedTransaction.product ?? "One-time Payment"}
                 </span>
               </div>
@@ -454,7 +454,7 @@ export default function TransactionsTable() {
                 selectedTransaction.metadata !== null &&
                 selectedTransaction.metadata !== "" && (
                   <div className="space-y-1">
-                    <span className="text-sm font-medium text-muted-foreground text-left block">
+                    <span className="block text-left text-sm font-medium text-muted-foreground">
                       Metadata
                     </span>
                     <pre className="mt-1 max-h-25 overflow-auto rounded-md bg-muted p-2 text-[10px]">

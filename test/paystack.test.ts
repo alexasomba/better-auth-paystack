@@ -11,9 +11,9 @@ import { bearer, organization } from "better-auth/plugins";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vite-plus/test";
 
 import { paystackClient } from "../src/client.ts";
+import { paystack, syncPaystackPlans, syncPaystackProducts } from "../src/index.ts";
 import { referenceMiddleware } from "../src/middleware.ts";
 import { getSchema } from "../src/schema.ts";
-import { expectCheckoutResult } from "./helpers/paystack-results";
 import type {
   Subscription,
   PaystackOptions,
@@ -21,8 +21,7 @@ import type {
   PaystackResponse,
   PaystackCustomerResponse,
 } from "../src/types";
-
-import { paystack, syncPaystackPlans, syncPaystackProducts } from "../src/index.ts";
+import { expectCheckoutResult } from "./helpers/paystack-results";
 
 describe("paystack type", () => {
   const options = {

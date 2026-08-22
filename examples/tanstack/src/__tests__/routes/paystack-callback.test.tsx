@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+
 import { CallbackPage } from "@/routes/billing/paystack/callback";
 
 const { mockNavigate, mockUseSearch, verifyCallbackMock, verifyCallbackServerFnMock } = vi.hoisted(

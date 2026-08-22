@@ -3,16 +3,16 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { createAuthClient } from "better-auth/client";
-import { bearer } from "better-auth/plugins";
-import { organization } from "better-auth/plugins";
 import { organizationClient } from "better-auth/client/plugins";
 import { setCookieToHeader } from "better-auth/cookies";
+import { bearer } from "better-auth/plugins";
+import { organization } from "better-auth/plugins";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src/index.ts";
 import { paystackClient } from "../src/client.ts";
-import { expectCheckoutResult } from "./helpers/paystack-results";
+import { paystack } from "../src/index.ts";
 import type { Member } from "../src/types";
+import { expectCheckoutResult } from "./helpers/paystack-results";
 
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
 

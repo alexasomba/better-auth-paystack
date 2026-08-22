@@ -1,9 +1,10 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState } from "react";
-import { verifyPaystackCallbackServerFn, type VerifyCallbackResult } from "@/lib/paystack-admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parsePaystackMetadata } from "better-auth-paystack/client";
+import { useEffect, useRef, useState } from "react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { verifyPaystackCallbackServerFn, type VerifyCallbackResult } from "@/lib/paystack-admin";
 import { createSeoHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/billing/paystack/callback")({

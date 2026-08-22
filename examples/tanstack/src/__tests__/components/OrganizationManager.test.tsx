@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
+
 import OrganizationManager from "@/components/dashboard/OrganizationManager";
 import { authClient } from "@/lib/auth-client";
 
@@ -32,17 +33,17 @@ describe("OrganizationManager component", () => {
     vi.clearAllMocks();
     vi.mocked(authClient.organization.list).mockResolvedValue({
       data: [],
-    } as never);
+    });
     vi.mocked(authClient.organization.create).mockResolvedValue({
       data: null,
       error: null,
-    } as never);
+    });
     vi.mocked(authClient.organization.setActive).mockResolvedValue({
       data: null,
-    } as never);
+    });
     vi.mocked(authClient.organization.getFullOrganization).mockResolvedValue({
       data: { members: [] },
-    } as never);
+    });
   });
 
   it("creates an organization and selects it when Better Auth returns data", async () => {
@@ -54,12 +55,12 @@ describe("OrganizationManager component", () => {
     };
 
     vi.mocked(authClient.organization.list)
-      .mockResolvedValueOnce({ data: [] } as never)
-      .mockResolvedValueOnce({ data: [organization] } as never);
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValueOnce({ data: [organization] });
     vi.mocked(authClient.organization.create).mockResolvedValue({
       data: organization,
       error: null,
-    } as never);
+    });
 
     render(<OrganizationManager />);
 
@@ -87,7 +88,7 @@ describe("OrganizationManager component", () => {
     vi.mocked(authClient.organization.create).mockResolvedValue({
       data: null,
       error: { message: "Organization slug is already taken" },
-    } as never);
+    });
 
     render(<OrganizationManager />);
 

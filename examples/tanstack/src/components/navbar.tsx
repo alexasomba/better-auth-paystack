@@ -1,6 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
+
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export default function Navbar() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function Navbar() {
     <nav className="mb-8 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+          <Link to="/" className="flex items-center gap-2 text-xl font-bold">
             <span className="text-primary">Better Auth</span>
             <span className="text-foreground">Paystack</span>
           </Link>
@@ -22,7 +23,7 @@ export default function Navbar() {
               <Link to="/dashboard">
                 <Button variant="ghost">Dashboard</Button>
               </Link>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground border-l pl-4">
+              <div className="flex items-center gap-2 border-l pl-4 text-sm text-muted-foreground">
                 <span>{session.user.email}</span>
                 <Button
                   variant="outline"
