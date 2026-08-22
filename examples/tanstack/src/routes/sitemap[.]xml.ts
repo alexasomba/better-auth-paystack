@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+
 import { getOrigin, getSitemapXml } from "@/lib/agent-discovery";
 
 export const Route = createFileRoute("/sitemap.xml")({

@@ -7,6 +7,10 @@ import {
 import { APIError } from "better-auth/api";
 import { defu } from "defu";
 
+import { createBillingStoreFromAdapter } from "./billing-store";
+import { resolvePaystackCustomer } from "./customer";
+import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits";
+import { createPaystackAdapter } from "./paystack-sdk";
 import {
   disablePaystackSubscription,
   enablePaystackSubscription,
@@ -26,13 +30,9 @@ import {
   listPlans,
 } from "./routes";
 import { getSchema } from "./schema";
-import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits";
-import { syncSubscriptionSeats } from "./utils";
 import type { PaystackClientLike, PaystackOptions, AnyPaystackOptions, User } from "./types";
-import { createPaystackAdapter } from "./paystack-sdk";
+import { syncSubscriptionSeats } from "./utils";
 import { PACKAGE_VERSION } from "./version";
-import { createBillingStoreFromAdapter } from "./billing-store";
-import { resolvePaystackCustomer } from "./customer";
 
 export {
   createCheckoutMetadata,

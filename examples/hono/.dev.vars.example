@@ -1,0 +1,16 @@
+# Wrangler local dev vars (copy to .dev.vars)
+# See: https://developers.cloudflare.com/workers/wrangler/configuration/#dev-vars
+
+# Your Paystack secret key (server-side)
+PAYSTACK_SECRET_KEY=sk_test_...
+
+# Better Auth secret (use a long random value)
+BETTER_AUTH_SECRET=replace-with-a-long-random-secret
+
+# Paystack webhook signing secret.
+# Paystack computes `x-paystack-signature` using your Paystack SECRET KEY.
+# So this is optional and can be set to the same value as PAYSTACK_SECRET_KEY.
+# PAYSTACK_WEBHOOK_SECRET=sk_test_...
+
+# Optional: override Better Auth base URL, otherwise derived from request origin
+# BETTER_AUTH_URL=http://localhost:8787

@@ -6,8 +6,8 @@ import { createAuthClient } from "better-auth/client";
 import { setCookieToHeader } from "better-auth/cookies";
 import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 
-import { chargeSubscriptionRenewal, paystack } from "../src/index.ts";
 import { paystackClient as createPaystackClient } from "../src/client.ts";
+import { chargeSubscriptionRenewal, paystack } from "../src/index.ts";
 import {
   readPaystackPaymentCredentials,
   savePaystackPaymentCredentials,

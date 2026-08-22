@@ -1,0 +1,25 @@
+{
+  "name": "hono",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check": "vp -C ../.. check examples/hono",
+    "test": "vp test run --config ./vitest.config.ts"
+  },
+  "dependencies": {
+    "@alexasomba/paystack-node": "catalog:",
+    "better-auth": "catalog:",
+    "better-auth-paystack": "workspace:*",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "4.1.11",
+    "wrangler": "catalog:"
+  }
+}

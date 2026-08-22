@@ -1,9 +1,9 @@
 /* oxlint-disable @typescript-eslint/strict-boolean-expressions */
 
-import { describe, expectTypeOf, it } from "vite-plus/test";
+import { createPaystack } from "@alexasomba/paystack-node";
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
-import { createPaystack } from "@alexasomba/paystack-node";
+import { describe, expectTypeOf, it } from "vite-plus/test";
 
 import { paystack } from "../src/index.ts";
 import type { PaystackClientLike, PaystackOptions, PaystackCustomerResponse } from "../src/types";

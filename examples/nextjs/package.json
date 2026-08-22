@@ -1,0 +1,34 @@
+{
+  "name": "my-next-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "vp -C ../.. run typecheck:nextjs",
+    "lint": "vp -C ../.. lint examples/nextjs",
+    "check": "vp -C ../.. check examples/nextjs",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
+  },
+  "dependencies": {
+    "@alexasomba/paystack-node": "catalog:",
+    "@opennextjs/cloudflare": "catalog:",
+    "better-auth": "catalog:",
+    "better-auth-paystack": "workspace:*",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:typescript-next",
+    "wrangler": "catalog:"
+  }
+}

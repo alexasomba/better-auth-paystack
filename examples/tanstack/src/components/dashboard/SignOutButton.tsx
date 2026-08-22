@@ -1,7 +1,8 @@
-import { useRouter } from "@tanstack/react-router";
 import { SignOut } from "@phosphor-icons/react";
-import { authClient } from "@/lib/auth-client";
+import { useRouter } from "@tanstack/react-router";
+
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export default function SignOutButton() {
   const router = useRouter();

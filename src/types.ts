@@ -1,5 +1,3 @@
-import type { GenericEndpointContext, InferOptionSchema, Session, User } from "better-auth";
-import type { Organization, Member } from "better-auth/plugins/organization";
 import type {
   PaystackPaths,
   PaystackResponse,
@@ -18,6 +16,9 @@ import type {
   ProductFetchResponseData,
   components,
 } from "@alexasomba/paystack-node";
+import type { GenericEndpointContext, InferOptionSchema, Session, User } from "better-auth";
+import type { Organization, Member } from "better-auth/plugins/organization";
+
 import type { PaystackPluginSchema } from "./schema";
 
 /**

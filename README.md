@@ -866,19 +866,19 @@ This repository is powered by **Vite+**. You use the `vp` CLI to manage the enti
 
 ```bash
 # Install dependencies
-vp i
+vp install
 
 # Check project health (format, lint, types)
 vp check --fix
 
 # Build the core library
-vp build
+vp pack
 
 # Run tests
 vp test
 
 # Run the TanStack Start example
-vp run examples/tanstack dev
+vp -C examples/tanstack dev
 ```
 
 Contributions are welcome! Please open an issue or pull request.

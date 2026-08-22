@@ -1,5 +1,3 @@
-import { useCallback, useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowRight,
   CheckCircle,
@@ -10,17 +8,7 @@ import {
   ShieldCheck,
   Sparkle,
 } from "@phosphor-icons/react";
-import { authClient } from "@/lib/auth-client";
-import { paystackActions, subscriptionActions } from "@/lib/paystack-client";
-import {
-  chargeRenewalServerFn,
-  syncPlansServerFn,
-  syncProductsServerFn,
-} from "@/lib/paystack-admin";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
 import {
   type PaystackInitializeResult,
   type PaystackPlan,
@@ -28,6 +16,8 @@ import {
   type Subscription,
 } from "better-auth-paystack";
 import { parsePaystackMetadata } from "better-auth-paystack/client";
+import { useCallback, useEffect, useState } from "react";
+
 import {
   ActionMessageBanner,
   type OperationMessage,
@@ -37,13 +27,19 @@ import {
   type BillingOrganization,
 } from "@/components/dashboard/payment/BillingTargetSelector";
 import { TrustedServerOperations } from "@/components/dashboard/payment/TrustedServerOperations";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { authClient } from "@/lib/auth-client";
+import {
+  chargeRenewalServerFn,
+  syncPlansServerFn,
+  syncProductsServerFn,
+} from "@/lib/paystack-admin";
+import { paystackActions, subscriptionActions } from "@/lib/paystack-client";
+import { cn } from "@/lib/utils";
 
 type Organization = BillingOrganization;
-
-interface SyncResult {
-  status: "success";
-  count: number;
-}
 
 interface RenewalResult {
   status: "success" | "failed";
@@ -129,7 +125,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     try {
       const res = await paystackActions.listProducts();
       if (res.data?.products !== undefined && res.data?.products !== null) {
-        setNativeProducts(res.data.products as unknown as PaystackProduct[]);
+        setNativeProducts(res.data.products);
       }
     } catch (error: unknown) {
       setActionMessage({
@@ -197,7 +193,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       try {
         const result = await authClient.organization.list();
         if (result.data !== undefined && result.data !== null) {
-          setOrganizations(result.data as Organization[]);
+          setOrganizations(result.data);
         }
       } catch (error: unknown) {
         setActionMessage({
@@ -373,7 +369,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         product: product.name,
         amount: product.price ?? 0,
         currency: product.currency ?? "NGN",
-        metadata: metadata as Record<string, unknown>,
+        metadata: metadata,
         callbackURL: `${window.location.origin}/billing/paystack/callback`,
       });
       const data = res.data as PaystackInitializeResult | null | undefined;
@@ -472,7 +468,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     setServerOpsLoading("products");
     setServerOpsMessage(null);
     try {
-      const result = (await syncProducts()) as SyncResult;
+      const result = await syncProducts();
       setServerOpsMessage(`Synced ${result.count} products from Paystack into local storage.`);
       void fetchNativeProducts();
     } catch (error: unknown) {
@@ -486,7 +482,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     setServerOpsLoading("plans");
     setServerOpsMessage(null);
     try {
-      const result = (await syncPlans()) as SyncResult;
+      const result = await syncPlans();
       setServerOpsMessage(`Synced ${result.count} plans from Paystack into local storage.`);
       void fetchNativePlans();
     } catch (error: unknown) {
@@ -527,7 +523,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   if (isLoading) {
     return (
-      <div className="text-center py-8 text-muted-foreground animate-pulse">
+      <div className="animate-pulse py-8 text-center text-muted-foreground">
         Loading billing details...
       </div>
     );
@@ -566,13 +562,13 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
           {/* Active Subscription Summary */}
           {activeSubscription && (
-            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between">
+            <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="rounded-lg bg-primary/10 p-2">
                   <Sparkle weight="duotone" size={20} className="text-primary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">Active {activeSubscription.plan} Plan</p>
+                  <p className="text-sm font-semibold">Active {activeSubscription.plan} Plan</p>
                   <p className="text-xs text-muted-foreground">
                     Status:{" "}
                     <span className="capitalize">
@@ -581,7 +577,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                     {activeSubscription.cancelAtPeriodEnd === true && " (Ends at period end)"}
                   </p>
                   {activeSubscription.status === "trialing" && (
-                    <p className="text-xs text-amber-700 mt-1">
+                    <p className="mt-1 text-xs text-amber-700">
                       Trial active
                       {formatDate(activeSubscription.trialEnd) !== null
                         ? ` until ${formatDate(activeSubscription.trialEnd)}`
@@ -615,7 +611,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                       {!isPaystackManagedSubscriptionCode(
                         activeSubscription.paystackSubscriptionCode,
                       ) && (
-                        <p className="text-[11px] text-muted-foreground max-w-56">
+                        <p className="max-w-56 text-[11px] text-muted-foreground">
                           This plan is managed in-app, so billing changes happen here instead of on
                           Paystack's subscription portal.
                         </p>
@@ -662,7 +658,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           {/* Local Plans Section */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-lg font-semibold">
                 <Sparkle weight="duotone" className="text-primary" />
                 Better Auth Config Plans
               </h3>
@@ -670,7 +666,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 Plans defined in your application configuration.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {config.plans.map((plan) => (
                 <PlanCard key={plan.name} plan={plan} variant="local" />
               ))}
@@ -691,21 +687,21 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           />
 
           {/* Native Plans Section */}
-          <div className="space-y-4 border-t pt-8 border-dashed">
+          <div className="space-y-4 border-t border-dashed pt-8">
             <div>
-              <h3 className="text-lg font-semibold flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-lg font-semibold">
                 <Package weight="duotone" className="text-primary" />
                 Paystack-&gt;DB Synced Plans
               </h3>
               <p className="text-xs text-muted-foreground">Plans synced directly from Paystack.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {nativePlans.length > 0 ? (
                 nativePlans.map((plan) => (
                   <PlanCard key={plan.paystackId ?? plan.planCode} plan={plan} variant="native" />
                 ))
               ) : (
-                <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                <div className="col-span-full rounded-lg border border-dashed p-8 text-center text-muted-foreground">
                   No native plans are currently available from the synced catalog.
                 </div>
               )}
@@ -735,19 +731,19 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 Products defined locally in your application configuration.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {config.products.length > 0 ? (
                 config.products.map((product) => (
                   <div
                     key={product.name}
-                    className="p-4 border rounded-lg hover:border-primary/50 transition-colors cursor-default bg-muted/5 flex flex-col justify-between"
+                    className="flex cursor-default flex-col justify-between rounded-lg border bg-muted/5 p-4 transition-colors hover:border-primary/50"
                   >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="mb-4 flex items-start justify-between">
                       <div>
-                        <p className="font-bold text-lg">{product.name}</p>
+                        <p className="text-lg font-bold">{product.name}</p>
                         <p className="text-xs text-muted-foreground">One-time payment</p>
                       </div>
-                      <Badge variant="outline" className="text-primary border-primary/20">
+                      <Badge variant="outline" className="border-primary/20 text-primary">
                         {formatCurrency(getProductPrice(product), product.currency)}
                       </Badge>
                     </div>
@@ -755,7 +751,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                       onClick={() => handleBuyProduct(product)}
                       disabled={actionLoading}
                       variant="default"
-                      className="w-full h-10 gap-2"
+                      className="h-10 w-full gap-2"
                     >
                       <Coins weight="duotone" size={20} />
                       {actionLoading ? "Initializing..." : "Buy Now"}
@@ -763,14 +759,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                   </div>
                 ))
               ) : (
-                <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                <div className="col-span-full rounded-lg border border-dashed p-8 text-center text-muted-foreground">
                   No one-time products configured locally.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-dashed">
+          <div className="space-y-4 border-t border-dashed pt-4">
             <div>
               <h3 className="text-lg font-semibold">Paystack-&gt;DB Synced Products</h3>
               <p className="text-xs text-muted-foreground">
@@ -778,21 +774,21 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {nativeProducts.length > 0 ? (
                 nativeProducts.map((product) => (
                   <div
                     key={product.id ?? product.paystackId}
-                    className="p-4 border rounded-lg hover:border-primary/50 transition-colors cursor-default bg-muted/5 flex flex-col justify-between"
+                    className="flex cursor-default flex-col justify-between rounded-lg border bg-muted/5 p-4 transition-colors hover:border-primary/50"
                   >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="mb-4 flex items-start justify-between">
                       <div>
-                        <p className="font-bold text-lg">{product.name}</p>
-                        <p className="text-xs text-muted-foreground truncate max-w-37.5">
+                        <p className="text-lg font-bold">{product.name}</p>
+                        <p className="max-w-37.5 truncate text-xs text-muted-foreground">
                           {product.description ?? "Synced Product"}
                         </p>
                       </div>
-                      <Badge variant="outline" className="text-primary border-primary/20">
+                      <Badge variant="outline" className="border-primary/20 text-primary">
                         {formatCurrency(product.price, product.currency)}
                       </Badge>
                     </div>
@@ -800,7 +796,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                       onClick={() => handleBuyProduct(product)}
                       disabled={actionLoading}
                       variant="secondary"
-                      className="w-full h-10 gap-2 border-primary/10"
+                      className="h-10 w-full gap-2 border-primary/10"
                     >
                       <Package weight="duotone" size={20} />
                       {actionLoading ? "Initializing..." : "Purchase"}
@@ -808,14 +804,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                   </div>
                 ))
               ) : (
-                <div className="col-span-full p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                <div className="col-span-full rounded-lg border border-dashed p-8 text-center text-muted-foreground">
                   No native products are currently available from the synced catalog.
                 </div>
               )}
             </div>
           </div>
 
-          <p className="text-[10px] text-center text-muted-foreground uppercase tracking-widest flex items-center justify-center gap-1 pt-4 border-t">
+          <p className="flex items-center justify-center gap-1 border-t pt-4 text-center text-[10px] tracking-widest text-muted-foreground uppercase">
             <ShieldCheck weight="duotone" size={12} />
             Secure payments by Paystack
           </p>
@@ -844,14 +840,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     return (
       <div
         className={cn(
-          "relative flex flex-col p-5 border rounded-2xl transition-all duration-300 group",
+          "group relative flex flex-col rounded-2xl border p-5 transition-all duration-300",
           isCurrentPlan
             ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
             : "bg-muted/20 hover:border-primary/50 hover:bg-muted/30",
         )}
       >
         {isCurrentPlan && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm z-10">
+          <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[10px] font-bold tracking-widest text-primary-foreground uppercase shadow-sm">
             Current Plan
           </div>
         )}
@@ -861,14 +857,14 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             {isNative ? (
               <Badge
                 variant="secondary"
-                className="text-[10px] uppercase tracking-wider bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none"
+                className="border-blue-200 bg-blue-100 text-[10px] tracking-wider text-blue-700 uppercase shadow-none hover:bg-blue-100"
               >
                 Paystack Managed
               </Badge>
             ) : (
               <Badge
                 variant="secondary"
-                className="text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200 shadow-none"
+                className="border-purple-200 bg-purple-100 text-[10px] tracking-wider text-purple-700 uppercase shadow-none hover:bg-purple-100"
               >
                 Custom Plan
               </Badge>
@@ -877,10 +873,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
               <Badge
                 variant="secondary"
                 className={cn(
-                  "text-[10px] uppercase tracking-wider shadow-none",
+                  "text-[10px] tracking-wider uppercase shadow-none",
                   trialConsumed
-                    ? "bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200"
-                    : "bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200",
+                    ? "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-100"
+                    : "border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100",
                 )}
               >
                 {trialConsumed ? "Trial Used" : `${trialDays}-Day Trial`}
@@ -889,8 +885,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           </div>
         </div>
 
-        <div className="mb-4 mt-6">
-          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">
+        <div className="mt-6 mb-4">
+          <p className="mb-1 text-xs font-bold tracking-widest text-primary uppercase">
             {plan.name}
           </p>
           <div className="flex items-baseline gap-1">
@@ -910,7 +906,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           {plan.description !== undefined &&
             plan.description !== null &&
             plan.description !== "" && (
-              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{plan.description}</p>
+              <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{plan.description}</p>
             )}
           {trialDays !== null && (
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-900">
@@ -921,7 +917,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           )}
         </div>
 
-        <ul className="space-y-2 mb-6 text-sm text-muted-foreground">
+        <ul className="mb-6 space-y-2 text-sm text-muted-foreground">
           <li className="flex items-center gap-2">
             <span className="text-primary">
               <CheckCircle weight="duotone" size={16} />
@@ -938,7 +934,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
         <div className="mt-auto">
           {isCurrentPlan ? (
-            <Button disabled variant="outline" className="w-full h-11 gap-2">
+            <Button disabled variant="outline" className="h-11 w-full gap-2">
               <CheckCircle weight="fill" size={20} />
               Active
             </Button>
@@ -949,7 +945,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                   onClick={() => handleUpgradeNow(plan.name)}
                   disabled={actionLoading}
                   variant="default"
-                  className="w-full h-11 gap-2"
+                  className="h-11 w-full gap-2"
                 >
                   <CreditCard weight="duotone" size={20} />
                   {actionLoading ? "Processing..." : "Upgrade Now"}
@@ -959,7 +955,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 onClick={() => handleSchedulePlanChange(plan.name)}
                 disabled={actionLoading}
                 variant="outline"
-                className="w-full h-11 gap-2"
+                className="h-11 w-full gap-2"
               >
                 <Clock size={20} />
                 Schedule Change
@@ -970,7 +966,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
               onClick={() => handleSubscribe(plan.name)}
               disabled={actionLoading}
               variant={variant === "native" ? "secondary" : "default"}
-              className="w-full h-11 gap-2"
+              className="h-11 w-full gap-2"
             >
               <CreditCard weight="duotone" size={20} />
               {actionLoading

@@ -1,17 +1,17 @@
+import type { components } from "@alexasomba/paystack-node";
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
-import type { components } from "@alexasomba/paystack-node";
 
 import { createBillingStore } from "./billing-store";
-import { authorizeBillingReference } from "./reference-access";
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
-import { getPlans, syncProductQuantityFromPaystack } from "./utils";
 import {
   getMetadataBoolean,
   getMetadataNumber,
   getMetadataString,
   parsePaystackMetadata,
 } from "./metadata";
+import { savePaystackPaymentCredentials } from "./payment-credentials";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
+import { authorizeBillingReference } from "./reference-access";
 import type {
   AnyPaystackOptions,
   PaystackCheckoutChannel,
@@ -22,7 +22,7 @@ import type {
   Subscription,
   User,
 } from "./types";
-import { savePaystackPaymentCredentials } from "./payment-credentials";
+import { getPlans, syncProductQuantityFromPaystack } from "./utils";
 
 export type PaystackReconciliationSource = "webhook" | "queue" | "admin" | "server" | "browser";
 
@@ -440,7 +440,12 @@ export async function reconcilePaystackTransaction(
       summary.subscription.id = updatedSubscription?.id ?? subscriptionId;
       summary.subscription.status = updatedSubscription?.status;
       summary.subscription.prorationApplied = updatedSubscription !== null;
-      if (updatedSubscription && authorizationCode) {
+      if (
+        updatedSubscription !== null &&
+        authorizationCode !== undefined &&
+        authorizationCode !== null &&
+        authorizationCode !== ""
+      ) {
         await savePaystackPaymentCredentials(ctx.context.adapter, options, updatedSubscription.id, {
           authorizationCode,
         });
@@ -546,7 +551,12 @@ export async function reconcilePaystackTransaction(
     summary.subscription.updated = updatedSubscription !== null;
     summary.subscription.id = updatedSubscription?.id ?? targetSub.id;
     summary.subscription.status = updatedSubscription?.status ?? targetSub.status;
-    if (authorizationCode && updatedSubscription !== null) {
+    if (
+      authorizationCode !== undefined &&
+      authorizationCode !== null &&
+      authorizationCode !== "" &&
+      updatedSubscription !== null
+    ) {
       await savePaystackPaymentCredentials(ctx.context.adapter, options, updatedSubscription.id, {
         authorizationCode,
       });

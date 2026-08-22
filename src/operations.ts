@@ -1,10 +1,10 @@
-import { APIError } from "better-auth/api";
 import type { GenericEndpointContext } from "better-auth";
+import { APIError } from "better-auth/api";
 
 import { createBillingStore } from "./billing-store";
-import { createPaystackAdapter } from "./paystack-sdk";
-import { getNextPeriodEnd, getPlans, validateMinAmount } from "./utils";
 import { createRenewalMetadata, stringifyPaystackMetadata } from "./metadata";
+import { readPaystackPaymentCredentials } from "./payment-credentials";
+import { createPaystackAdapter } from "./paystack-sdk";
 import type {
   AnyPaystackOptions,
   ChargeRecurringSubscriptionInput,
@@ -12,7 +12,7 @@ import type {
   PaystackSyncResult,
   PaystackChargeAuthorizationResponse,
 } from "./types";
-import { readPaystackPaymentCredentials } from "./payment-credentials";
+import { getNextPeriodEnd, getPlans, validateMinAmount } from "./utils";
 
 export async function syncPaystackProducts(
   ctx: GenericEndpointContext,
@@ -125,7 +125,11 @@ export async function chargeSubscriptionRenewal(
     options,
     subscription.id,
   );
-  if (!credentials?.authorizationCode) {
+  if (
+    credentials?.authorizationCode === undefined ||
+    credentials.authorizationCode === null ||
+    credentials.authorizationCode === ""
+  ) {
     throw new APIError("BAD_REQUEST", {
       message: "No authorization code found for this subscription",
     });

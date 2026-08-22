@@ -1,13 +1,13 @@
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import type { QueryClient } from "@tanstack/react-query";
 import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { TanStackDevtools } from "@tanstack/react-devtools";
+
+import { createSeoHead } from "@/lib/seo";
 
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 
 import appCss from "../styles.css?url";
-import { createSeoHead } from "@/lib/seo";
-
-import type { QueryClient } from "@tanstack/react-query";
 
 interface MyRouterContext {
   queryClient: QueryClient;
@@ -43,9 +43,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   shellComponent: RootDocument,
   errorComponent: ({ error }: any) => {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
-        <h1 className="text-4xl font-bold mb-4">Something went wrong</h1>
-        <pre className="text-red-500 bg-muted p-4 rounded mb-8 overflow-auto max-w-full">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center">
+        <h1 className="mb-4 text-4xl font-bold">Something went wrong</h1>
+        <pre className="mb-8 max-w-full overflow-auto rounded bg-muted p-4 text-red-500">
           {error.message}
         </pre>
         <Link to="/" className="text-primary hover:underline">
@@ -56,9 +56,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   },
   notFoundComponent: () => {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
-        <h1 className="text-4xl font-bold mb-4">404 - Not Found</h1>
-        <p className="text-muted-foreground mb-8">The page you are looking for does not exist.</p>
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center">
+        <h1 className="mb-4 text-4xl font-bold">404 - Not Found</h1>
+        <p className="mb-8 text-muted-foreground">The page you are looking for does not exist.</p>
         <Link to="/" className="text-primary hover:underline">
           Go back home
         </Link>

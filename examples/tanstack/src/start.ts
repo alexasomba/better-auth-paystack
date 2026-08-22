@@ -1,4 +1,5 @@
 import { createMiddleware, createStart } from "@tanstack/react-start";
+
 import { homeMarkdown, linkHeader, markdownTokenCount } from "@/lib/agent-discovery";
 
 const agentDiscoveryMiddleware = createMiddleware().server(async ({ next, request }) => {

@@ -1,17 +1,13 @@
+import type { components } from "@alexasomba/paystack-node";
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
-import type { components } from "@alexasomba/paystack-node";
 
 import { createBillingStore } from "./billing-store";
 import { getOrganizationSubscription } from "./limits";
+import { createProrationMetadata, stringifyPaystackMetadata } from "./metadata";
+import { PAYSTACK_MODELS } from "./models";
+import { readPaystackPaymentCredentials } from "./payment-credentials";
 import { createPaystackAdapter } from "./paystack-sdk";
-import {
-  assertLocallyManagedSubscription,
-  calculatePlanAmount,
-  getPlanByName,
-  getPlanSeatAmount,
-  normalizeSubscriptionGroup,
-} from "./utils";
 import type {
   AnyPaystackOptions,
   PaystackChargeAuthorizationResponse,
@@ -21,9 +17,13 @@ import type {
   Subscription,
   User,
 } from "./types";
-import { createProrationMetadata, stringifyPaystackMetadata } from "./metadata";
-import { PAYSTACK_MODELS } from "./models";
-import { readPaystackPaymentCredentials } from "./payment-credentials";
+import {
+  assertLocallyManagedSubscription,
+  calculatePlanAmount,
+  getPlanByName,
+  getPlanSeatAmount,
+  normalizeSubscriptionGroup,
+} from "./utils";
 
 export type ProratedUpgradeOutcome =
   | Extract<PaystackInitializeResult, { kind: "prorated" }>
@@ -324,7 +324,11 @@ export async function handleProratedUpgrade(
       options,
       existingSub.id,
     );
-    if (credentials?.authorizationCode) {
+    if (
+      credentials?.authorizationCode !== undefined &&
+      credentials.authorizationCode !== null &&
+      credentials.authorizationCode !== ""
+    ) {
       const sdkRes = (await paystack.chargeAuthorization({
         email: input.targetEmail,
         amount: proratedAmount,

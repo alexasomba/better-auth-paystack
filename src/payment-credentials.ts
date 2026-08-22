@@ -4,8 +4,8 @@ import {
   encryptPaystackCredential,
   resolveCredentialEncryptionKey,
 } from "./credential-crypto";
-import type { PaystackOptions } from "./types";
 import { PAYSTACK_MODELS } from "./models";
+import type { PaystackOptions } from "./types";
 
 type Adapter = Parameters<typeof createBillingStoreFromAdapter>[0];
 
@@ -39,13 +39,17 @@ export async function readPaystackPaymentCredentials(
   }
   if (!row) return null;
   const key = resolveCredentialEncryptionKey(options);
+  const authorizationCodeEncrypted = row.authorizationCodeEncrypted;
+  const emailTokenEncrypted = row.emailTokenEncrypted;
   return {
-    authorizationCode: row.authorizationCodeEncrypted
-      ? decryptPaystackCredential(row.authorizationCodeEncrypted, key)
-      : undefined,
-    emailToken: row.emailTokenEncrypted
-      ? decryptPaystackCredential(row.emailTokenEncrypted, key)
-      : undefined,
+    authorizationCode:
+      typeof authorizationCodeEncrypted === "string" && authorizationCodeEncrypted !== ""
+        ? decryptPaystackCredential(authorizationCodeEncrypted, key)
+        : undefined,
+    emailToken:
+      typeof emailTokenEncrypted === "string" && emailTokenEncrypted !== ""
+        ? decryptPaystackCredential(emailTokenEncrypted, key)
+        : undefined,
   };
 }
 

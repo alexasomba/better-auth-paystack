@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vite-plus/test";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vite-plus/test";
+
 import DashboardContent from "@/components/dashboard/DashboardContent";
 
 // Mock sub-components/icons to avoid deep dependencies and icon rendering issues in tests
