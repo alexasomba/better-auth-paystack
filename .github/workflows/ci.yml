@@ -31,14 +31,14 @@ jobs:
           cache: true
           run-install: true
 
+      - name: Build package
+        run: vp pack
+
       - name: Check
         run: vp check
 
       - name: Test
         run: vp test
-
-      - name: Build package
-        run: vp pack
 
       - name: Inspect packed package manifest
         shell: bash
