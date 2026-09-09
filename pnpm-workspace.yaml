@@ -41,7 +41,7 @@ catalog:
   "@vitest/ui": 4.1.11
   "better-auth": 1.6.25
   "better-call": "~1.3.8"
-  "better-sqlite3": "^12.11.1"
+  "better-sqlite3": "^13.0.3"
   "class-variance-authority": "^0.7.1"
   "clsx": "^2.1.1"
   "defu": "^6.1.7"
