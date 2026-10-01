@@ -24,6 +24,13 @@ Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.de
 
 <!--VITE PLUS END-->
 
+## Package skill discovery
+
+For TanStack Router, Start, and Devtools work, run `pnpm exec intent list` from the
+repository root, then `pnpm exec intent load <package>#<skill>` to read the matching
+guidance. Use the package versions installed in this workspace; package-owned
+skills stay with their dependencies.
+
 ## Package Source Inspection
 
 No local vendoring. Use `opensrc path <package>` + `rg`/`sed`.
