@@ -4,6 +4,13 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.3.1](https://github.com/alexasomba/better-auth-paystack/compare/v3.3.0...v3.3.1) (2026-10-01)
+
+
+### Miscellaneous Chores
+
+* use Intent for TanStack package skills ([#187](https://github.com/alexasomba/better-auth-paystack/issues/187)) ([ae214d9](https://github.com/alexasomba/better-auth-paystack/commit/ae214d96008cf55e1e16e5bb14922d3fad3c2965))
+
 ## [3.3.0](https://github.com/alexasomba/better-auth-paystack/compare/v3.2.1...v3.3.0) (2026-08-22)
 
 
