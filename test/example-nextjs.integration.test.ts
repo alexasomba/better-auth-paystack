@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { paystackClient } from "../src/client.ts";
 import { paystack } from "../src/index.ts";
-import { expectCheckoutResult } from "./helpers/paystack-results";
+import { expectCheckoutResult } from "./helpers/paystack-results.ts";
 
 describe("examples/nextjs integration - paystack flow", () => {
   beforeEach(() => {

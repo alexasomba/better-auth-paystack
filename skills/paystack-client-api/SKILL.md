@@ -19,8 +19,8 @@ sources:
 Install the browser plugin from the client entrypoint:
 
 ```ts
-import { createAuthClient } from "better-auth/client";
 import { paystackClient } from "better-auth-paystack/client";
+import { createAuthClient } from "better-auth/client";
 
 export const authClient = createAuthClient({
   plugins: [paystackClient({ subscription: true })],

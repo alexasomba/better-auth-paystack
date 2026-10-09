@@ -7,7 +7,7 @@ import {
 import type { components } from "@alexasomba/paystack-node";
 import { APIError } from "better-auth/api";
 
-import type { PaystackClientLike } from "./types";
+import type { PaystackClientLike } from "./types.ts";
 
 /**
  * Interface for checking if a result is a PaystackResponse from the SDK v1.9.1+

@@ -19,7 +19,7 @@ import type {
 import type { GenericEndpointContext, InferOptionSchema, Session, User } from "better-auth";
 import type { Organization, Member } from "better-auth/plugins/organization";
 
-import type { PaystackPluginSchema } from "./schema";
+import type { PaystackPluginSchema } from "./schema.ts";
 
 /**
  * Valid Paystack currencies

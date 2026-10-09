@@ -2,12 +2,12 @@ import type { components } from "@alexasomba/paystack-node";
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
 
-import { createBillingStore } from "./billing-store";
-import { getOrganizationSubscription } from "./limits";
-import { createProrationMetadata, stringifyPaystackMetadata } from "./metadata";
-import { PAYSTACK_MODELS } from "./models";
-import { readPaystackPaymentCredentials } from "./payment-credentials";
-import { createPaystackAdapter } from "./paystack-sdk";
+import { createBillingStore } from "./billing-store.ts";
+import { getOrganizationSubscription } from "./limits.ts";
+import { createProrationMetadata, stringifyPaystackMetadata } from "./metadata.ts";
+import { PAYSTACK_MODELS } from "./models.ts";
+import { readPaystackPaymentCredentials } from "./payment-credentials.ts";
+import { createPaystackAdapter } from "./paystack-sdk.ts";
 import type {
   AnyPaystackOptions,
   PaystackChargeAuthorizationResponse,
@@ -18,14 +18,14 @@ import type {
   User,
   PaystackSubscriptionOperation,
   PaystackSubscriptionOperationPhase,
-} from "./types";
+} from "./types.ts";
 import {
   assertLocallyManagedSubscription,
   calculatePlanAmount,
   getPlanByName,
   getPlanSeatAmount,
   normalizeSubscriptionGroup,
-} from "./utils";
+} from "./utils.ts";
 
 /** Keep reservation context invocation-local, including concurrent requests through one plugin. */
 export async function runSubscriptionOperation<TResult extends PaystackInitializeResult>(

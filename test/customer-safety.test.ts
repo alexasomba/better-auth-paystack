@@ -3,8 +3,8 @@
 import { APIError } from "better-auth/api";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { paystack } from "../src/index";
-import type { PaystackClientLike } from "../src/types";
+import { paystack } from "../src/index.ts";
+import type { PaystackClientLike } from "../src/types.ts";
 
 function setup(options: Record<string, unknown> = {}) {
   const records = {

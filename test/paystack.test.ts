@@ -20,8 +20,8 @@ import type {
   PaystackClientLike,
   PaystackResponse,
   PaystackCustomerResponse,
-} from "../src/types";
-import { expectCheckoutResult } from "./helpers/paystack-results";
+} from "../src/types.ts";
+import { expectCheckoutResult } from "./helpers/paystack-results.ts";
 
 describe("paystack type", () => {
   const options = {

@@ -146,7 +146,7 @@ export default function TransactionsTable() {
                     className="max-w-20 truncate font-mono text-[9px] text-muted-foreground"
                     title={referenceId ?? ""}
                   >
-                    {referenceId?.slice(0, 8)}...
+                    {referenceId.slice(0, 8)}...
                   </code>
                 )}
               </div>
@@ -298,6 +298,8 @@ export default function TransactionsTable() {
     void fetchTransactions();
   }, []);
 
+  // This example does not use React Compiler; TanStack Table intentionally exposes mutable callbacks.
+  // oxlint-disable-next-line react/incompatible-library
   const table = useReactTable({
     data,
     columns,

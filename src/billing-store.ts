@@ -1,6 +1,6 @@
 import type { GenericEndpointContext } from "better-auth";
 
-import { PAYSTACK_MODELS } from "./models";
+import { PAYSTACK_MODELS } from "./models.ts";
 import type {
   Member,
   PaystackCustomer,
@@ -11,7 +11,7 @@ import type {
   PaystackWebhookEventRecord,
   Subscription,
   User,
-} from "./types";
+} from "./types.ts";
 
 type Adapter = GenericEndpointContext["context"]["adapter"];
 type WhereValue = string | number | boolean | null;
@@ -165,9 +165,12 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
     },
     async retireCompetingSubscriptions(referenceId, groupId, exceptId) {
       const subscriptions = await this.findSubscriptionsByReference(referenceId);
+      const selected = subscriptions.find((subscription) => subscription.id === exceptId);
       const competitors = subscriptions.filter(
         (subscription) =>
           subscription.id !== exceptId &&
+          (selected === undefined ||
+            new Date(subscription.createdAt).getTime() <= new Date(selected.createdAt).getTime()) &&
           (subscription.status === "active" || subscription.status === "trialing") &&
           (groupId === null
             ? subscription.groupId === undefined ||
@@ -228,9 +231,10 @@ export function createBillingStoreFromAdapter(adapter: Adapter): BillingStore {
         data,
       }),
     findWebhookEvent: (eventId) =>
-      findOne<PaystackWebhookEventRecord>(PAYSTACK_MODELS.webhookEvent, [
-        { field: "eventId", value: eventId },
-      ]),
+      adapter.findOne<PaystackWebhookEventRecord>({
+        model: PAYSTACK_MODELS.webhookEvent,
+        where: [{ field: "eventId", value: eventId }],
+      }),
     updateWebhookEvent: (eventId, update) =>
       adapter.update<PaystackWebhookEventRecord>({
         model: PAYSTACK_MODELS.webhookEvent,

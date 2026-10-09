@@ -12,8 +12,9 @@ We need to mount the handler to a TanStack API endpoint/Server Route.
 Create a new file: `/src/routes/api/auth/$.ts`
 
 ```ts title="src/routes/api/auth/$.ts"
-import { auth } from "@/lib/auth";
 import { createFileRoute } from "@tanstack/react-router";
+
+import { auth } from "@/lib/auth";
 
 export const Route = createFileRoute("/api/auth/$")({
   server: {
@@ -81,6 +82,7 @@ You can use TanStack Start's middleware to protect routes that require authentic
 import { redirect } from "@tanstack/react-router";
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+
 import { auth } from "@/lib/auth";
 
 export const authMiddleware = createMiddleware().server(async ({ next, request }) => {
@@ -99,6 +101,7 @@ You can then use this middleware in your route definitions to protect specific r
 
 ```tsx title="src/routes/dashboard.tsx"
 import { createFileRoute } from "@tanstack/react-router";
+
 import { authMiddleware } from "@/lib/middleware";
 
 export const Route = createFileRoute("/dashboard")({

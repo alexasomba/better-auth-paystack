@@ -1,7 +1,7 @@
 import type { BetterFetchResponse, BetterFetchOption, BetterFetch } from "@better-fetch/fetch";
 import type { BetterAuthClientPlugin } from "better-auth/client";
 
-import type { paystack as paystackServer } from "./index";
+import type { paystack as paystackServer } from "./index.ts";
 import type {
   PaystackPlan,
   PaystackProduct,
@@ -11,11 +11,11 @@ import type {
   PaystackClientLike,
   AnyPaystackOptions,
   PaystackInitializeResult,
-} from "./types";
-import { PACKAGE_VERSION } from "./version";
+} from "./types.ts";
+import { PACKAGE_VERSION } from "./version.ts";
 
-export { parsePaystackMetadata } from "./metadata";
-export type { PaystackMetadata } from "./metadata";
+export { parsePaystackMetadata } from "./metadata.ts";
+export type { PaystackMetadata } from "./metadata.ts";
 
 /**
  * Helper type to handle the conditional return type based on 'throw' option.

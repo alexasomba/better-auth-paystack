@@ -1,18 +1,19 @@
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
 
-import { createBillingStore } from "./billing-store";
-import { createRenewalMetadata, stringifyPaystackMetadata } from "./metadata";
-import { readPaystackPaymentCredentials } from "./payment-credentials";
-import { createPaystackAdapter } from "./paystack-sdk";
+import { createBillingStore } from "./billing-store.ts";
+import { createRenewalMetadata, stringifyPaystackMetadata } from "./metadata.ts";
+import { readPaystackPaymentCredentials } from "./payment-credentials.ts";
+import { createPaystackAdapter } from "./paystack-sdk.ts";
 import type {
   AnyPaystackOptions,
   ChargeRecurringSubscriptionInput,
   ChargeRecurringSubscriptionResult,
   PaystackSyncResult,
   PaystackChargeAuthorizationResponse,
-} from "./types";
-import { getNextPeriodEnd, getPlans, validateMinAmount } from "./utils";
+} from "./types.ts";
+import { calculatePlanAmount } from "./utils.ts";
+import { getNextPeriodEnd, getPlans, validateMinAmount } from "./utils.ts";
 
 export async function syncPaystackProducts(
   ctx: GenericEndpointContext,
@@ -112,7 +113,7 @@ export async function chargeSubscriptionRenewal(
   options: AnyPaystackOptions,
   input: ChargeRecurringSubscriptionInput,
 ): Promise<ChargeRecurringSubscriptionResult> {
-  const { subscriptionId, amount: bodyAmount } = input;
+  const { subscriptionId } = input;
   const store = createBillingStore(ctx);
   const subscription = await store.findSubscriptionById(subscriptionId);
 
@@ -144,7 +145,7 @@ export async function chargeSubscriptionRenewal(
     throw new APIError("NOT_FOUND", { message: "Plan not found" });
   }
 
-  const amount = bodyAmount ?? plan.amount;
+  const amount = calculatePlanAmount(plan, subscription.seats ?? 1);
   if (amount === undefined || amount === null) {
     throw new APIError("BAD_REQUEST", { message: "Plan amount is not defined" });
   }

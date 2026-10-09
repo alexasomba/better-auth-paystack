@@ -98,9 +98,9 @@
     "publint": "catalog:",
     "skills-npm": "catalog:",
     "typescript": "catalog:",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.9",
+    "vite": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "4.1.11"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "better-auth": "catalog:"

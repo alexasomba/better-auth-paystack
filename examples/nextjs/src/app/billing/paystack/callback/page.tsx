@@ -10,13 +10,15 @@ export default function PaystackCallbackPage() {
     const params = new URLSearchParams(window.location.search);
     return params.get("reference") ?? params.get("trxref") ?? "";
   }, []);
-  const [state, setState] = useState<VerificationState>("verifying");
-  const [message, setMessage] = useState("Please wait while we confirm your transaction.");
+  const [state, setState] = useState<VerificationState>(reference === "" ? "error" : "verifying");
+  const [message, setMessage] = useState(
+    reference === ""
+      ? "No Paystack reference was provided."
+      : "Please wait while we confirm your transaction.",
+  );
 
   useEffect(() => {
     if (reference === "") {
-      setState("error");
-      setMessage("No Paystack reference was provided.");
       return;
     }
 

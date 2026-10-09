@@ -59,7 +59,11 @@ export default function Home() {
   const [organizationSlug, setOrganizationSlug] = useState("demo-organization");
   const [planName, setPlanName] = useState("starter");
   const [quantity, setQuantity] = useState(1);
-  const [reference, setReference] = useState("");
+  const [reference, setReference] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("reference") ?? params.get("trxref") ?? "";
+  });
   const [subscriptionCode, setSubscriptionCode] = useState("");
   const [emailToken, setEmailToken] = useState("");
   const [renewalSubscriptionId, setRenewalSubscriptionId] = useState("");
@@ -109,9 +113,9 @@ export default function Home() {
   }, [activeOrganizationId, authClient]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setReference(params.get("reference") ?? params.get("trxref") ?? "");
-    void loadDashboard().catch((error: unknown) => append("load dashboard (error)", error));
+    void Promise.resolve()
+      .then(loadDashboard)
+      .catch((error: unknown) => append("load dashboard (error)", error));
   }, [append, loadDashboard]);
 
   const initializeCheckout = async (payload: JsonRecord, title: string) => {

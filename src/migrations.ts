@@ -1,9 +1,9 @@
 import type { GenericEndpointContext } from "better-auth";
 
-import type { createBillingStoreFromAdapter } from "./billing-store";
-import { LEGACY_PAYSTACK_MODELS, PAYSTACK_MODELS } from "./models";
-import { savePaystackPaymentCredentials } from "./payment-credentials";
-import type { AnyPaystackOptions } from "./types";
+import type { createBillingStoreFromAdapter } from "./billing-store.ts";
+import { LEGACY_PAYSTACK_MODELS, PAYSTACK_MODELS } from "./models.ts";
+import { savePaystackPaymentCredentials } from "./payment-credentials.ts";
+import type { AnyPaystackOptions } from "./types.ts";
 
 type Adapter = Parameters<typeof createBillingStoreFromAdapter>[0];
 type LegacyRecord = Record<string, unknown> & { id?: string | number };

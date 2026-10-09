@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { paystackClient } from "../src/client.ts";
 import { paystack } from "../src/index.ts";
-import type { PaystackClientLike, PaystackOptions } from "../src/types";
+import type { PaystackClientLike, PaystackOptions } from "../src/types.ts";
 
 describe("paystack regressions", () => {
   const data: Record<string, unknown[]> = {
