@@ -155,6 +155,18 @@ describe("payment integrity", () => {
     expect((await s.deliver()).status).toBe(200);
     expect(s.data.paystackTransaction[0]?.status).toBe("success");
   });
+  it("retries an application event callback after failure", async () => {
+    const onEvent = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("fulfillment unavailable"))
+      .mockResolvedValue(undefined);
+    const s = await setup({ onEvent });
+    expect((await s.deliver()).status).toBe(503);
+    expect(s.data.paystackWebhookEvent[0]?.status).toBe("pending");
+    expect((await s.deliver()).status).toBe(200);
+    expect(onEvent).toHaveBeenCalledTimes(2);
+    expect(s.data.paystackWebhookEvent[0]?.status).toBe("processed");
+  });
   it("claims webhook processing across concurrent deliveries and retries failed callbacks", async () => {
     let release!: () => void;
     const hold = new Promise<void>((resolve) => {
