@@ -1028,7 +1028,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             referenceId,
             userId: user.id,
             amount: amount ?? 0,
-            currency: plan?.currency ?? currency ?? "NGN",
+            currency: finalCurrency,
             status: "pending",
             plan: plan !== undefined ? plan.name.toLowerCase() : undefined,
             product: product !== undefined ? product.name.toLowerCase() : undefined,
