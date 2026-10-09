@@ -4,6 +4,13 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.4.2](https://github.com/alexasomba/better-auth-paystack/compare/v3.4.1...v3.4.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* preserve Paystack plugin types with current dependencies ([#193](https://github.com/alexasomba/better-auth-paystack/issues/193)) ([a777b76](https://github.com/alexasomba/better-auth-paystack/commit/a777b76f6a0ee7d91eb96331b53721a4adfb14a1))
+
 ## [3.4.1](https://github.com/alexasomba/better-auth-paystack/compare/v3.4.0...v3.4.1) (2026-10-09)
 
 
