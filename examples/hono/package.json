@@ -6,7 +6,7 @@
     "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc6 -p tsconfig.json --noEmit",
     "check": "vp -C ../.. check examples/hono",
     "test": "vp test run --config ./vitest.config.ts"
   },
@@ -21,5 +21,9 @@
     "vite-plus": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"
-  }
+  },
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "packageManager": "pnpm@12.10.1"
 }

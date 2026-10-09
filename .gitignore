@@ -47,3 +47,4 @@ GEMINI.md
 
 # Agent skills from npm packages (managed by skills-npm)
 **/skills/npm-*
+.vitest/
