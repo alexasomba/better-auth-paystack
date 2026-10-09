@@ -76,6 +76,11 @@ jobs:
         if: ${{ env.release_tag != '' }}
         run: pnpm install --frozen-lockfile
 
+      # Workspace examples resolve the package declarations from dist.
+      - name: Build package
+        if: ${{ env.release_tag != '' }}
+        run: pnpm exec vp pack
+
       - name: Check
         if: ${{ env.release_tag != '' }}
         run: pnpm exec vp check
@@ -83,10 +88,6 @@ jobs:
       - name: Test
         if: ${{ env.release_tag != '' }}
         run: pnpm exec vp test
-
-      - name: Build package
-        if: ${{ env.release_tag != '' }}
-        run: pnpm exec vp pack
 
       - name: Pack and inspect release tarball
         if: ${{ env.release_tag != '' }}
