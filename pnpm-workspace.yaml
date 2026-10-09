@@ -103,6 +103,7 @@ minimumReleaseAgeExclude:
   - wrangler@4.149.0
 overrides:
   seroval: 1.6.9
+  "@node-minify/core>glob": 13.0.6
   next: "catalog:"
   postcss: 8.5.23
   sharp@0.34: 0.35.5
