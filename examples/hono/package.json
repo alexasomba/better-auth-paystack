@@ -19,11 +19,10 @@
   "devDependencies": {
     "typescript": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "catalog:",
     "wrangler": "catalog:"
   },
   "engines": {
     "node": ">=22.22.2"
   },
-  "packageManager": "pnpm@12.10.1"
+  "packageManager": "pnpm@12.11.0"
 }

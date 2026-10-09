@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vite-plus/te
 
 import { paystackClient } from "../src/client.ts";
 import { paystack, syncPaystackPlans, syncPaystackProducts } from "../src/index.ts";
-import { referenceMiddleware } from "../src/middleware.ts";
+import { referenceMiddleware } from "../src/reference-middleware.ts";
 import { getSchema } from "../src/schema.ts";
 import type {
   Subscription,
@@ -111,7 +111,12 @@ describe("paystack type", () => {
   });
 
   it("should not import Better Auth internals from published source files", () => {
-    for (const file of ["src/index.ts", "src/routes.ts", "src/middleware.ts", "src/schema.ts"]) {
+    for (const file of [
+      "src/index.ts",
+      "src/routes.ts",
+      "src/reference-middleware.ts",
+      "src/schema.ts",
+    ]) {
       const source = readFileSync(file, "utf8");
       expect(source).not.toContain('from "@better-auth/core');
     }

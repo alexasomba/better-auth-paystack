@@ -21,7 +21,6 @@ import {
   parsePaystackMetadata,
   stringifyPaystackMetadata,
 } from "./metadata.ts";
-import { referenceMiddleware } from "./middleware.ts";
 import { PAYSTACK_MODELS } from "./models.ts";
 import {
   readPaystackPaymentCredentials,
@@ -30,6 +29,7 @@ import {
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk.ts";
 import { reconcilePaystackTransaction } from "./reconciliation.ts";
 import { authorizeBillingReference } from "./reference-access.ts";
+import { referenceMiddleware } from "./reference-middleware.ts";
 import {
   getConfiguredCatalog,
   listStoredPlans,
