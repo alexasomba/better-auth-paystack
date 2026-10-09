@@ -140,13 +140,11 @@ export default function DashboardContent({ session }: DashboardContentProps) {
                       <strong>Account Type:</strong> Anonymous
                     </p>
                   )}
-                  {session.user.id !== null &&
-                    session.user.id !== undefined &&
-                    session.user.id !== "" && (
-                      <p className="text-md">
-                        <strong>User ID:</strong> {session.user.id}
-                      </p>
-                    )}
+                  {session.user.id !== "" && (
+                    <p className="text-md">
+                      <strong>User ID:</strong> {session.user.id}
+                    </p>
+                  )}
                   {session.user.paystackCustomerCode !== null &&
                     session.user.paystackCustomerCode !== undefined &&
                     session.user.paystackCustomerCode !== "" && (

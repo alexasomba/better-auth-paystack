@@ -13,7 +13,11 @@ import type {
   User,
 } from "./types.ts";
 
-type Adapter = GenericEndpointContext["context"]["adapter"];
+export type BillingStoreAdapter = Pick<
+  GenericEndpointContext["context"]["adapter"],
+  "create" | "delete" | "deleteMany" | "findMany" | "findOne" | "update" | "updateMany"
+>;
+type Adapter = BillingStoreAdapter;
 type WhereValue = string | number | boolean | null;
 type WhereClause = { field: string; value: WhereValue }[];
 

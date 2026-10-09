@@ -16,6 +16,7 @@ import { PACKAGE_VERSION } from "./version.ts";
 
 export { parsePaystackMetadata } from "./metadata.ts";
 export type { PaystackMetadata } from "./metadata.ts";
+export type { PaystackTransaction } from "./types.ts";
 
 /**
  * Helper type to handle the conditional return type based on 'throw' option.
@@ -160,12 +161,17 @@ declare module "better-auth" {
  * either one (e.g. by annotating this function as returning plain
  * `BetterAuthClientPlugin`) collapses the entire inferred auth client to `never`.
  */
+type PaystackClientServerPlugin = Pick<
+  ReturnType<typeof paystackServer<PaystackClientLike, AnyPaystackOptions>>,
+  "id" | "endpoints" | "schema" | "$ERROR_CODES"
+>;
+
 type PaystackClientPluginInstance = Omit<
   BetterAuthClientPlugin,
   "id" | "$InferServerPlugin" | "getActions"
 > & {
   id: "paystack";
-  $InferServerPlugin: ReturnType<typeof paystackServer<PaystackClientLike, AnyPaystackOptions>>;
+  $InferServerPlugin: PaystackClientServerPlugin;
   getActions: ($fetch: BetterFetch, $store: unknown, options: unknown) => PaystackClientActions;
 };
 
@@ -182,9 +188,7 @@ export const paystackClient = <
   return {
     id: "paystack",
     version: PACKAGE_VERSION,
-    $InferServerPlugin: {} as ReturnType<
-      typeof paystackServer<PaystackClientLike, AnyPaystackOptions>
-    >,
+    $InferServerPlugin: {} as PaystackClientServerPlugin,
     pathMethods: {
       "/paystack/initialize-transaction": "POST",
       "/paystack/verify-transaction": "POST",

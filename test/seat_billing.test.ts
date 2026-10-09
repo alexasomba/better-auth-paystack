@@ -497,7 +497,7 @@ describe("Seat-Based Billing & Scheduled Changes", () => {
         updatedAt: new Date(),
       },
     });
-    await savePaystackPaymentCredentials(ctx.adapter as any, options, proratingSubscription.id, {
+    await savePaystackPaymentCredentials(ctx.adapter, options, proratingSubscription.id, {
       authorizationCode: "AUTH_abc123",
     });
 

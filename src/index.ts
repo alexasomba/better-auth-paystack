@@ -7,7 +7,7 @@ import {
 import { APIError } from "better-auth/api";
 import { defu } from "defu";
 
-import { createBillingStoreFromAdapter } from "./billing-store.ts";
+import { createBillingStoreFromAdapter, type BillingStoreAdapter } from "./billing-store.ts";
 import { resolvePaystackCustomer } from "./customer.ts";
 import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits.ts";
 import { createPaystackAdapter } from "./paystack-sdk.ts";
@@ -109,7 +109,11 @@ interface PaystackPluginInitResult {
   };
 }
 
-type PaystackPluginInit = ((ctx: AuthContext) => PaystackPluginInitResult) &
+type PaystackPluginInitContext = Pick<AuthContext, "hasPlugin" | "logger"> & {
+  adapter: BillingStoreAdapter;
+};
+
+type PaystackPluginInit = ((ctx: PaystackPluginInitContext) => PaystackPluginInitResult) &
   NonNullable<BetterAuthPlugin["init"]>;
 
 type PaystackPluginInstance<O extends AnyPaystackOptions> = Omit<
@@ -169,7 +173,7 @@ const createPaystackPlugin = <
       listPlans: listPlans(routeOptions, "/paystack/list-plans"),
     },
     schema: getSchema(options),
-    init: ((ctx: AuthContext) => {
+    init: ((ctx: PaystackPluginInitContext) => {
       const organizationPluginAvailable = ctx.hasPlugin("organization");
       if (options.organization?.enabled === true && !organizationPluginAvailable) {
         ctx.logger.error(
@@ -607,6 +611,7 @@ export type {
   PaystackPlan,
   PaystackOptions,
   PaystackProduct,
+  PaystackTransaction,
   PaystackTransactionResponse,
   PaystackClientLike,
   ChargeRecurringSubscriptionResult,

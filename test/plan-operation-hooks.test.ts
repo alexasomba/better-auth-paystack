@@ -230,7 +230,7 @@ describe("subscription operation hooks", () => {
       const f = await fixture({ before, after });
       const sub = await f.subscription();
       if (credential)
-        await savePaystackPaymentCredentials(f.ctx.adapter as any, f.options, sub.id, {
+        await savePaystackPaymentCredentials(f.ctx.adapter, f.options, sub.id, {
           authorizationCode: "AUTH_fixture",
         });
       const response = await f.client.subscription.upgrade(
@@ -393,7 +393,7 @@ describe("subscription operation hooks", () => {
       });
       const sub = operation === "initialize" ? undefined : await f.subscription();
       if (operation === "proration-charge")
-        await savePaystackPaymentCredentials(f.ctx.adapter as any, f.options, sub.id, {
+        await savePaystackPaymentCredentials(f.ctx.adapter, f.options, sub.id, {
           authorizationCode: "AUTH_fixture",
         });
       const response = await f.client.subscription.upgrade(

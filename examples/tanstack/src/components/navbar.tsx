@@ -18,7 +18,7 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          {session !== null && session !== undefined ? (
+          {session !== null ? (
             <>
               <Link to="/dashboard">
                 <Button variant="ghost">Dashboard</Button>

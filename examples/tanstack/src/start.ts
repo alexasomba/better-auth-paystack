@@ -19,7 +19,7 @@ const agentDiscoveryMiddleware = createMiddleware().server(async ({ next, reques
   const result = await next();
   const response = result.response;
 
-  if (request.method === "GET" && url.pathname === "/" && response !== undefined) {
+  if (request.method === "GET" && url.pathname === "/") {
     response.headers.set("Link", linkHeader);
   }
 
