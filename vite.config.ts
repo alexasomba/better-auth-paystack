@@ -8,7 +8,12 @@ const config: UserConfig = defineConfig({
   },
   fmt: {
     // Release Please serializes these files and owns their formatting.
-    ignorePatterns: ["CHANGELOG.md", "_artifacts/skill_tree.yaml", "**/routeTree.gen.ts"],
+    ignorePatterns: [
+      ".worktrees/**",
+      "CHANGELOG.md",
+      "_artifacts/skill_tree.yaml",
+      "**/routeTree.gen.ts",
+    ],
     endOfLine: "lf",
     semi: true,
     singleQuote: false,
@@ -94,6 +99,7 @@ const config: UserConfig = defineConfig({
       builtin: true,
     },
     ignorePatterns: [
+      ".worktrees/**",
       "**/*.js",
       "**/*.cjs",
       "**/*.mjs",

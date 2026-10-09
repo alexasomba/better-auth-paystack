@@ -90,13 +90,13 @@ export default function OrganizationManager() {
   }, []);
 
   useEffect(() => {
-    void loadOrganizations();
+    void Promise.resolve().then(loadOrganizations);
   }, [loadOrganizations]);
 
   // Load members when active org changes
   useEffect(() => {
     if (activeOrg !== null) {
-      void loadMembers(activeOrg.id);
+      void Promise.resolve().then(() => loadMembers(activeOrg.id));
     }
   }, [activeOrg, loadMembers]);
 
@@ -135,7 +135,7 @@ export default function OrganizationManager() {
         setMessage({ tone: "success", text: "Organization created." });
       }
     } catch (error: unknown) {
-      const message = (error as { message?: string })?.message ?? "Failed to create organization";
+      const message = (error as { message?: string }).message ?? "Failed to create organization";
       setMessage({ tone: "error", text: message });
     } finally {
       setCreating(false);
@@ -152,7 +152,7 @@ export default function OrganizationManager() {
       }
       await loadOrganizations();
     } catch (error: unknown) {
-      const message = (error as { message?: string })?.message ?? "Failed to delete organization";
+      const message = (error as { message?: string }).message ?? "Failed to delete organization";
       alert(message);
     }
   }

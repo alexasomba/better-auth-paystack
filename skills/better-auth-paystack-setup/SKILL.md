@@ -19,8 +19,8 @@ sources:
 Install the package alongside Better Auth and a Paystack client:
 
 ```ts
-import { betterAuth } from "better-auth";
 import { createPaystack } from "@alexasomba/paystack-node";
+import { betterAuth } from "better-auth";
 import { paystack } from "better-auth-paystack";
 
 const paystackSdk = createPaystack({
@@ -57,8 +57,8 @@ export const auth = betterAuth({
 Add the client plugin in browser-safe code:
 
 ```ts
-import { createAuthClient } from "better-auth/client";
 import { paystackClient } from "better-auth-paystack/client";
+import { createAuthClient } from "better-auth/client";
 
 export const authClient = createAuthClient({
   plugins: [paystackClient()],

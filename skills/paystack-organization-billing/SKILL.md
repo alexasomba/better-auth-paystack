@@ -20,8 +20,8 @@ Install the Better Auth organization plugin and enable Paystack organization bil
 
 ```ts
 import { betterAuth } from "better-auth";
-import { organization } from "better-auth/plugins/organization";
 import { paystack } from "better-auth-paystack";
+import { organization } from "better-auth/plugins/organization";
 
 export const auth = betterAuth({
   plugins: [

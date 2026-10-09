@@ -1,7 +1,7 @@
 import { defineErrorCodes } from "better-auth";
 import type { RawError } from "better-auth";
 
-import type { AnyPaystackOptions, PaystackCheckoutChannel } from "../types";
+import type { AnyPaystackOptions, PaystackCheckoutChannel } from "../types.ts";
 
 export const PAYSTACK_ERROR_CODES: {
   SUBSCRIPTION_NOT_FOUND: RawError<"SUBSCRIPTION_NOT_FOUND">;

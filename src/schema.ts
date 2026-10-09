@@ -1,6 +1,6 @@
 import { mergeSchema, type BetterAuthPluginDBSchema, type DBFieldAttribute } from "better-auth/db";
 
-import type { PaystackOptions } from "./types";
+import type { PaystackOptions } from "./types.ts";
 
 type PluginSchemaTable<TableName extends string, FieldName extends string> = Record<
   TableName,

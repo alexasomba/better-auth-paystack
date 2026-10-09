@@ -19,7 +19,7 @@
   "devDependencies": {
     "typescript": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "4.1.11",
+    "vitest": "catalog:",
     "wrangler": "catalog:"
   }
 }

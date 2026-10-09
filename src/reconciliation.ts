@@ -2,16 +2,16 @@ import type { components } from "@alexasomba/paystack-node";
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
 
-import { createBillingStore } from "./billing-store";
+import { createBillingStore } from "./billing-store.ts";
 import {
   getMetadataBoolean,
   getMetadataNumber,
   getMetadataString,
   parsePaystackMetadata,
-} from "./metadata";
-import { savePaystackPaymentCredentials } from "./payment-credentials";
-import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk";
-import { authorizeBillingReference } from "./reference-access";
+} from "./metadata.ts";
+import { savePaystackPaymentCredentials } from "./payment-credentials.ts";
+import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk.ts";
+import { authorizeBillingReference } from "./reference-access.ts";
 import type {
   AnyPaystackOptions,
   PaystackCheckoutChannel,
@@ -21,8 +21,8 @@ import type {
   Session,
   Subscription,
   User,
-} from "./types";
-import { getPlans, syncProductQuantityFromPaystack } from "./utils";
+} from "./types.ts";
+import { getPlans, syncProductQuantityFromPaystack } from "./utils.ts";
 
 export type PaystackReconciliationSource = "webhook" | "queue" | "admin" | "server" | "browser";
 
@@ -429,6 +429,13 @@ export async function reconcilePaystackTransaction(
       newPlan !== undefined &&
       newPlan !== ""
     ) {
+      const originalSubscription = await store.findSubscriptionById(subscriptionId);
+      if (
+        !originalSubscription ||
+        originalSubscription.status === "canceled" ||
+        originalSubscription.transactionReference === reference
+      )
+        return { ok: true, source, status, reference, data, ...summary };
       const updatedSubscription = await store.updateSubscription(subscriptionId, {
         plan: newPlan,
         ...(typeof newSeatCount === "number" ? { seats: newSeatCount } : {}),
@@ -471,6 +478,11 @@ export async function reconcilePaystackTransaction(
   summary.subscription.found = targetSub !== undefined;
   summary.subscription.id = targetSub?.id;
   summary.subscription.status = targetSub?.status;
+
+  // Payment verification is repeatable; terminal or already-active entitlements are not.
+  if (targetSub && targetSub.status !== "incomplete") {
+    return { ok: true, source, status, reference, data, ...summary };
+  }
 
   if (isTrial && targetPlan !== undefined && trialEnd !== undefined) {
     const email = data.customer?.email;

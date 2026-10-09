@@ -4,10 +4,10 @@ import {
   authorizeBillingReference,
   type BillingReferenceAction,
   resolveBillingReferenceId,
-} from "./reference-access";
-import type { PaystackOptions } from "./types";
+} from "./reference-access.ts";
+import type { PaystackOptions } from "./types.ts";
 
-export { hasBillingRole } from "./reference-access";
+export { hasBillingRole } from "./reference-access.ts";
 
 export const referenceMiddleware = (
   options: PaystackOptions,

@@ -1,9 +1,9 @@
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
 
-import { createBillingStore } from "./billing-store";
-import type { AnyPaystackOptions, Subscription } from "./types";
-import { getPlanByName } from "./utils";
+import { createBillingStore } from "./billing-store.ts";
+import type { AnyPaystackOptions, Subscription } from "./types.ts";
+import { getPlanByName } from "./utils.ts";
 
 export const getOrganizationSubscription = async (
   ctx: GenericEndpointContext,

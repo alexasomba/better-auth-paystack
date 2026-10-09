@@ -7,10 +7,10 @@ import {
 import { APIError } from "better-auth/api";
 import { defu } from "defu";
 
-import { createBillingStoreFromAdapter } from "./billing-store";
-import { resolvePaystackCustomer } from "./customer";
-import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits";
-import { createPaystackAdapter } from "./paystack-sdk";
+import { createBillingStoreFromAdapter } from "./billing-store.ts";
+import { resolvePaystackCustomer } from "./customer.ts";
+import { checkSeatLimit, checkTeamLimit, getOrganizationEntitlements } from "./limits.ts";
+import { createPaystackAdapter } from "./paystack-sdk.ts";
 import {
   disablePaystackSubscription,
   enablePaystackSubscription,
@@ -28,11 +28,11 @@ import {
   restoreSubscription,
   listProducts,
   listPlans,
-} from "./routes";
-import { getSchema } from "./schema";
-import type { PaystackClientLike, PaystackOptions, AnyPaystackOptions, User } from "./types";
-import { syncSubscriptionSeats } from "./utils";
-import { PACKAGE_VERSION } from "./version";
+} from "./routes.ts";
+import { getSchema } from "./schema.ts";
+import type { PaystackClientLike, PaystackOptions, AnyPaystackOptions, User } from "./types.ts";
+import { syncSubscriptionSeats } from "./utils.ts";
+import { PACKAGE_VERSION } from "./version.ts";
 
 export {
   createCheckoutMetadata,
@@ -44,9 +44,9 @@ export {
   hasPaystackMetadata,
   parsePaystackMetadata,
   stringifyPaystackMetadata,
-} from "./metadata";
-export type { PaystackMetadata } from "./metadata";
-export type { PaystackInitializeResult } from "./types";
+} from "./metadata.ts";
+export type { PaystackMetadata } from "./metadata.ts";
+export type { PaystackInitializeResult } from "./types.ts";
 
 declare module "better-auth" {
   interface BetterAuthPluginRegistry<AuthOptions, Options> {
@@ -577,10 +577,14 @@ export type PaystackPlugin<
   O extends PaystackOptions<TPaystackClient> = PaystackOptions<TPaystackClient>,
 > = ReturnType<typeof paystack<TPaystackClient, O>>;
 
-export { chargeSubscriptionRenewal, syncPaystackPlans, syncPaystackProducts } from "./operations";
-export { getOrganizationEntitlements } from "./limits";
-export { reconcilePaystackTransaction } from "./reconciliation";
-export { migratePaystackSubscriptionSchema } from "./migrations";
+export {
+  chargeSubscriptionRenewal,
+  syncPaystackPlans,
+  syncPaystackProducts,
+} from "./operations.ts";
+export { getOrganizationEntitlements } from "./limits.ts";
+export { reconcilePaystackTransaction } from "./reconciliation.ts";
+export { migratePaystackSubscriptionSchema } from "./migrations.ts";
 export type {
   PaystackReconciliationError,
   PaystackReconciliationSource,
@@ -589,7 +593,7 @@ export type {
   ReconcilePaystackTransactionInput,
   ReconcilePaystackTransactionResult,
   ReconcilePaystackTransactionSuccess,
-} from "./reconciliation";
+} from "./reconciliation.ts";
 export type {
   Subscription,
   PaystackSubscription,
@@ -608,5 +612,8 @@ export type {
   ChargeRecurringSubscriptionResult,
   PaystackSyncResult,
   PaystackWebhookEventRecord,
-} from "./types";
-export type { PaystackSchemaMigrationFailure, PaystackSchemaMigrationReport } from "./migrations";
+} from "./types.ts";
+export type {
+  PaystackSchemaMigrationFailure,
+  PaystackSchemaMigrationReport,
+} from "./migrations.ts";

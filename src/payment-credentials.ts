@@ -1,11 +1,11 @@
-import type { createBillingStoreFromAdapter } from "./billing-store";
+import type { createBillingStoreFromAdapter } from "./billing-store.ts";
 import {
   decryptPaystackCredential,
   encryptPaystackCredential,
   resolveCredentialEncryptionKey,
-} from "./credential-crypto";
-import { PAYSTACK_MODELS } from "./models";
-import type { PaystackOptions } from "./types";
+} from "./credential-crypto.ts";
+import { PAYSTACK_MODELS } from "./models.ts";
+import type { PaystackOptions } from "./types.ts";
 
 type Adapter = Parameters<typeof createBillingStoreFromAdapter>[0];
 

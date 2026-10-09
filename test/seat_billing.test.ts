@@ -11,12 +11,12 @@ import { describe, expect, it, vi, beforeEach } from "vite-plus/test";
 import { paystackClient as createPaystackClient } from "../src/client.ts";
 import { paystack } from "../src/index.ts";
 import { savePaystackPaymentCredentials } from "../src/payment-credentials.ts";
-import type { PaystackClientLike, PaystackOptions } from "../src/types";
+import type { PaystackClientLike, PaystackOptions } from "../src/types.ts";
 import {
   expectCheckoutResult,
   expectProratedResult,
   expectScheduledResult,
-} from "./helpers/paystack-results";
+} from "./helpers/paystack-results.ts";
 
 describe("Seat-Based Billing & Scheduled Changes", () => {
   const paystackSdk = {

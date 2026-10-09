@@ -20,8 +20,8 @@ Create the Better Auth server config with Paystack and `tanstackStartCookies()` 
 
 ```ts
 import { betterAuth } from "better-auth";
-import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { paystack } from "better-auth-paystack";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -42,6 +42,7 @@ Wire the catch-all auth route:
 
 ```ts
 import { createFileRoute } from "@tanstack/react-router";
+
 import { auth } from "../../../lib/auth";
 
 export const Route = createFileRoute("/api/auth/$")({
@@ -57,8 +58,8 @@ export const Route = createFileRoute("/api/auth/$")({
 Create the client plugin:
 
 ```ts
-import { createAuthClient } from "better-auth/client";
 import { paystackClient } from "better-auth-paystack/client";
+import { createAuthClient } from "better-auth/client";
 
 export const authClient = createAuthClient({
   plugins: [paystackClient()],
@@ -95,8 +96,9 @@ Use client actions for checkout and user-triggered subscription lifecycle calls.
 ```ts
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { auth } from "./auth";
 import { syncPaystackPlans } from "better-auth-paystack";
+
+import { auth } from "./auth";
 
 export const syncPlans = createServerFn({ method: "POST" }).handler(async () => {
   const session = await auth.api.getSession({

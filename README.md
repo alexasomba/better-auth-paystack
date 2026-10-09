@@ -100,9 +100,9 @@ BETTER_AUTH_URL=http://localhost:8787
 ### 3. Setup Server Plugin
 
 ```ts title="auth.ts"
+import { createPaystack } from "@alexasomba/paystack-node";
 import { betterAuth } from "better-auth";
 import { paystack } from "better-auth-paystack";
-import { createPaystack } from "@alexasomba/paystack-node";
 import { admin } from "better-auth/plugins";
 
 const paystackClient = createPaystack({
@@ -150,8 +150,8 @@ are accepted for source compatibility but ignored.
 ### 4. Configure Client Plugin
 
 ```ts title="client.ts"
-import { createAuthClient } from "better-auth/client";
 import { paystackClient } from "better-auth-paystack/client";
+import { createAuthClient } from "better-auth/client";
 import { adminClient } from "better-auth/client/plugins";
 
 export const client = createAuthClient({
@@ -951,3 +951,9 @@ const operationHooks: PaystackSubscriptionOperationHooks = {
 ```
 
 A production `proceed` implementation must reserve before returning, deduplicate concurrent requests, protect replay results, and resolve uncertain outcomes against authoritative provider and subscription state. One-time product/amount payments and recurring renewal operations do not use these subscription plan hooks.
+
+### Pricing and webhook delivery
+
+Catalog plans/products own checkout prices and currencies. Client `amount`/`currency` values apply only to ad hoc payments; product quantities and plan seats use server pricing. Subscription renewal operations also derive the amount from the configured plan.
+
+Webhook processing requires the `paystackWebhookEvent` table, including its unique `eventId` constraint. Deliveries claim the event with a conditional database update; incomplete database changes or callbacks return HTTP 503 and remain retryable. A processing claim expires after five minutes for crash recovery. Callbacks must be idempotent by transaction/event reference because a crash after an external side effect can cause a retry. Historical successful transaction verification does not reactivate canceled subscriptions or reset an already active billing period.

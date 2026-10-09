@@ -6,7 +6,11 @@ import { memoryAdapter } from "better-auth/adapters/memory";
 import { describe, expectTypeOf, it } from "vite-plus/test";
 
 import { paystack } from "../src/index.ts";
-import type { PaystackClientLike, PaystackOptions, PaystackCustomerResponse } from "../src/types";
+import type {
+  PaystackClientLike,
+  PaystackOptions,
+  PaystackCustomerResponse,
+} from "../src/types.ts";
 
 describe("Paystack Deep Typesafety", () => {
   it("should propagate custom metadata and limits types", () => {

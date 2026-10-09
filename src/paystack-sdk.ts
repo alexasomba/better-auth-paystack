@@ -7,7 +7,7 @@ import {
 import type { components } from "@alexasomba/paystack-node";
 import { APIError } from "better-auth/api";
 
-import type { PaystackClientLike } from "./types";
+import type { PaystackClientLike } from "./types.ts";
 
 /**
  * Interface for checking if a result is a PaystackResponse from the SDK v1.9.1+
@@ -26,7 +26,7 @@ export function unwrapSdkResult<T = unknown>(result: unknown): T {
       return result.unwrap() as T;
     } catch (e: unknown) {
       if (e instanceof PaystackError) {
-        throw new APIError("BAD_REQUEST", {
+        throw new APIError(e.status === 404 ? "NOT_FOUND" : "BAD_REQUEST", {
           message: e.message,
           status: e.status,
         });

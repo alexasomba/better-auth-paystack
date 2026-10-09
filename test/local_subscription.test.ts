@@ -12,7 +12,7 @@ import {
   readPaystackPaymentCredentials,
   savePaystackPaymentCredentials,
 } from "../src/payment-credentials.ts";
-import type { PaystackClientLike, PaystackOptions } from "../src/types";
+import type { PaystackClientLike, PaystackOptions } from "../src/types.ts";
 
 describe("Local Custom Subscriptions", () => {
   const paystackSdk = {
@@ -222,15 +222,17 @@ describe("Local Custom Subscriptions", () => {
       authorizationCode: "AUTH_min_123",
     });
 
-    // Local starter is 500000 kobo (5000 NGN).
-    // Let's try to charge 1000 kobo (10 NGN) which is below 5000 kobo (50 NGN) minimum.
-    // Note: The plan defined in options has amount: 500000.
-    // Our charge-recurring uses the plan's amount.
-    // To test this effectively, we'd need a plan with a very low amount in its definition.
+    const lowPriceOptions = {
+      ...options,
+      subscription: {
+        ...options.subscription,
+        plans: options.subscription.plans.map((plan) => ({ ...plan, amount: 1000 })),
+      },
+    };
 
     const operationCtx = { context: await auth.$context } as any;
     await expect(
-      chargeSubscriptionRenewal(operationCtx, options as any, {
+      chargeSubscriptionRenewal(operationCtx, lowPriceOptions as any, {
         subscriptionId: sub.id,
         amount: 1000,
       }),

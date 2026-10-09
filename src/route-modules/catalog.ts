@@ -1,8 +1,8 @@
 import type { GenericEndpointContext } from "better-auth";
 
-import { createBillingStore } from "../billing-store";
-import type { AnyPaystackOptions, PaystackPlan, PaystackProduct } from "../types";
-import { getPlans, getProducts } from "../utils";
+import { createBillingStore } from "../billing-store.ts";
+import type { AnyPaystackOptions, PaystackPlan, PaystackProduct } from "../types.ts";
+import { getPlans, getProducts } from "../utils.ts";
 
 export async function listStoredProducts(ctx: GenericEndpointContext): Promise<PaystackProduct[]> {
   return createBillingStore(ctx).listProducts();

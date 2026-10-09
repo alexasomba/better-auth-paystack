@@ -1,7 +1,7 @@
-import { createBillingStoreFromAdapter } from "./billing-store";
-import { parsePaystackMetadata, stringifyPaystackMetadata } from "./metadata";
-import { createPaystackAdapter } from "./paystack-sdk";
-import type { PaystackClientLike, PaystackCustomerResponse } from "./types";
+import { createBillingStoreFromAdapter } from "./billing-store.ts";
+import { parsePaystackMetadata, stringifyPaystackMetadata } from "./metadata.ts";
+import { createPaystackAdapter } from "./paystack-sdk.ts";
+import type { PaystackClientLike, PaystackCustomerResponse } from "./types.ts";
 
 interface Logger {
   error(message: string, error?: unknown): void;

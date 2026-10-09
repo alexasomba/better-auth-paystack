@@ -1,7 +1,7 @@
 import type { GenericEndpointContext } from "better-auth";
 import { APIError } from "better-auth/api";
 
-import type { AnyPaystackOptions, Session, User } from "./types";
+import type { AnyPaystackOptions, Session, User } from "./types.ts";
 
 export type BillingReferenceAction =
   | "initialize-transaction"

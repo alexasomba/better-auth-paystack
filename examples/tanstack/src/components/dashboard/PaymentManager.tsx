@@ -88,7 +88,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const [serverOpsLoading, setServerOpsLoading] = useState<null | "plans" | "products" | "renewal">(
     null,
   );
-  const [selectedRenewalSubscriptionId, setSelectedRenewalSubscriptionId] = useState("");
+  const [renewalChoice, setSelectedRenewalSubscriptionId] = useState("");
   const syncProducts = useServerFn(syncProductsServerFn);
   const syncPlans = useServerFn(syncPlansServerFn);
   const chargeRenewal = useServerFn(chargeRenewalServerFn);
@@ -124,7 +124,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const fetchNativeProducts = useCallback(async () => {
     try {
       const res = await paystackActions.listProducts();
-      if (res.data?.products !== undefined && res.data?.products !== null) {
+      if (res.data?.products !== undefined && res.data.products !== null) {
         setNativeProducts(res.data.products);
       }
     } catch (error: unknown) {
@@ -138,7 +138,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const fetchNativePlans = useCallback(async () => {
     try {
       const res = await paystackActions.listPlans();
-      if (res.data?.plans !== undefined && res.data?.plans !== null) {
+      if (res.data?.plans !== undefined && res.data.plans !== null) {
         setNativePlans(res.data.plans);
       }
     } catch (error: unknown) {
@@ -151,7 +151,6 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
   useEffect(() => {
     async function fetchData() {
-      setIsLoading(true);
       try {
         const [configRes, subsRes] = await Promise.all([
           paystackActions.config(),
@@ -170,7 +169,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             },
           );
         }
-        if (subsRes.data?.subscriptions !== undefined && subsRes.data?.subscriptions !== null) {
+        if (subsRes.data?.subscriptions !== undefined && subsRes.data.subscriptions !== null) {
           setSubscriptions(subsRes.data.subscriptions);
         }
       } catch (error: unknown) {
@@ -182,9 +181,9 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
         setIsLoading(false);
       }
     }
-    void fetchData();
-    void fetchNativeProducts();
-    void fetchNativePlans();
+    void Promise.resolve().then(fetchData);
+    void Promise.resolve().then(fetchNativeProducts);
+    void Promise.resolve().then(fetchNativePlans);
   }, [selectedBillingTarget, fetchNativeProducts, fetchNativePlans]);
 
   // Fetch organizations for billing target selection
@@ -205,18 +204,11 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     void fetchOrganizations();
   }, []);
 
-  useEffect(() => {
-    if (localRenewalCandidates.length === 0) {
-      setSelectedRenewalSubscriptionId("");
-      return;
-    }
-
-    setSelectedRenewalSubscriptionId((current) =>
-      localRenewalCandidates.some((subscription) => subscription.id === current)
-        ? current
-        : (localRenewalCandidates[0]?.id ?? ""),
-    );
-  }, [localRenewalCandidates]);
+  const selectedRenewalSubscriptionId = localRenewalCandidates.some(
+    (subscription) => subscription.id === renewalChoice,
+  )
+    ? renewalChoice
+    : (localRenewalCandidates[0]?.id ?? "");
 
   const handleSubscribe = async (planName: string) => {
     setActionLoading(true);
@@ -397,7 +389,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       const res = await subscriptionActions.billingPortal({
         subscriptionCode,
       });
-      if (res.data?.link !== undefined && res.data?.link !== null && res.data.link !== "") {
+      if (res.data?.link !== undefined && res.data.link !== null && res.data.link !== "") {
         window.location.href = res.data.link;
       } else {
         setActionMessage({
@@ -470,7 +462,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     try {
       const result = await syncProducts();
       setServerOpsMessage(`Synced ${result.count} products from Paystack into local storage.`);
-      void fetchNativeProducts();
+      void Promise.resolve().then(fetchNativeProducts);
     } catch (error: unknown) {
       setServerOpsMessage(error instanceof Error ? error.message : "Failed to sync products.");
     } finally {
@@ -484,7 +476,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     try {
       const result = await syncPlans();
       setServerOpsMessage(`Synced ${result.count} plans from Paystack into local storage.`);
-      void fetchNativePlans();
+      void Promise.resolve().then(fetchNativePlans);
     } catch (error: unknown) {
       setServerOpsMessage(error instanceof Error ? error.message : "Failed to sync plans.");
     } finally {
@@ -651,7 +643,10 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             organizations={organizations}
             selectedBillingTarget={selectedBillingTarget}
             quantity={quantity}
-            onBillingTargetChange={setSelectedBillingTarget}
+            onBillingTargetChange={(target) => {
+              setIsLoading(true);
+              setSelectedBillingTarget(target);
+            }}
             onQuantityChange={setQuantity}
           />
 
