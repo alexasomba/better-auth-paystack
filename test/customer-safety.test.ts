@@ -1,5 +1,6 @@
 /* oxlint-disable typescript/require-await, typescript/strict-boolean-expressions */
 
+import { createPaystack } from "@alexasomba/paystack-node";
 import { APIError } from "better-auth/api";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -77,6 +78,31 @@ function setup(options: Record<string, unknown> = {}) {
 }
 
 describe("customer safety hooks", () => {
+  it("creates a customer after the real SDK returns an HTTP 404", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: false, message: "not found" }), { status: 404 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: true,
+            data: { customer_code: "CUS_new", email: "new@example.com" },
+          }),
+          { status: 200 },
+        ),
+      );
+    const client = createPaystack({ secretKey: "sk_test", fetch });
+    const { hooks, records, logger } = setup({ paystackClient: client });
+    const user = { id: "user_sdk", email: "new@example.com", emailVerified: false };
+    records.user.set(user.id, user);
+    await hooks.user.create.after(user, {} as any);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(records.paystackCustomer[0]?.customerCode).toBe("CUS_new");
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
   it("does not call Paystack again when the local customer code is already linked", async () => {
     const { client, hooks, records } = setup();
     const user = {

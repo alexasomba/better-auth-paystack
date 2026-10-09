@@ -26,7 +26,7 @@ export function unwrapSdkResult<T = unknown>(result: unknown): T {
       return result.unwrap() as T;
     } catch (e: unknown) {
       if (e instanceof PaystackError) {
-        throw new APIError("BAD_REQUEST", {
+        throw new APIError(e.status === 404 ? "NOT_FOUND" : "BAD_REQUEST", {
           message: e.message,
           status: e.status,
         });
