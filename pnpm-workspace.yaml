@@ -3,7 +3,7 @@ packages:
   - "examples/*"
 
 catalog:
-  "@alexasomba/paystack-node": "^1.10.8"
+  "@alexasomba/paystack-node": "^1.10.9"
   "@arethetypeswrong/cli": "^0.18.5"
   "@base-ui/react": "^1.7.0"
   "@better-auth/core": 1.6.25
@@ -113,3 +113,6 @@ peerDependencyRules:
   allowedVersions:
     vite: "*"
     vitest: "*"
+
+minimumReleaseAgeExclude:
+  - "@alexasomba/paystack-node@1.10.9"
