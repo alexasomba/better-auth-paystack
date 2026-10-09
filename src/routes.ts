@@ -46,6 +46,7 @@ import {
   resolveCheckoutTargetEmail,
   resolveTrialLifecycle,
   scheduleSubscriptionLifecycleChange,
+  runSubscriptionOperation,
 } from "./subscription-lifecycle";
 import type {
   InputPaystackProduct,
@@ -732,17 +733,23 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         }
       }
 
-      const scheduledChange = await scheduleSubscriptionLifecycleChange(ctx, {
-        referenceId,
-        subscriptionId,
-        plan,
-        scheduleAtPeriodEnd,
-        cancelAtPeriodEnd,
-      });
+      const scheduledChange = await scheduleSubscriptionLifecycleChange(
+        ctx,
+        {
+          userId: user.id,
+          referenceId,
+          subscriptionId,
+          plan,
+          scheduleAtPeriodEnd,
+          cancelAtPeriodEnd,
+        },
+        options,
+      );
       if (scheduledChange !== null) {
         return ctx.json(scheduledChange);
       }
 
+      let validatedQuantity = quantity ?? 1;
       // Calculate final amount considering seats if applicable
       if (plan !== undefined) {
         try {
@@ -753,6 +760,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             });
             const seatCount = members.length > 0 ? members.length : 1;
             const quantityToUse = quantity ?? seatCount;
+            validatedQuantity = quantityToUse;
             amount = calculatePlanAmount(plan, quantityToUse);
           }
         } catch (error: unknown) {
@@ -770,7 +778,17 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       const trial = await resolveTrialLifecycle(ctx, { referenceId, plan });
       const { trialStart, trialEnd } = trial;
 
-      try {
+      const normalizeInitializationError = (error: unknown): APIError => {
+        ctx.context.logger.error("Failed to initialize Paystack transaction", error);
+        return new APIError("BAD_REQUEST", {
+          code: "FAILED_TO_INITIALIZE_TRANSACTION",
+          message:
+            error instanceof Error
+              ? error.message
+              : PAYSTACK_ERROR_CODES.FAILED_TO_INITIALIZE_TRANSACTION.message,
+        });
+      };
+      const prepared = await (async () => {
         const targetEmail = await resolveCheckoutTargetEmail(ctx, options, {
           email,
           referenceId,
@@ -838,22 +856,26 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           });
 
           if (proration?.kind === "checkout") {
-            return ctx.json({
-              kind: "checkout",
-              url: proration.url ?? "",
-              reference: proration.reference ?? "",
-              accessCode: proration.accessCode ?? "",
-              redirect: proration.redirect,
-            } satisfies PaystackInitializeResult);
+            return {
+              earlyResult: {
+                kind: "checkout",
+                url: proration.url ?? "",
+                reference: proration.reference ?? "",
+                accessCode: proration.accessCode ?? "",
+                redirect: proration.redirect,
+              } satisfies PaystackInitializeResult,
+            };
           }
 
           if (proration?.kind === "prorated") {
-            return ctx.json({
-              kind: "prorated",
-              status: proration.status,
-              message: proration.message,
-              prorated: proration.prorated,
-            } satisfies PaystackInitializeResult);
+            return {
+              earlyResult: {
+                kind: "prorated",
+                status: proration.status,
+                message: proration.message,
+                prorated: proration.prorated,
+              } satisfies PaystackInitializeResult,
+            };
           }
         }
 
@@ -886,118 +908,158 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           initBody.amount = Math.round(amount);
         }
 
-        const initRaw = await paystack?.transaction?.initialize({
-          body: initBody as components["schemas"]["TransactionInitialize"],
-        });
-        const sdkRes =
-          unwrapSdkResult<components["schemas"]["TransactionInitializeResponse"]["data"]>(initRaw);
-
-        url = sdkRes?.authorization_url;
-        reference = sdkRes?.reference;
-        accessCode = sdkRes?.access_code;
-      } catch (error: unknown) {
-        ctx.context.logger.error("Failed to initialize Paystack transaction", error);
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : PAYSTACK_ERROR_CODES.FAILED_TO_INITIALIZE_TRANSACTION.message;
-        throw new APIError("BAD_REQUEST", {
-          code: "FAILED_TO_INITIALIZE_TRANSACTION",
-          message: errorMessage,
-        });
-      }
-
-      // 6. Record Transaction & Subscription
-      await ctx.context.adapter.create({
-        model: PAYSTACK_MODELS.transaction,
-        data: {
-          reference: reference ?? "",
-          referenceId,
-          userId: user.id,
-          amount: amount ?? 0,
-          currency: plan?.currency ?? currency ?? "NGN",
-          status: "pending",
-          plan: plan !== undefined ? plan.name.toLowerCase() : undefined,
-          product: product !== undefined ? product.name.toLowerCase() : undefined,
-          metadata: hasPaystackMetadata(extraMetadata)
-            ? stringifyPaystackMetadata(extraMetadata)
-            : undefined,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+        return { initBody };
+      })().catch((error: unknown) => {
+        if (options.subscription?.operationHooks === undefined)
+          throw normalizeInitializationError(error);
+        throw error;
       });
-
-      if (plan !== undefined) {
-        const store = createBillingStore(ctx);
-        const customer = await store.findCustomerByReference(
-          referenceId === user.id ? "user" : "organization",
-          referenceId,
-        );
-        let customerCode = customer?.customerCode;
-        if (customerCode === undefined) {
-          try {
-            const legacy = await ctx.context.adapter.findOne<{
-              paystackCustomerCode?: string | null;
-            }>({
-              model: referenceId === user.id ? "user" : "organization",
-              where: [{ field: "id", value: referenceId }],
-              select: ["paystackCustomerCode"],
-            });
-            customerCode = legacy?.paystackCustomerCode ?? undefined;
-            if (customerCode !== undefined && customerCode !== null && customerCode !== "") {
-              await store.saveCustomer(
-                referenceId === user.id ? "user" : "organization",
-                referenceId,
-                customerCode,
-              );
+      if (prepared.earlyResult !== undefined) return ctx.json(prepared.earlyResult);
+      const initBody = prepared.initBody;
+      const operation =
+        plan !== undefined && options.subscription?.operationHooks !== undefined
+          ? {
+              actor: { id: user.id },
+              referenceId,
+              kind: "initialize" as const,
+              subscription:
+                subscriptionId !== undefined
+                  ? await createBillingStore(ctx).findSubscriptionById(subscriptionId)
+                  : await createBillingStore(ctx).findCurrentSubscription(referenceId, groupId),
+              intent: {
+                plan: plan.name.toLowerCase(),
+                amount: initBody.amount,
+                currency: finalCurrency,
+                interval: plan.interval,
+                quantity: validatedQuantity,
+                groupId,
+                callbackURL,
+                trialStart,
+                trialEnd,
+              },
             }
-          } catch {
-            // Legacy customer columns are optional after the migration.
-          }
-        }
+          : undefined;
+      const execute = async (
+        providerReference: string | undefined,
+        setPhase: (phase: "provider" | "persistence" | "completion") => void,
+      ): Promise<PaystackInitializeResult> => {
+        if (providerReference !== undefined) initBody.reference = providerReference;
+        try {
+          const initRaw = await paystack?.transaction?.initialize({
+            body: initBody as components["schemas"]["TransactionInitialize"],
+          });
+          const sdkRes =
+            unwrapSdkResult<components["schemas"]["TransactionInitializeResponse"]["data"]>(
+              initRaw,
+            );
 
-        const newSubscription = await ctx.context.adapter.create<Subscription>({
-          model: PAYSTACK_MODELS.subscription,
+          if (providerReference !== undefined && sdkRes?.reference !== providerReference) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Provider reference does not match reserved operation.",
+            });
+          }
+          url = sdkRes?.authorization_url;
+          reference = sdkRes?.reference;
+          accessCode = sdkRes?.access_code;
+        } catch (error: unknown) {
+          throw normalizeInitializationError(error);
+        }
+        setPhase("persistence");
+        // 6. Record Transaction & Subscription
+        await ctx.context.adapter.create({
+          model: PAYSTACK_MODELS.transaction,
           data: {
-            plan: plan.name.toLowerCase(),
-            groupId,
+            reference: reference ?? "",
             referenceId,
             userId: user.id,
-            customerCode,
-            subscriptionCode: undefined,
-            planCode: plan.planCode,
-            transactionReference: reference ?? "",
-            status: trialStart !== undefined ? "trialing" : "incomplete",
-            billingInterval: plan.interval ?? null,
-            seats: quantity ?? 1,
-            periodStart: new Date(),
-            periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
-            cancelAtPeriodEnd: false,
-            trialStart,
-            trialEnd,
+            amount: amount ?? 0,
+            currency: plan?.currency ?? currency ?? "NGN",
+            status: "pending",
+            plan: plan !== undefined ? plan.name.toLowerCase() : undefined,
+            product: product !== undefined ? product.name.toLowerCase() : undefined,
+            metadata: hasPaystackMetadata(extraMetadata)
+              ? stringifyPaystackMetadata(extraMetadata)
+              : undefined,
             createdAt: new Date(),
             updatedAt: new Date(),
           },
         });
 
-        // Call trial start hook if trial was granted
-        if (
-          trialStart !== undefined &&
-          newSubscription !== undefined &&
-          newSubscription !== null &&
-          plan.freeTrial?.onTrialStart !== undefined
-        ) {
-          await plan.freeTrial.onTrialStart(newSubscription);
-        }
-      }
+        if (plan !== undefined) {
+          const store = createBillingStore(ctx);
+          const customer = await store.findCustomerByReference(
+            referenceId === user.id ? "user" : "organization",
+            referenceId,
+          );
+          let customerCode = customer?.customerCode;
+          if (customerCode === undefined) {
+            try {
+              const legacy = await ctx.context.adapter.findOne<{
+                paystackCustomerCode?: string | null;
+              }>({
+                model: referenceId === user.id ? "user" : "organization",
+                where: [{ field: "id", value: referenceId }],
+                select: ["paystackCustomerCode"],
+              });
+              customerCode = legacy?.paystackCustomerCode ?? undefined;
+              if (customerCode !== undefined && customerCode !== null && customerCode !== "") {
+                await store.saveCustomer(
+                  referenceId === user.id ? "user" : "organization",
+                  referenceId,
+                  customerCode,
+                );
+              }
+            } catch {
+              // Legacy customer columns are optional after the migration.
+            }
+          }
 
-      return ctx.json({
-        kind: "checkout",
-        url: url ?? "",
-        reference: reference ?? "",
-        accessCode: accessCode ?? "",
-        redirect: true,
-      } satisfies PaystackInitializeResult);
+          const newSubscription = await ctx.context.adapter.create<Subscription>({
+            model: PAYSTACK_MODELS.subscription,
+            data: {
+              plan: plan.name.toLowerCase(),
+              groupId,
+              referenceId,
+              userId: user.id,
+              customerCode,
+              subscriptionCode: undefined,
+              planCode: plan.planCode,
+              transactionReference: reference ?? "",
+              status: trialStart !== undefined ? "trialing" : "incomplete",
+              billingInterval: plan.interval ?? null,
+              seats: quantity ?? 1,
+              periodStart: new Date(),
+              periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
+              cancelAtPeriodEnd: false,
+              trialStart,
+              trialEnd,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+          // Call trial start hook if trial was granted
+          if (
+            trialStart !== undefined &&
+            newSubscription !== undefined &&
+            newSubscription !== null &&
+            plan.freeTrial?.onTrialStart !== undefined
+          ) {
+            await plan.freeTrial.onTrialStart(newSubscription);
+          }
+        }
+
+        return ctx.json({
+          kind: "checkout",
+          url: url ?? "",
+          reference: reference ?? "",
+          accessCode: accessCode ?? "",
+          redirect: true,
+        } satisfies PaystackInitializeResult);
+      };
+      return operation !== undefined
+        ? runSubscriptionOperation(ctx, options, operation, execute)
+        : execute(undefined, () => undefined);
     },
   );
 };
