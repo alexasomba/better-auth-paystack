@@ -16,6 +16,8 @@ import type {
   PaystackPlan,
   Subscription,
   User,
+  PaystackSubscriptionOperation,
+  PaystackSubscriptionOperationPhase,
 } from "./types";
 import {
   assertLocallyManagedSubscription,
@@ -24,6 +26,72 @@ import {
   getPlanSeatAmount,
   normalizeSubscriptionGroup,
 } from "./utils";
+
+/** Keep reservation context invocation-local, including concurrent requests through one plugin. */
+export async function runSubscriptionOperation<TResult extends PaystackInitializeResult>(
+  ctx: GenericEndpointContext,
+  options: AnyPaystackOptions | undefined,
+  operation: PaystackSubscriptionOperation,
+  run: (
+    providerReference: string | undefined,
+    setPhase: (phase: PaystackSubscriptionOperationPhase) => void,
+  ) => Promise<TResult>,
+): Promise<TResult> {
+  const hooks = options?.subscription?.operationHooks;
+  if (hooks === undefined) return run(undefined, () => undefined);
+  const decision = await hooks.before(operation, ctx);
+  if (decision.kind === "replay") {
+    const validKind =
+      operation.kind === "schedule"
+        ? decision.result.kind === "scheduled"
+        : operation.kind === "initialize"
+          ? decision.result.kind === "checkout"
+          : operation.kind === "local-change"
+            ? decision.result.kind === "prorated"
+            : decision.result.kind === "checkout" || decision.result.kind === "prorated";
+    if (!validKind)
+      throw new APIError("BAD_REQUEST", {
+        message: "Operation replay does not match the validated operation kind.",
+      });
+    return decision.result as TResult;
+  }
+  if (decision.kind === "block") {
+    throw new APIError("CONFLICT", {
+      message: decision.message ?? "Subscription operation is blocked.",
+    });
+  }
+  if (
+    decision.kind !== "proceed" ||
+    typeof decision.providerReference !== "string" ||
+    decision.providerReference.trim() === ""
+  ) {
+    throw new APIError("BAD_REQUEST", {
+      message: "Operation hook must reserve a provider reference.",
+    });
+  }
+  const invocation = {
+    ...operation,
+    providerReference: decision.providerReference,
+    context: decision.context,
+  };
+  let phase: PaystackSubscriptionOperationPhase =
+    operation.kind === "schedule" || operation.kind === "local-change" ? "persistence" : "provider";
+  try {
+    const result = await run(decision.providerReference, (next) => {
+      phase = next;
+    });
+    phase = "completion";
+    await hooks.after?.({ ...invocation, result }, ctx);
+    return result;
+  } catch (error: unknown) {
+    try {
+      await hooks.onError?.({ ...invocation, phase, error }, ctx);
+    } catch {
+      ctx.context.logger.error("Paystack operation error hook failed", { phase });
+    }
+    throw error;
+  }
+}
 
 export type ProratedUpgradeOutcome =
   | Extract<PaystackInitializeResult, { kind: "prorated" }>
@@ -47,12 +115,14 @@ export interface TrialLifecycleDecision {
 export async function scheduleSubscriptionLifecycleChange(
   ctx: GenericEndpointContext,
   input: {
+    userId?: string;
     referenceId: string;
     subscriptionId?: string;
     plan?: PaystackPlan;
     scheduleAtPeriodEnd?: boolean;
     cancelAtPeriodEnd?: boolean;
   },
+  options?: AnyPaystackOptions,
 ): Promise<Extract<PaystackInitializeResult, { kind: "scheduled" }> | null> {
   const groupId = normalizeSubscriptionGroup(input.plan?.group);
   if (input.plan !== undefined && input.scheduleAtPeriodEnd === true) {
@@ -61,20 +131,39 @@ export async function scheduleSubscriptionLifecycleChange(
         ? await getOrganizationSubscription(ctx, input.referenceId, groupId)
         : await createBillingStore(ctx).findSubscriptionById(input.subscriptionId);
     if (existingSub?.status === "active") {
-      await ctx.context.adapter.update({
-        model: PAYSTACK_MODELS.subscription,
-        where: [{ field: "id", value: existingSub.id }],
-        update: {
-          pendingPlan: input.plan.name,
-          updatedAt: new Date(),
+      return runSubscriptionOperation<Extract<PaystackInitializeResult, { kind: "scheduled" }>>(
+        ctx,
+        options,
+        {
+          actor: { id: input.userId ?? existingSub.userId },
+          referenceId: input.referenceId,
+          kind: "schedule",
+          subscription: existingSub,
+          intent: {
+            plan: input.plan?.name ?? existingSub.plan,
+            interval: input.plan?.interval ?? existingSub.billingInterval ?? undefined,
+            groupId,
+            scheduleAtPeriodEnd: input.scheduleAtPeriodEnd,
+            cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+          },
         },
-      });
-      return {
-        kind: "scheduled",
-        status: "success",
-        message: "Plan change scheduled at period end.",
-        scheduled: true,
-      };
+        async () => {
+          await ctx.context.adapter.update({
+            model: PAYSTACK_MODELS.subscription,
+            where: [{ field: "id", value: existingSub.id }],
+            update: {
+              pendingPlan: input.plan?.name,
+              updatedAt: new Date(),
+            },
+          });
+          return {
+            kind: "scheduled",
+            status: "success",
+            message: "Plan change scheduled at period end.",
+            scheduled: true,
+          };
+        },
+      );
     }
   }
 
@@ -88,23 +177,42 @@ export async function scheduleSubscriptionLifecycleChange(
           )
         : await createBillingStore(ctx).findSubscriptionById(input.subscriptionId);
     if (existingSub?.status === "active") {
-      await ctx.context.adapter.update({
-        model: PAYSTACK_MODELS.subscription,
-        where: [{ field: "id", value: existingSub.id }],
-        update: {
-          cancelAtPeriodEnd: true,
-          cancelAt: existingSub.periodEnd ?? null,
-          canceledAt: new Date(),
-          updatedAt: new Date(),
+      return runSubscriptionOperation<Extract<PaystackInitializeResult, { kind: "scheduled" }>>(
+        ctx,
+        options,
+        {
+          actor: { id: input.userId ?? existingSub.userId },
+          referenceId: input.referenceId,
+          kind: "schedule",
+          subscription: existingSub,
+          intent: {
+            plan: input.plan?.name ?? existingSub.plan,
+            interval: input.plan?.interval ?? existingSub.billingInterval ?? undefined,
+            groupId,
+            scheduleAtPeriodEnd: input.scheduleAtPeriodEnd,
+            cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+          },
         },
-      });
+        async () => {
+          await ctx.context.adapter.update({
+            model: PAYSTACK_MODELS.subscription,
+            where: [{ field: "id", value: existingSub.id }],
+            update: {
+              cancelAtPeriodEnd: true,
+              cancelAt: existingSub.periodEnd ?? null,
+              canceledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
 
-      return {
-        kind: "scheduled",
-        status: "success",
-        message: "Subscription cancellation scheduled at period end.",
-        scheduled: true,
-      };
+          return {
+            kind: "scheduled",
+            status: "success",
+            message: "Subscription cancellation scheduled at period end.",
+            scheduled: true,
+          };
+        },
+      );
     }
   }
 
@@ -306,105 +414,149 @@ export async function handleProratedUpgrade(
     remainingDays,
   });
   const serializedProrationMetadata = stringifyPaystackMetadata(prorationMetadata);
-  let completedProrationReference: string | undefined;
+  const proratedAmount = Math.round((costDifference / totalDays) * remainingDays);
+  const hasCharge = costDifference > 0 && remainingDays > 0;
+  if (hasCharge && proratedAmount < 5000) {
+    throw new APIError("BAD_REQUEST", {
+      message:
+        "Prorated upgrade amount is below Paystack's minimum charge. Schedule the change for period end instead.",
+      status: 400,
+    });
+  }
+  const credentials = hasCharge
+    ? await readPaystackPaymentCredentials(ctx.context.adapter, options, existingSub.id)
+    : null;
+  const hasAuthorization =
+    credentials?.authorizationCode !== undefined &&
+    credentials.authorizationCode !== null &&
+    credentials.authorizationCode !== "";
+  return runSubscriptionOperation<Exclude<PaystackInitializeResult, { kind: "scheduled" }>>(
+    ctx,
+    options,
+    {
+      actor: { id: input.userId ?? existingSub.userId },
+      referenceId: input.referenceId,
+      kind: hasCharge
+        ? hasAuthorization
+          ? "proration-charge"
+          : "proration-initialize"
+        : "local-change",
+      subscription: existingSub,
+      intent: {
+        plan: input.plan.name.toLowerCase(),
+        amount: hasCharge ? proratedAmount : 0,
+        currency: input.finalCurrency,
+        interval: input.plan.interval,
+        quantity: newSeatCount,
+        groupId: normalizeSubscriptionGroup(input.plan.group),
+        callbackURL: input.callbackURL,
+      },
+    },
+    async (providerReference, setPhase) => {
+      let completedProrationReference: string | undefined;
 
-  if (costDifference > 0 && remainingDays > 0) {
-    const proratedAmount = Math.round((costDifference / totalDays) * remainingDays);
-    if (proratedAmount < 5000) {
-      throw new APIError("BAD_REQUEST", {
-        message:
-          "Prorated upgrade amount is below Paystack's minimum charge. Schedule the change for period end instead.",
-        status: 400,
-      });
-    }
+      if (costDifference > 0 && remainingDays > 0) {
+        const paystack = createPaystackAdapter(options.paystackClient);
+        if (
+          credentials?.authorizationCode !== undefined &&
+          credentials.authorizationCode !== null &&
+          credentials.authorizationCode !== ""
+        ) {
+          const sdkRes = (await paystack.chargeAuthorization({
+            email: input.targetEmail,
+            amount: proratedAmount,
+            authorization_code: credentials.authorizationCode,
+            reference:
+              providerReference ??
+              `upg_${existingSub.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            metadata: serializedProrationMetadata,
+          })) as PaystackChargeAuthorizationResponse;
 
-    const paystack = createPaystackAdapter(options.paystackClient);
-    const credentials = await readPaystackPaymentCredentials(
-      ctx.context.adapter,
-      options,
-      existingSub.id,
-    );
-    if (
-      credentials?.authorizationCode !== undefined &&
-      credentials.authorizationCode !== null &&
-      credentials.authorizationCode !== ""
-    ) {
-      const sdkRes = (await paystack.chargeAuthorization({
-        email: input.targetEmail,
-        amount: proratedAmount,
-        authorization_code: credentials.authorizationCode,
-        reference: `upg_${existingSub.id}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-        metadata: serializedProrationMetadata,
-      })) as PaystackChargeAuthorizationResponse;
+          if (providerReference !== undefined && sdkRes?.reference !== providerReference) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Provider reference does not match reserved operation.",
+            });
+          }
+          if (sdkRes?.status !== "success") {
+            throw new APIError("BAD_REQUEST", {
+              message: "Failed to process prorated charge via saved authorization.",
+            });
+          }
 
-      if (sdkRes?.status !== "success") {
-        throw new APIError("BAD_REQUEST", {
-          message: "Failed to process prorated charge via saved authorization.",
-        });
+          setPhase("persistence");
+          await store.createTransaction({
+            reference: sdkRes.reference ?? "",
+            paystackId:
+              sdkRes.id !== undefined && sdkRes.id !== null ? String(sdkRes.id) : undefined,
+            referenceId: input.referenceId,
+            userId: input.userId,
+            amount: sdkRes.amount ?? proratedAmount,
+            currency: sdkRes.currency ?? input.finalCurrency,
+            status: "success",
+            plan: input.plan.name.toLowerCase(),
+            metadata: serializedProrationMetadata,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          completedProrationReference = sdkRes.reference ?? undefined;
+        } else {
+          const initRes = await paystack.initializeTransaction({
+            ...(providerReference !== undefined ? { reference: providerReference } : {}),
+            email: input.targetEmail,
+            amount: proratedAmount,
+            currency: input.finalCurrency,
+            callback_url: input.callbackURL ?? undefined,
+            metadata: serializedProrationMetadata,
+            ...(input.allowedSubscriptionChannels !== undefined
+              ? { channels: input.allowedSubscriptionChannels }
+              : {}),
+          } as components["schemas"]["TransactionInitialize"]);
+
+          if (providerReference !== undefined && initRes?.reference !== providerReference) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Provider reference does not match reserved operation.",
+            });
+          }
+          setPhase("persistence");
+          await store.createTransaction({
+            reference: initRes?.reference ?? "",
+            referenceId: input.referenceId,
+            userId: input.userId,
+            amount: proratedAmount,
+            currency: input.finalCurrency,
+            status: "pending",
+            plan: input.plan.name.toLowerCase(),
+            metadata: serializedProrationMetadata,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+
+          return {
+            kind: "checkout",
+            url: initRes?.authorization_url,
+            reference: initRes?.reference,
+            accessCode: initRes?.access_code,
+            redirect: true,
+          };
+        }
       }
 
-      await store.createTransaction({
-        reference: sdkRes.reference ?? "",
-        paystackId: sdkRes.id !== undefined && sdkRes.id !== null ? String(sdkRes.id) : undefined,
-        referenceId: input.referenceId,
-        userId: input.userId,
-        amount: sdkRes.amount ?? proratedAmount,
-        currency: sdkRes.currency ?? input.finalCurrency,
-        status: "success",
-        plan: input.plan.name.toLowerCase(),
-        metadata: serializedProrationMetadata,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      completedProrationReference = sdkRes.reference ?? undefined;
-    } else {
-      const initRes = await paystack.initializeTransaction({
-        email: input.targetEmail,
-        amount: proratedAmount,
-        currency: input.finalCurrency,
-        callback_url: input.callbackURL ?? undefined,
-        metadata: serializedProrationMetadata,
-        ...(input.allowedSubscriptionChannels !== undefined
-          ? { channels: input.allowedSubscriptionChannels }
+      setPhase("persistence");
+      await store.updateSubscription(existingSub.id, {
+        plan: input.plan.name,
+        seats: newSeatCount,
+        ...(completedProrationReference !== undefined
+          ? { transactionReference: completedProrationReference }
           : {}),
-      } as components["schemas"]["TransactionInitialize"]);
-
-      await store.createTransaction({
-        reference: initRes?.reference ?? "",
-        referenceId: input.referenceId,
-        userId: input.userId,
-        amount: proratedAmount,
-        currency: input.finalCurrency,
-        status: "pending",
-        plan: input.plan.name.toLowerCase(),
-        metadata: serializedProrationMetadata,
-        createdAt: new Date(),
         updatedAt: new Date(),
       });
 
       return {
-        kind: "checkout",
-        url: initRes?.authorization_url,
-        reference: initRes?.reference,
-        accessCode: initRes?.access_code,
-        redirect: true,
+        kind: "prorated",
+        status: "success",
+        message: "Subscription successfully upgraded with prorated charge.",
+        prorated: true,
       };
-    }
-  }
-
-  await store.updateSubscription(existingSub.id, {
-    plan: input.plan.name,
-    seats: newSeatCount,
-    ...(completedProrationReference !== undefined
-      ? { transactionReference: completedProrationReference }
-      : {}),
-    updatedAt: new Date(),
-  });
-
-  return {
-    kind: "prorated",
-    status: "success",
-    message: "Subscription successfully upgraded with prorated charge.",
-    prorated: true,
-  };
+    },
+  );
 }

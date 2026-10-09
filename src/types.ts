@@ -200,7 +200,62 @@ export type PaystackInitializeResult =
       prorated: true;
     };
 
+/** Validated invocation data; credentials and provider responses are deliberately excluded. */
+export interface PaystackSubscriptionOperation {
+  actor: { id: string };
+  referenceId: string;
+  kind: "initialize" | "proration-initialize" | "proration-charge" | "local-change" | "schedule";
+  subscription: Subscription | null;
+  intent: {
+    plan: string;
+    amount?: number;
+    currency?: string;
+    interval?: string;
+    quantity?: number;
+    groupId?: string | null;
+    callbackURL?: string;
+    trialStart?: Date;
+    trialEnd?: Date;
+    scheduleAtPeriodEnd?: boolean;
+    cancelAtPeriodEnd?: boolean;
+  };
+}
+
+export type PaystackSubscriptionOperationDecision =
+  | { kind: "proceed"; providerReference: string; context?: unknown }
+  | { kind: "replay"; result: PaystackInitializeResult }
+  | { kind: "block"; message?: string };
+
+export type PaystackSubscriptionOperationPhase = "provider" | "persistence" | "completion";
+
+/** Optional application-owned reservation/recovery boundary. No locks or ledger are provided by the SDK. */
+export interface PaystackSubscriptionOperationHooks {
+  before: (
+    operation: PaystackSubscriptionOperation,
+    ctx: GenericEndpointContext,
+  ) => Promise<PaystackSubscriptionOperationDecision>;
+  after?: (
+    operation: PaystackSubscriptionOperation & {
+      providerReference: string;
+      context?: unknown;
+      result: PaystackInitializeResult;
+    },
+    ctx: GenericEndpointContext,
+  ) => Promise<void>;
+  /** An error after dispatch does not establish that the provider did nothing. */
+  onError?: (
+    operation: PaystackSubscriptionOperation & {
+      providerReference: string;
+      context?: unknown;
+      phase: PaystackSubscriptionOperationPhase;
+      error: unknown;
+    },
+    ctx: GenericEndpointContext,
+  ) => Promise<void>;
+}
+
 export interface SubscriptionOptions {
+  operationHooks?: PaystackSubscriptionOperationHooks;
   /**
    * Enable subscriptions
    */

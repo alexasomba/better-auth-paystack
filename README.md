@@ -917,3 +917,37 @@ Future features planned for upcoming versions:
 - Paystack Subscription API: https://paystack.com/docs/api/subscription/
 - Paystack Plan API: https://paystack.com/docs/api/plan/
 - [Better Auth Documentation](https://www.better-auth.com/docs)
+
+### Optional subscription operation hooks
+
+`subscription.operationHooks` lets an application place its own durable reservation and recovery boundary around plan operations. It is optional: leaving it unset retains the existing SDK behavior. The SDK does **not** provide a ledger, mutex, or a cross-request idempotency guarantee.
+
+The `before(operation, ctx)` hook runs after authentication, reference authorization, and the applicable plan, seat, trial, and proration validation. It runs before provider initialization/charge or a local plan/schedule mutation. `operation` includes the actor, authorized reference, selected subscription, operation kind, and validated intent. Scheduling has a separate preflight before its local mutation.
+
+Return one of:
+
+- `{ kind: "proceed", providerReference, context? }`: supply a stable reference reserved by your application. The SDK passes it to ordinary checkout, prorated checkout, and saved authorization charge. `context` stays local to this invocation and is passed to the completion/error hooks.
+- `{ kind: "replay", result }`: return an existing `PaystackInitializeResult` of the appropriate operation kind without another provider call or SDK write.
+- `{ kind: "block", message? }`: reject this operation without dispatch or mutation.
+
+`after(operation, ctx)` receives the result only after the operation's SDK writes have completed. `onError(operation, ctx)` receives the original error and a `provider`, `persistence`, or `completion` phase. A provider timeout, malformed/mismatched reference, persistence failure after payment, or completion-hook failure does not establish that no payment occurred. Retain the application's unresolved reservation and reconcile it; do not automatically repeat a charge. An error-hook failure is logged and does not replace the original operation error.
+
+Hooks are server-only. Authenticate and authorize stored checkout replay data for the current actor/reference before returning it; authorization URLs and access codes must not appear in public status reads. Do not place provider credentials in hook context. The SDK keeps its existing reference authorization rules; applications remain responsible for their own stricter UI permissions.
+
+A fail-closed configuration while an application reservation service is unavailable:
+
+```ts
+import type { PaystackSubscriptionOperationHooks } from "better-auth-paystack";
+
+const operationHooks: PaystackSubscriptionOperationHooks = {
+  before: () =>
+    Promise.resolve({
+      kind: "block",
+      message: "Subscription changes are temporarily unavailable.",
+    }),
+};
+
+// Pass operationHooks under paystack({ subscription: { enabled: true, plans, operationHooks } }).
+```
+
+A production `proceed` implementation must reserve before returning, deduplicate concurrent requests, protect replay results, and resolve uncertain outcomes against authoritative provider and subscription state. One-time product/amount payments and recurring renewal operations do not use these subscription plan hooks.
