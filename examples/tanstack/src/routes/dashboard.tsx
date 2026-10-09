@@ -25,7 +25,7 @@ export const Route = createFileRoute("/dashboard")({
   loader: async () => {
     const session = await getSession();
 
-    if (session?.user === null || session?.user === undefined) {
+    if (session?.user === undefined) {
       throw redirect({ to: "/" });
     }
 

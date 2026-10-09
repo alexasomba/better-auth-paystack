@@ -42,7 +42,7 @@ function Home() {
   const [isAuthActionInProgress, setIsAuthActionInProgress] = useState(false);
 
   useEffect(() => {
-    if (sessionData?.user !== null && sessionData?.user !== undefined) {
+    if (sessionData?.user !== undefined) {
       void router.navigate({ to: "/dashboard" });
     }
   }, [sessionData, router]);
@@ -116,7 +116,7 @@ function Home() {
     setIsAuthActionInProgress(true);
     try {
       const result = await authClient.signIn.anonymous();
-      if (result.error !== null && result.error !== undefined) {
+      if (result.error !== null) {
         setIsAuthActionInProgress(false);
         alert(`Anonymous login failed: ${result.error.message}`);
       } else {
@@ -129,7 +129,7 @@ function Home() {
     }
   };
 
-  if (sessionError !== null && sessionError !== undefined) {
+  if (sessionError !== null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Error loading session: {sessionError.message}</p>

@@ -75,14 +75,13 @@
     "lint": "vp lint src",
     "lint:package": "publint run --strict",
     "lint:types": "node scripts/lint-types-packed.mjs",
-    "typecheck:nextjs": "tsc -p examples/nextjs/tsconfig.json --noEmit",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:nextjs": "tsc6 -p examples/nextjs/tsconfig.json --noEmit",
+    "typecheck": "tsc6 -p tsconfig.json --noEmit",
     "skills:install": "skills-npm --cwd examples/tanstack --yes --force",
     "skills:dry-run": "skills-npm --cwd examples/tanstack --dry-run --yes --agents universal --force"
   },
   "dependencies": {
     "@alexasomba/paystack-node": "catalog:",
-    "better-call": "1.3.8",
     "defu": "catalog:",
     "zod": "catalog:"
   },
@@ -111,5 +110,5 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "packageManager": "pnpm@11.22.0"
+  "packageManager": "pnpm@12.10.1"
 }

@@ -2,13 +2,14 @@ import { randomUUID, createHash } from "node:crypto";
 
 import type { components } from "@alexasomba/paystack-node";
 import { HIDE_METADATA } from "better-auth";
-import type {
-  GenericEndpointContext,
-  MiddlewareInputContext,
-  MiddlewareOptions,
-  StrictEndpoint,
-} from "better-auth";
-import { APIError, getSessionFromCtx, originCheck, sessionMiddleware } from "better-auth/api";
+import type { GenericEndpointContext, StrictEndpoint } from "better-auth";
+import {
+  APIError,
+  getSessionFromCtx,
+  type AuthMiddleware,
+  originCheckMiddleware,
+  sessionMiddleware,
+} from "better-auth/api";
 import { createAuthEndpoint } from "better-auth/api";
 /* oxlint-disable no-restricted-imports */
 import { z } from "zod";
@@ -609,20 +610,19 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   PaystackInitializeResult | undefined
 > => {
   const subscriptionOptions = options.subscription;
-  const useMiddlewares =
+  const useMiddlewares: AuthMiddleware[] =
     subscriptionOptions?.enabled === true
-      ? [sessionMiddleware, originCheck, referenceMiddleware(options, "initialize-transaction")]
-      : [sessionMiddleware, originCheck];
+      ? [
+          sessionMiddleware,
+          originCheckMiddleware,
+          referenceMiddleware(options, "initialize-transaction"),
+        ]
+      : [sessionMiddleware, originCheckMiddleware];
 
   return createAuthEndpoint(
     path,
@@ -1145,12 +1145,7 @@ export const createSubscription = <P extends string = "/create-subscription">(
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   PaystackInitializeResult | undefined
 > => initializeTransaction(options, path);
@@ -1180,12 +1175,7 @@ export const upgradeSubscription = <P extends string = "/upgrade-subscription">(
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   PaystackInitializeResult | undefined
 > => initializeTransaction(options, path);
@@ -1206,12 +1196,7 @@ export const cancelSubscription = <P extends string = "/cancel-subscription">(
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     status: string;
@@ -1234,12 +1219,7 @@ export const restoreSubscription = <P extends string = "/restore-subscription">(
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     status: string;
@@ -1259,12 +1239,7 @@ export const verifyTransaction = <P extends string = "/verify-transaction">(
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     status: string;
@@ -1357,10 +1332,14 @@ export const verifyTransaction = <P extends string = "/verify-transaction">(
   });
 
   const subscriptionOptions = options.subscription;
-  const useMiddlewares =
+  const useMiddlewares: AuthMiddleware[] =
     subscriptionOptions?.enabled === true
-      ? [sessionMiddleware, originCheck, referenceMiddleware(options, "verify-transaction")]
-      : [sessionMiddleware, originCheck];
+      ? [
+          sessionMiddleware,
+          originCheckMiddleware,
+          referenceMiddleware(options, "verify-transaction"),
+        ]
+      : [sessionMiddleware, originCheckMiddleware];
 
   return createAuthEndpoint(
     path,
@@ -1415,12 +1394,7 @@ export const listSubscriptions = <P extends string = "/list-subscriptions">(
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     subscriptions: Subscription[];
@@ -1431,10 +1405,14 @@ export const listSubscriptions = <P extends string = "/list-subscriptions">(
   });
 
   const subscriptionOptions = options.subscription;
-  const useMiddlewares =
+  const useMiddlewares: AuthMiddleware[] =
     subscriptionOptions?.enabled === true
-      ? [sessionMiddleware, originCheck, referenceMiddleware(options, "list-subscriptions")]
-      : [sessionMiddleware, originCheck];
+      ? [
+          sessionMiddleware,
+          originCheckMiddleware,
+          referenceMiddleware(options, "list-subscriptions"),
+        ]
+      : [sessionMiddleware, originCheckMiddleware];
 
   return createAuthEndpoint(
     path,
@@ -1489,12 +1467,7 @@ export const listTransactions = <P extends string = "/list-transactions">(
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     transactions: PaystackTransaction[];
@@ -1505,10 +1478,14 @@ export const listTransactions = <P extends string = "/list-transactions">(
   });
 
   const subscriptionOptions = options.subscription;
-  const useMiddlewares =
+  const useMiddlewares: AuthMiddleware[] =
     subscriptionOptions?.enabled === true
-      ? [sessionMiddleware, originCheck, referenceMiddleware(options, "list-transactions")]
-      : [sessionMiddleware, originCheck];
+      ? [
+          sessionMiddleware,
+          originCheckMiddleware,
+          referenceMiddleware(options, "list-transactions"),
+        ]
+      : [sessionMiddleware, originCheckMiddleware];
 
   return createAuthEndpoint(
     path,
@@ -1561,22 +1538,21 @@ export const disablePaystackSubscription = <P extends string = "/disable-subscri
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     status: string;
   }
 > => {
   const subscriptionOptions = options.subscription;
-  const useMiddlewares =
+  const useMiddlewares: AuthMiddleware[] =
     subscriptionOptions?.enabled === true
-      ? [sessionMiddleware, originCheck, referenceMiddleware(options, "disable-subscription")]
-      : [sessionMiddleware, originCheck];
+      ? [
+          sessionMiddleware,
+          originCheckMiddleware,
+          referenceMiddleware(options, "disable-subscription"),
+        ]
+      : [sessionMiddleware, originCheckMiddleware];
 
   return createAuthEndpoint(
     path,
@@ -1733,22 +1709,21 @@ export const enablePaystackSubscription = <P extends string = "/enable-subscript
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     status: string;
   }
 > => {
   const subscriptionOptions = options.subscription;
-  const useMiddlewares =
+  const useMiddlewares: AuthMiddleware[] =
     subscriptionOptions?.enabled === true
-      ? [sessionMiddleware, originCheck, referenceMiddleware(options, "enable-subscription")]
-      : [sessionMiddleware, originCheck];
+      ? [
+          sessionMiddleware,
+          originCheckMiddleware,
+          referenceMiddleware(options, "enable-subscription"),
+        ]
+      : [sessionMiddleware, originCheckMiddleware];
 
   return createAuthEndpoint(
     path,
@@ -1857,12 +1832,7 @@ export const getSubscriptionManageLink = <P extends string = "/subscription-mana
       },
       z.core.$strip
     >;
-    use: (
-      | ((
-          getValue: (ctx: GenericEndpointContext) => string | string[],
-        ) => (inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<void>)
-      | ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<unknown>)
-    )[];
+    use: AuthMiddleware[];
   },
   {
     link: string | null;
@@ -1872,14 +1842,14 @@ export const getSubscriptionManageLink = <P extends string = "/subscription-mana
     subscriptionCode: z.string(),
   });
   const subscriptionOptions = options.subscription;
-  const useMiddlewares =
+  const useMiddlewares: AuthMiddleware[] =
     subscriptionOptions?.enabled === true
       ? [
           sessionMiddleware,
-          originCheck,
+          originCheckMiddleware,
           referenceMiddleware(options, "get-subscription-manage-link"),
         ]
-      : [sessionMiddleware, originCheck];
+      : [sessionMiddleware, originCheckMiddleware];
 
   const handler = async (ctx: GenericEndpointContext) => {
     const { subscriptionCode } = ctx.query;
@@ -1958,29 +1928,7 @@ export const listPlans = <P extends string = "/list-plans">(
     metadata: {
       scope: "server";
     };
-    use: ((inputContext: MiddlewareInputContext<MiddlewareOptions>) => Promise<{
-      session: {
-        session: Record<string, unknown> & {
-          id: string;
-          createdAt: Date;
-          updatedAt: Date;
-          userId: string;
-          expiresAt: Date;
-          token: string;
-          ipAddress?: string | null | undefined;
-          userAgent?: string | null | undefined;
-        };
-        user: Record<string, unknown> & {
-          id: string;
-          createdAt: Date;
-          updatedAt: Date;
-          email: string;
-          emailVerified: boolean;
-          name: string;
-          image?: string | null | undefined;
-        };
-      };
-    }>)[];
+    use: AuthMiddleware[];
   },
   {
     plans: PaystackPlan[];

@@ -176,7 +176,7 @@ describe("Local Custom Subscriptions", () => {
         updatedAt: new Date(),
       },
     });
-    await savePaystackPaymentCredentials(ctx.adapter as any, options, sub.id, {
+    await savePaystackPaymentCredentials(ctx.adapter, options, sub.id, {
       authorizationCode: "AUTH_stored_123",
     });
 
@@ -218,7 +218,7 @@ describe("Local Custom Subscriptions", () => {
         updatedAt: new Date(),
       },
     });
-    await savePaystackPaymentCredentials(ctx.adapter as any, options, sub.id, {
+    await savePaystackPaymentCredentials(ctx.adapter, options, sub.id, {
       authorizationCode: "AUTH_min_123",
     });
 

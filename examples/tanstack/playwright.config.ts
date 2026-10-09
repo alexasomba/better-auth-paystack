@@ -5,8 +5,8 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
-  forbidOnly: process.env.CI !== undefined && process.env.CI !== null && process.env.CI !== "",
-  retries: process.env.CI !== undefined && process.env.CI !== null && process.env.CI !== "" ? 2 : 0,
+  forbidOnly: process.env.CI !== undefined && process.env.CI !== "",
+  retries: process.env.CI !== undefined && process.env.CI !== "" ? 2 : 0,
   workers: 1,
   reporter: "html",
   use: {
@@ -33,7 +33,6 @@ export default defineConfig({
       : {
           command: "vp dev",
           url: baseURL,
-          reuseExistingServer:
-            process.env.CI === undefined || process.env.CI === null || process.env.CI === "",
+          reuseExistingServer: process.env.CI === undefined || process.env.CI === "",
         },
 });

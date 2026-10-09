@@ -45,7 +45,6 @@
     "@tanstack/react-table": "catalog:",
     "better-auth": "catalog:",
     "better-auth-paystack": "workspace:*",
-    "better-sqlite3": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "react": "catalog:",
@@ -68,14 +67,16 @@
     "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "@vitest/ui": "catalog:",
-    "dotenv": "catalog:",
     "jsdom": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:",
-    "web-vitals": "catalog:",
     "wrangler": "catalog:"
-  }
+  },
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "packageManager": "pnpm@12.10.1"
 }

@@ -4,7 +4,7 @@ library:
   repository: https://github.com/alexasomba/better-auth-paystack
   license: MIT
   compatibility: >-
-    Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
+    Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.11.x;
     better-auth-paystack >=3.0.0 <4.0.0
   description: >-
     Paystack billing plugin for Better Auth with subscriptions, transactions,
@@ -21,7 +21,7 @@ skills:
     path: skills/better-auth-paystack-setup/SKILL.md
     license: MIT
     compatibility: >-
-      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
+      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.11.x;
       better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Configure the Better Auth Paystack server and client plugins, schema,
@@ -38,7 +38,7 @@ skills:
     path: skills/paystack-billing-flows/SKILL.md
     license: MIT
     compatibility: >-
-      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
+      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.11.x;
       better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Build Paystack checkout, transaction verification, subscription lifecycle,
@@ -55,7 +55,7 @@ skills:
     path: skills/paystack-organization-billing/SKILL.md
     license: MIT
     compatibility: >-
-      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
+      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.11.x;
       better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Configure organization billing authorization, owner/admin defaults, custom
@@ -72,7 +72,7 @@ skills:
     path: skills/paystack-catalog-limits/SKILL.md
     license: MIT
     compatibility: >-
-      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
+      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.11.x;
       better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Configure products, Paystack-native plans, local plans, free trials, seat
@@ -90,7 +90,7 @@ skills:
     path: skills/paystack-tanstack-start/SKILL.md
     license: MIT
     compatibility: >-
-      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.10.x;
+      Node.js >=22.0.0; better-auth ^1.6.9; @alexasomba/paystack-node 1.11.x;
       better-auth-paystack >=3.0.0 <4.0.0
     description: >-
       Integrate Better Auth Paystack in TanStack Start with auth routes,

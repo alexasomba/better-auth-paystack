@@ -33,12 +33,12 @@ const baseURL =
 
 const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
-if (secretKey === undefined || secretKey === null || secretKey === "") {
+if (secretKey === undefined || secretKey === "") {
   console.warn("Missing PAYSTACK_SECRET_KEY in environment variables");
 }
 
 export const paystackClient =
-  secretKey !== undefined && secretKey !== null && secretKey !== ""
+  secretKey !== undefined && secretKey !== ""
     ? createPaystack({
         secretKey,
         timeoutMs: 30_000,
@@ -200,12 +200,7 @@ export const auth = betterAuth({
                 ctx,
               ) => {
                 // If no referenceId provided, allow (defaults to user.id)
-                if (
-                  referenceId === undefined ||
-                  referenceId === null ||
-                  referenceId === "" ||
-                  referenceId === user.id
-                ) {
+                if (referenceId === "" || referenceId === user.id) {
                   return true;
                 }
 

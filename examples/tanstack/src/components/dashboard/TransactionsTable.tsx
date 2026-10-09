@@ -6,8 +6,8 @@ import {
   DotsThree,
   Eye,
 } from "@phosphor-icons/react";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { ColumnDef, HeaderGroup, Row, Cell, Header } from "@tanstack/react-table";
+import { flexRender, tableFeatures, useTable } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { parsePaystackMetadata } from "better-auth-paystack/client";
 import * as React from "react";
 
@@ -50,16 +50,18 @@ interface Transaction {
   _orgName?: string; // Added by frontend for org transactions display
 }
 
+const transactionTableFeatures = tableFeatures({});
+
 export default function TransactionsTable() {
   const [data, setData] = React.useState<Transaction[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedTransaction, setSelectedTransaction] = React.useState<Transaction | null>(null);
 
-  const columns: ColumnDef<Transaction>[] = [
+  const columns: ColumnDef<typeof transactionTableFeatures, Transaction>[] = [
     {
       accessorKey: "reference",
       header: "Reference",
-      cell: ({ row }: { row: Row<Transaction> }) => {
+      cell: ({ row }) => {
         const reference = row.original.reference;
         return (
           <div className="group flex items-center gap-2">
@@ -85,13 +87,13 @@ export default function TransactionsTable() {
     {
       accessorKey: "amount",
       header: "Amount",
-      cell: ({ row }: { row: Row<Transaction> }) => {
+      cell: ({ row }) => {
         const rawAmount = row.getValue("amount");
         const amount = parseFloat(String(rawAmount));
         if (Number.isNaN(amount) || rawAmount === null || rawAmount === undefined) {
           return <div className="font-medium text-muted-foreground">—</div>;
         }
-        const currency = row.original.currency ?? "NGN"; // fallback
+        const currency = row.original.currency;
         const formatted = new Intl.NumberFormat("en-NG", {
           style: "currency",
           currency: currency,
@@ -102,7 +104,7 @@ export default function TransactionsTable() {
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }: { row: Row<Transaction> }) => {
+      cell: ({ row }) => {
         const status = row.original.status;
         return (
           <Badge
@@ -119,16 +121,13 @@ export default function TransactionsTable() {
     {
       accessorKey: "referenceId",
       header: "Billed To",
-      cell: ({ row }: { row: Row<Transaction> }) => {
+      cell: ({ row }) => {
         const referenceId = row.original.referenceId;
         const userId = row.original.userId;
 
         // If referenceId equals userId or is empty, it's personal billing
         const isOrgBilling =
-          referenceId !== undefined &&
-          referenceId !== null &&
-          referenceId !== "" &&
-          referenceId !== userId;
+          referenceId !== undefined && referenceId !== "" && referenceId !== userId;
 
         if (isOrgBilling) {
           const orgName = row.original._orgName;
@@ -144,7 +143,7 @@ export default function TransactionsTable() {
                 {orgName === undefined && (
                   <code
                     className="max-w-20 truncate font-mono text-[9px] text-muted-foreground"
-                    title={referenceId ?? ""}
+                    title={referenceId}
                   >
                     {referenceId.slice(0, 8)}...
                   </code>
@@ -160,7 +159,7 @@ export default function TransactionsTable() {
     {
       accessorKey: "createdAt",
       header: "Date",
-      cell: ({ row }: { row: Row<Transaction> }) => {
+      cell: ({ row }) => {
         const date = new Date(row.getValue("createdAt"));
         return (
           <div className="flex flex-col">
@@ -173,7 +172,7 @@ export default function TransactionsTable() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }: { row: Row<Transaction> }) => {
+      cell: ({ row }) => {
         const transaction = row.original;
 
         const copyReference = () => {
@@ -217,9 +216,7 @@ export default function TransactionsTable() {
               <DropdownMenuItem>
                 <a
                   href={
-                    transaction.paystackId !== undefined &&
-                    transaction.paystackId !== null &&
-                    transaction.paystackId !== ""
+                    transaction.paystackId !== undefined && transaction.paystackId !== ""
                       ? `https://dashboard.paystack.com/#/transactions/${transaction.paystackId}/analytics`
                       : `https://dashboard.paystack.com/#/transactions?q=${transaction.reference}`
                   }
@@ -260,7 +257,7 @@ export default function TransactionsTable() {
         // Fetch organization transactions
         try {
           const orgsRes = await authClient.organization.list();
-          if (orgsRes.data !== undefined && orgsRes.data !== null && Array.isArray(orgsRes.data)) {
+          if (orgsRes.data !== null && Array.isArray(orgsRes.data)) {
             for (const org of orgsRes.data) {
               try {
                 const orgRes = await (authClient as any).paystack.listTransactions({
@@ -300,10 +297,10 @@ export default function TransactionsTable() {
 
   // This example does not use React Compiler; TanStack Table intentionally exposes mutable callbacks.
   // oxlint-disable-next-line react/incompatible-library
-  const table = useReactTable({
+  const table = useTable({
+    features: transactionTableFeatures,
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
   });
 
   if (loading) {
@@ -321,9 +318,9 @@ export default function TransactionsTable() {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup: HeaderGroup<Transaction>) => (
+            {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header: Header<Transaction, unknown>) => (
+                {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder === true
                       ? null
@@ -335,12 +332,9 @@ export default function TransactionsTable() {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row: Row<Transaction>) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() === true ? "selected" : undefined}
-                >
-                  {row.getVisibleCells().map((cell: Cell<Transaction, unknown>) => (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getAllCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -393,9 +387,7 @@ export default function TransactionsTable() {
               <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
                 <span className="text-sm font-medium text-muted-foreground">Amount</span>
                 <span className="col-span-3 text-right font-semibold">
-                  {selectedTransaction.amount !== undefined &&
-                  selectedTransaction.amount !== null &&
-                  !Number.isNaN(selectedTransaction.amount)
+                  {!Number.isNaN(selectedTransaction.amount)
                     ? new Intl.NumberFormat("en-NG", {
                         style: "currency",
                         currency: selectedTransaction.currency || "NGN",
@@ -421,7 +413,6 @@ export default function TransactionsTable() {
                 <span className="text-sm font-medium text-muted-foreground">Billed To</span>
                 <span className="col-span-3 text-right">
                   {selectedTransaction.referenceId !== undefined &&
-                  selectedTransaction.referenceId !== null &&
                   selectedTransaction.referenceId !== "" &&
                   selectedTransaction.referenceId !== selectedTransaction.userId ? (
                     <span className="inline-flex items-center gap-1 text-blue-600">
@@ -453,7 +444,6 @@ export default function TransactionsTable() {
                 </span>
               </div>
               {selectedTransaction.metadata !== undefined &&
-                selectedTransaction.metadata !== null &&
                 selectedTransaction.metadata !== "" && (
                   <div className="space-y-1">
                     <span className="block text-left text-sm font-medium text-muted-foreground">

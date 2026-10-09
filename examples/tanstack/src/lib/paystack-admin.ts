@@ -80,7 +80,7 @@ async function getAuthenticatedContext() {
   const headers = getRequestHeaders();
   const session = await auth.api.getSession({ headers });
 
-  if (session?.user === undefined || session.user === null) {
+  if (session?.user === undefined) {
     throw new Error("You must be signed in to run trusted billing operations.");
   }
 
@@ -114,7 +114,7 @@ export const chargeRenewalServerFn = createServerFn({ method: "POST" })
       where: [{ field: "id", value: input.subscriptionId }],
     });
 
-    if (subscription === undefined || subscription === null) {
+    if (subscription === null) {
       throw new Error("Subscription not found.");
     }
 
@@ -142,7 +142,7 @@ export const chargeRenewalServerFn = createServerFn({ method: "POST" })
 
     return {
       status: result.status,
-      reference: result.data.reference ?? null,
+      reference: result.data.reference,
     };
   });
 

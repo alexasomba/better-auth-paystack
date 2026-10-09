@@ -2081,7 +2081,7 @@ describe("paystack", () => {
     };
 
     const plugin = paystack<any>(options);
-    const initResult = plugin.init(ctx as any);
+    const initResult = plugin.init(ctx);
     const orgHooks = initResult.options.databaseHooks.organization;
     if (orgHooks === undefined) {
       throw new Error("Expected organization database hooks to be registered");

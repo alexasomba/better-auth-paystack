@@ -63,7 +63,7 @@ export default function OrganizationManager() {
     setLoading(true);
     try {
       const result = await authClient.organization.list();
-      if (result.data !== null && result.data !== undefined) {
+      if (result.data !== null) {
         setOrganizations(result.data);
         if (result.data.length > 0 && activeOrg === null) {
           setActiveOrg(result.data[0]);
@@ -81,7 +81,7 @@ export default function OrganizationManager() {
       // Set active org first
       await authClient.organization.setActive({ organizationId: orgId });
       const result = await authClient.organization.getFullOrganization();
-      if (result.data?.members !== null && result.data?.members !== undefined) {
+      if (result.data?.members !== undefined) {
         setMembers(result.data.members);
       }
     } catch (_) {
@@ -118,7 +118,7 @@ export default function OrganizationManager() {
         slug,
       });
 
-      if (result.error !== null && result.error !== undefined) {
+      if (result.error !== null) {
         setMessage({
           tone: "error",
           text: result.error.message ?? "Failed to create organization",
@@ -126,14 +126,12 @@ export default function OrganizationManager() {
         return;
       }
 
-      if (result.data !== null && result.data !== undefined) {
-        await loadOrganizations();
-        setActiveOrg(result.data);
-        setOrgName("");
-        setOrgSlug("");
-        setShowCreateForm(false);
-        setMessage({ tone: "success", text: "Organization created." });
-      }
+      await loadOrganizations();
+      setActiveOrg(result.data);
+      setOrgName("");
+      setOrgSlug("");
+      setShowCreateForm(false);
+      setMessage({ tone: "success", text: "Organization created." });
     } catch (error: unknown) {
       const message = (error as { message?: string }).message ?? "Failed to create organization";
       setMessage({ tone: "error", text: message });
@@ -331,17 +329,15 @@ export default function OrganizationManager() {
                     <span className="font-medium">ID:</span>
                     <code className="rounded bg-muted px-1 text-[10px]">{org.id}</code>
                   </div>
-                  {org.paystackCustomerCode !== null &&
-                    org.paystackCustomerCode !== undefined &&
-                    org.paystackCustomerCode !== "" && (
-                      <div className="flex items-center gap-2 text-green-600">
-                        <CreditCard size={12} weight="duotone" />
-                        <span className="font-medium">Paystack:</span>
-                        <code className="rounded bg-green-50 px-1 text-[10px]">
-                          {org.paystackCustomerCode}
-                        </code>
-                      </div>
-                    )}
+                  {org.paystackCustomerCode !== undefined && org.paystackCustomerCode !== "" && (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CreditCard size={12} weight="duotone" />
+                      <span className="font-medium">Paystack:</span>
+                      <code className="rounded bg-green-50 px-1 text-[10px]">
+                        {org.paystackCustomerCode}
+                      </code>
+                    </div>
+                  )}
                   <p className="text-[10px] text-muted-foreground/70">
                     Use this ID as <code className="rounded bg-muted px-1">referenceId</code> for
                     org billing

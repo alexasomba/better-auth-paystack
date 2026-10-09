@@ -8,7 +8,7 @@ export const authMiddleware = createMiddleware().server(async ({ next }) => {
   const headers = getRequestHeaders();
   const session = await auth.api.getSession({ headers });
 
-  if (session === null || session === undefined) {
+  if (session === null) {
     throw redirect({ to: "/" });
   }
 

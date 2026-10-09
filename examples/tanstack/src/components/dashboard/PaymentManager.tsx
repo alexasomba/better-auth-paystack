@@ -50,8 +50,8 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message !== "" ? error.message : fallback;
 }
 
-function getProductPrice(product: PaystackProduct & { amount?: number }) {
-  return product.price ?? product.amount;
+function getProductPrice(product: PaystackProduct) {
+  return product.price;
 }
 
 function hasRedirectUrl(
@@ -124,7 +124,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const fetchNativeProducts = useCallback(async () => {
     try {
       const res = await paystackActions.listProducts();
-      if (res.data?.products !== undefined && res.data.products !== null) {
+      if (res.data?.products !== undefined) {
         setNativeProducts(res.data.products);
       }
     } catch (error: unknown) {
@@ -138,7 +138,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
   const fetchNativePlans = useCallback(async () => {
     try {
       const res = await paystackActions.listPlans();
-      if (res.data?.plans !== undefined && res.data.plans !== null) {
+      if (res.data?.plans !== undefined) {
         setNativePlans(res.data.plans);
       }
     } catch (error: unknown) {
@@ -161,7 +161,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
           }),
         ]);
 
-        if (configRes.data !== undefined && configRes.data !== null) {
+        if (configRes.data !== null) {
           setConfig(
             configRes.data as unknown as {
               plans: PaystackPlan[];
@@ -169,7 +169,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             },
           );
         }
-        if (subsRes.data?.subscriptions !== undefined && subsRes.data.subscriptions !== null) {
+        if (subsRes.data?.subscriptions !== undefined) {
           setSubscriptions(subsRes.data.subscriptions);
         }
       } catch (error: unknown) {
@@ -191,7 +191,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
     async function fetchOrganizations() {
       try {
         const result = await authClient.organization.list();
-        if (result.data !== undefined && result.data !== null) {
+        if (result.data !== null) {
           setOrganizations(result.data);
         }
       } catch (error: unknown) {
@@ -359,8 +359,8 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       const metadata = parsePaystackMetadata(product.metadata);
       const res = await paystackActions.initializeTransaction({
         product: product.name,
-        amount: product.price ?? 0,
-        currency: product.currency ?? "NGN",
+        amount: product.price,
+        currency: product.currency,
         metadata: metadata,
         callbackURL: `${window.location.origin}/billing/paystack/callback`,
       });
@@ -389,7 +389,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
       const res = await subscriptionActions.billingPortal({
         subscriptionCode,
       });
-      if (res.data?.link !== undefined && res.data.link !== null && res.data.link !== "") {
+      if (res.data?.link !== undefined && res.data.link !== "") {
         window.location.href = res.data.link;
       } else {
         setActionMessage({
@@ -825,9 +825,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
 
     // Dynamic amount based on quantity for organizations, but only for local/custom plans
     // Native plans have fixed pricing on Paystack.
-    const isNative =
-      variant === "native" ||
-      (plan.planCode !== undefined && plan.planCode !== null && plan.planCode !== "");
+    const isNative = variant === "native" || (plan.planCode !== undefined && plan.planCode !== "");
     const planAmount = plan.amount ?? 0;
     const displayAmount =
       selectedBillingTarget !== "personal" && !isNative ? planAmount * quantity : planAmount;
@@ -885,11 +883,7 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
             {plan.name}
           </p>
           <div className="flex items-baseline gap-1">
-            <p className="text-3xl font-bold">
-              {displayAmount !== undefined && displayAmount !== null
-                ? formatCurrency(displayAmount, plan.currency)
-                : "Custom"}
-            </p>
+            <p className="text-3xl font-bold">{formatCurrency(displayAmount, plan.currency)}</p>
             <p className="text-xs text-muted-foreground">
               /{plan.interval ?? "mo"}
               {selectedBillingTarget !== "personal" &&
@@ -898,11 +892,9 @@ export default function PaymentManager({ activeTab }: { activeTab: "subscription
                 ` for ${quantity} seats`}
             </p>
           </div>
-          {plan.description !== undefined &&
-            plan.description !== null &&
-            plan.description !== "" && (
-              <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{plan.description}</p>
-            )}
+          {plan.description !== undefined && plan.description !== "" && (
+            <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{plan.description}</p>
+          )}
           {trialDays !== null && (
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-900">
               {trialAvailable
