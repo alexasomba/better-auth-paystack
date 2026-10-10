@@ -1685,6 +1685,75 @@ describe("paystack", () => {
     expect((persisted as any).endedAt).toBeInstanceOf(Date);
   });
 
+  it("marks recurring invoices past due and restores access after a successful retry", async () => {
+    const onSubscriptionUpdate = vi.fn().mockResolvedValue(undefined);
+    const options = {
+      paystackClient: {} as PaystackClientLike,
+      subscription: {
+        enabled: true,
+        plans: [{ name: "pro", amount: 5000, currency: "NGN" }],
+        onSubscriptionUpdate,
+      },
+      secretKey: "sk_test_123",
+    } satisfies PaystackOptions<PaystackClientLike>;
+    const auth = betterAuth({
+      baseURL: "http://localhost:3000",
+      database: memory,
+      plugins: [paystack<PaystackClientLike>(options)],
+    });
+    const ctx = await auth.$context;
+    const created = await ctx.adapter.create({
+      model: "paystackSubscription",
+      data: {
+        plan: "pro",
+        referenceId: "user_invoice_retry",
+        subscriptionCode: "SUB_INVOICE_RETRY",
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any,
+    });
+    const deliver = async (event: Record<string, unknown>) => {
+      const payload = JSON.stringify(event);
+      const signature = createHmac("sha512", options.secretKey).update(payload).digest("hex");
+      return auth.handler(
+        new Request("http://localhost:3000/api/auth/paystack/webhook", {
+          method: "POST",
+          headers: { "x-paystack-signature": signature },
+          body: payload,
+        }),
+      );
+    };
+
+    const failedInvoice = {
+      event: "invoice.payment_failed",
+      data: { subscription: { subscription_code: "SUB_INVOICE_RETRY" } },
+    };
+    expect((await deliver(failedInvoice)).status).toBe(200);
+    expect((await deliver(failedInvoice)).status).toBe(200);
+    let persisted = await ctx.adapter.findOne({
+      model: "paystackSubscription",
+      where: [{ field: "id", value: created.id }],
+    });
+    expect(persisted).toMatchObject({ status: "past_due" });
+    expect(onSubscriptionUpdate).toHaveBeenCalledTimes(1);
+
+    expect(
+      (
+        await deliver({
+          event: "charge.success",
+          data: { subscription: { subscription_code: "SUB_INVOICE_RETRY" } },
+        })
+      ).status,
+    ).toBe(200);
+    persisted = await ctx.adapter.findOne({
+      model: "paystackSubscription",
+      where: [{ field: "id", value: created.id }],
+    });
+    expect(persisted).toMatchObject({ status: "active" });
+    expect(onSubscriptionUpdate).toHaveBeenCalledTimes(2);
+  });
+
   it("should prevent trial abuse - second subscription does not get trial", async () => {
     const paystackSdk = {
       transaction: {
@@ -2013,11 +2082,19 @@ describe("paystack", () => {
       onSuccess: setCookieToHeader(cookieHeaders),
     });
 
-    // Initialize subscription - should get trial (no previous subs)
+    // A trial requires explicit customer consent to the tokenization charge.
+    await expect(
+      authClient.paystack.initializeTransaction({ plan: "pro" }, { throw: true }),
+    ).rejects.toMatchObject({
+      error: { code: "TRIAL_TOKENIZATION_CHARGE_CONFIRMATION_REQUIRED" },
+    });
+
+    // Initialize subscription - the trial is pending until Paystack confirms its charge.
     await authClient.paystack.initializeTransaction(
       {
         plan: "pro",
         callbackURL: "http://localhost:3000/done",
+        confirmTrialTokenizationCharge: true,
       },
       { throw: true },
     );
@@ -2032,6 +2109,28 @@ describe("paystack", () => {
     });
     expect(sub?.trialStart).toBeDefined();
     expect(sub?.trialEnd).toBeDefined();
+    expect(sub?.status).toBe("incomplete");
+    expect(onTrialStart).not.toHaveBeenCalled();
+
+    const payload = JSON.stringify({
+      event: "charge.success",
+      data: { reference: "REF_FIRST_TRIAL", status: "success", amount: 5000, currency: "NGN" },
+    });
+    const signature = createHmac("sha512", "sk_test_123").update(payload).digest("hex");
+    const webhookRequest = () =>
+      new Request("http://localhost:3000/api/auth/paystack/webhook", {
+        method: "POST",
+        headers: { "x-paystack-signature": signature },
+        body: payload,
+      });
+    await auth.handler(webhookRequest());
+    await auth.handler(webhookRequest());
+
+    const started = await (ctx.adapter as any).findOne({
+      model: "paystackSubscription",
+      where: [{ field: "transactionReference", value: "REF_FIRST_TRIAL" }],
+    });
+    expect(started?.status).toBe("trialing");
     expect(onTrialStart).toHaveBeenCalledTimes(1);
   }, 30000);
 

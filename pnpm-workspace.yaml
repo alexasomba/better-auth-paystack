@@ -3,7 +3,7 @@ packages:
   - "examples/*"
 
 catalog:
-  "@alexasomba/paystack-node": "^1.11.1"
+  "@alexasomba/paystack-node": "^1.12.0"
   "@arethetypeswrong/cli": "^0.18.5"
   "@base-ui/react": "^1.9.0"
   "@better-auth/core": 1.7.7
@@ -82,7 +82,7 @@ allowBuilds:
   workerd: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
-  - "@alexasomba/paystack-node@1.11.0 || 1.11.1"
+  - "@alexasomba/paystack-node@1.12.0"
   - "@better-auth/infra@0.4.16"
   - "@base-ui/react@1.9.0"
   - "@base-ui/utils@0.5.0"
@@ -101,6 +101,16 @@ minimumReleaseAgeExclude:
   - seroval-plugins@1.6.9
   - seroval@1.6.9
   - wrangler@4.149.0
+  - vite-plus
+  - "@voidzero-dev/*"
+  - oxlint
+  - "@oxlint/*"
+  - oxlint-tsgolint
+  - "@oxlint-tsgolint/*"
+  - oxfmt
+  - "@oxfmt/*"
+  - vitest
+  - "@vitest/*"
 overrides:
   seroval: 1.6.9
   "@node-minify/core>glob": 13.0.6
