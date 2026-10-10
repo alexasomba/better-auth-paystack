@@ -4,6 +4,13 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.5.1](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.0...v3.5.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* align Paystack skill SDK compatibility ([#202](https://github.com/alexasomba/better-auth-paystack/issues/202)) ([420e67c](https://github.com/alexasomba/better-auth-paystack/commit/420e67cc3fa03974e0df8b974dbc9428e38fddd6))
+
 ## [3.5.0](https://github.com/alexasomba/better-auth-paystack/compare/v3.4.3...v3.5.0) (2026-10-10)
 
 
