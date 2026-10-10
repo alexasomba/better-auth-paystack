@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  validate-runtimes:
     name: Validate (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
@@ -84,3 +84,14 @@ jobs:
 
       - name: TanStack example Wrangler dry-run
         run: vp -C examples/tanstack run wrangler:dry-run
+
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    needs: validate-runtimes
+    if: ${{ always() }}
+    steps:
+      - name: Require both supported runtimes to pass
+        env:
+          RUNTIME_RESULT: ${{ needs.validate-runtimes.result }}
+        run: test "$RUNTIME_RESULT" = success
