@@ -64,7 +64,7 @@ export interface BillingStore {
     update: Partial<PaystackTransaction> & Record<string, unknown>,
   ): Promise<PaystackTransaction | null>;
   createWebhookEvent(
-    data: Partial<PaystackWebhookEventRecord> & Record<string, unknown>,
+    data: Omit<PaystackWebhookEventRecord, "id">,
   ): Promise<PaystackWebhookEventRecord>;
   findWebhookEvent(eventId: string): Promise<PaystackWebhookEventRecord | null>;
   updateWebhookEvent(
