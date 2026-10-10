@@ -105,6 +105,7 @@ describe("Local Custom Subscriptions", () => {
           status: "success",
           reference: "ref_local_123",
           amount: 500000,
+          currency: "NGN",
           authorization: {
             authorization_code: "AUTH_local_token_123",
             email: "local@test.com",
@@ -257,6 +258,7 @@ describe("Local Custom Subscriptions", () => {
           status: "success",
           reference: "ref_local_trial_123",
           amount: 0, // 0 for trial initialization in some flows
+          currency: "NGN",
           customer: { email: "local-trial@test.com" },
           metadata: {
             plan: "local-starter",
