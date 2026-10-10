@@ -53,7 +53,7 @@ export async function claimSubscriptionFulfillment(
     try {
       record = await store.createWebhookEvent({
         eventId,
-        event: "subscription.fulfillment",
+        eventType: "subscription.fulfillment",
         reference,
         status: "pending",
         payload: JSON.stringify({ version: 1, completed: [] }),

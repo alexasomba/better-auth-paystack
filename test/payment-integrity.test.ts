@@ -193,6 +193,26 @@ describe("payment integrity", () => {
     expect(onSubscriptionComplete).toHaveBeenCalledTimes(2);
     expect(onSubscriptionUpdate).toHaveBeenCalledOnce();
   });
+  it("persists the required journal event type before activating a subscription", async () => {
+    const complete = vi.fn();
+    const s = await subscriptionPayment({ onSubscriptionComplete: complete });
+    const original = s.context.adapter.create.bind(s.context.adapter);
+    vi.spyOn(s.context.adapter, "create").mockImplementation(async (input: any) => {
+      if (input.model === "paystackWebhookEvent") {
+        if (typeof input.data.eventType !== "string")
+          throw new Error("NOT NULL constraint failed: paystack_webhook_event.event_type");
+        expect(s.data.paystackSubscription[0]?.status).toBe("incomplete");
+      }
+      return original(input);
+    });
+    await reconcilePaystackTransaction(s.ctx, s.options, { reference: "ref" });
+    expect(s.data.paystackSubscription[0]?.status).toBe("active");
+    expect(s.data.paystackWebhookEvent[0]).toMatchObject({
+      eventType: "subscription.fulfillment",
+      status: "processed",
+    });
+    expect(complete).toHaveBeenCalledOnce();
+  });
   it("recovers credential persistence after activation before completing hooks", async () => {
     const complete = vi.fn();
     const s = await subscriptionPayment({ onSubscriptionComplete: complete });
