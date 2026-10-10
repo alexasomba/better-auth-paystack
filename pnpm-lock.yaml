@@ -165,8 +165,8 @@ settings:
 catalogs:
   default:
     '@alexasomba/paystack-node':
-      specifier: ^1.11.0
-      version: 1.11.0
+      specifier: ^1.11.1
+      version: 1.11.1
     '@arethetypeswrong/cli':
       specifier: ^0.18.5
       version: 0.18.5
@@ -361,7 +361,7 @@ importers:
     dependencies:
       '@alexasomba/paystack-node':
         specifier: 'catalog:'
-        version: 1.11.0
+        version: 1.11.1
       defu:
         specifier: 'catalog:'
         version: 6.1.7
@@ -420,7 +420,7 @@ importers:
     dependencies:
       '@alexasomba/paystack-node':
         specifier: 'catalog:'
-        version: 1.11.0
+        version: 1.11.1
       better-auth:
         specifier: 'catalog:'
         version: 1.7.7(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.60(@voidzero-dev/vite-plus-core@1.1.0(@arethetypeswrong/core@0.18.5)(@types/node@22.20.5)(@typescript/typescript6@6.0.2)(esbuild@0.28.2)(jiti@2.7.0)(publint@0.3.25)(terser@5.36.0)(tsx@4.23.15)(yaml@2.9.0))(esbuild@0.28.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@10.2.2))(drizzle-kit@0.31.10)(next@16.4.0(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.64.0)(@types/node@22.20.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(solid-js@1.9.17)(vitest@5.0.3)
@@ -445,7 +445,7 @@ importers:
     dependencies:
       '@alexasomba/paystack-node':
         specifier: 'catalog:'
-        version: 1.11.0
+        version: 1.11.1
       '@opennextjs/cloudflare':
         specifier: 'catalog:'
         version: 1.20.10(next@16.4.0(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.64.0)(@types/node@22.20.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(supports-color@10.2.2)(wrangler@4.149.0(@types/node@22.20.5))
@@ -491,7 +491,7 @@ importers:
     dependencies:
       '@alexasomba/paystack-node':
         specifier: 'catalog:'
-        version: 1.11.0
+        version: 1.11.1
       '@base-ui/react':
         specifier: 'catalog:'
         version: 1.9.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -628,8 +628,8 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
-  '@alexasomba/paystack-node@1.11.0':
-    resolution: {integrity: sha512-zNxqLeOhrdVZNtLNkaYFxlTZP7liPMrK7KbXCWl8HRmhbTkClHZyuYbXen637qivU3bYDNzXRs4S+P0IROGKmg==}
+  '@alexasomba/paystack-node@1.11.1':
+    resolution: {integrity: sha512-67dzIA8QXWpzie7Lzd+IKWJJAM8XcryhotPlL2qGzmraCsYzK3Lvgp7zGrhkt2hd82lPPprnxdca1NMrsTpSvQ==}
     engines: {node: '>=22.0.0'}
 
   '@alloc/quick-lru@5.2.0':
@@ -5403,7 +5403,7 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
-  '@alexasomba/paystack-node@1.11.0':
+  '@alexasomba/paystack-node@1.11.1':
     dependencies:
       '@noble/hashes': 2.4.0
       openapi-fetch: 0.17.0
