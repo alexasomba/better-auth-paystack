@@ -1146,7 +1146,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             reference: reference ?? "",
             referenceId,
             userId: user.id,
-            amount: amount ?? 0,
+            amount: initBody.amount ?? 0,
             currency: finalCurrency,
             status: "pending",
             plan: plan !== undefined ? plan.name.toLowerCase() : undefined,
