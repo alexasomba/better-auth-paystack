@@ -153,6 +153,8 @@ export interface PaystackPlan {
   group?: string;
   freeTrial?: {
     days?: number;
+    /** One-time tokenization amount in currency minor units; defaults to Paystack's documented minimum for NGN, GHS, ZAR, KES, and USD. */
+    tokenizationCharge?: number;
     onTrialStart?: (subscription: Subscription) => Promise<void>;
     onTrialEnd?: (subscription: Subscription) => Promise<void>;
     onTrialExpired?: (subscription: Subscription) => Promise<void>;
@@ -186,6 +188,10 @@ export type PaystackInitializeResult =
       reference: string;
       accessCode: string;
       redirect: true;
+      trial?: {
+        days: number;
+        tokenizationCharge: { amount: number; currency: string };
+      };
     }
   | {
       kind: "scheduled";

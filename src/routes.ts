@@ -30,6 +30,7 @@ import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk.ts";
 import { reconcilePaystackTransaction } from "./reconciliation.ts";
 import { authorizeBillingReference } from "./reference-access.ts";
 import { referenceMiddleware } from "./reference-middleware.ts";
+import { isTrustedCallbackURL } from "./route-modules/callback-url.ts";
 import {
   getConfiguredCatalog,
   listStoredPlans,
@@ -228,6 +229,27 @@ export const paystackWebhook = <P extends string = "/webhook">(
               throw e;
             }
 
+            if (options.subscription?.enabled === true) {
+              const pendingTrial = await ctx.context.adapter.findOne<Subscription>({
+                model: PAYSTACK_MODELS.subscription,
+                where: [{ field: "transactionReference", value: reference }],
+              });
+              if (
+                pendingTrial?.status === "incomplete" &&
+                pendingTrial.trialStart !== undefined &&
+                pendingTrial.trialStart !== null
+              ) {
+                const startedTrial = { ...pendingTrial, status: "trialing", updatedAt: new Date() };
+                await ctx.context.adapter.update({
+                  model: PAYSTACK_MODELS.subscription,
+                  where: [{ field: "id", value: pendingTrial.id }],
+                  update: { status: "trialing", updatedAt: startedTrial.updatedAt },
+                });
+                const trialPlan = await getPlanByName(options, pendingTrial.plan);
+                await trialPlan?.freeTrial?.onTrialStart?.(startedTrial);
+              }
+            }
+
             // Sync product quantity from Paystack after successful charge
             try {
               const transaction = await ctx.context.adapter.findOne<PaystackTransaction>({
@@ -271,6 +293,58 @@ export const paystackWebhook = <P extends string = "/webhook">(
             } catch (e) {
               ctx.context.logger.warn("Failed to update transaction status for charge.failure", e);
               throw e;
+            }
+            if (options.subscription?.enabled === true) {
+              const pendingTrial = await ctx.context.adapter.findOne<Subscription>({
+                model: PAYSTACK_MODELS.subscription,
+                where: [{ field: "transactionReference", value: reference }],
+              });
+              if (
+                pendingTrial?.status === "incomplete" &&
+                pendingTrial.trialStart !== undefined &&
+                pendingTrial.trialStart !== null
+              ) {
+                const endedAt = new Date();
+                await ctx.context.adapter.update({
+                  model: PAYSTACK_MODELS.subscription,
+                  where: [{ field: "id", value: pendingTrial.id }],
+                  update: { status: "canceled", endedAt, updatedAt: endedAt },
+                });
+              }
+            }
+          }
+        }
+
+        if ((eventName as string) === "invoice.payment_failed") {
+          const invoice = data as {
+            subscription?: { subscription_code?: string | null };
+            subscription_code?: string | null;
+          };
+          const subscriptionCode =
+            invoice.subscription?.subscription_code ?? invoice.subscription_code;
+          if (
+            subscriptionCode !== null &&
+            subscriptionCode !== undefined &&
+            subscriptionCode !== ""
+          ) {
+            const existing = await ctx.context.adapter.findOne<Subscription>({
+              model: PAYSTACK_MODELS.subscription,
+              where: [{ field: "subscriptionCode", value: subscriptionCode }],
+            });
+            if (existing && existing.status !== "canceled" && existing.status !== "past_due") {
+              const pastDue = { ...existing, status: "past_due", updatedAt: new Date() };
+              await ctx.context.adapter.update({
+                model: PAYSTACK_MODELS.subscription,
+                where: [{ field: "id", value: existing.id }],
+                update: { status: pastDue.status, updatedAt: pastDue.updatedAt },
+              });
+              const plan = await getPlanByName(options, existing.plan);
+              if (plan) {
+                await options.subscription?.onSubscriptionUpdate?.(
+                  { event, subscription: pastDue, plan },
+                  ctx as GenericEndpointContext,
+                );
+              }
             }
           }
         }
@@ -527,6 +601,22 @@ export const paystackWebhook = <P extends string = "/webhook">(
                   where: [{ field: "subscriptionCode", value: subscriptionCode }],
                 });
 
+                if (existingSub?.status === "past_due") {
+                  const recovered = { ...existingSub, status: "active", updatedAt: new Date() };
+                  await ctx.context.adapter.update({
+                    model: PAYSTACK_MODELS.subscription,
+                    update: { status: recovered.status, updatedAt: recovered.updatedAt },
+                    where: [{ field: "id", value: existingSub.id }],
+                  });
+                  const plan = await getPlanByName(options, existingSub.plan);
+                  if (plan) {
+                    await options.subscription.onSubscriptionUpdate?.(
+                      { event, subscription: recovered, plan },
+                      ctx as GenericEndpointContext,
+                    );
+                  }
+                }
+
                 if (
                   existingSub !== undefined &&
                   existingSub !== null &&
@@ -607,6 +697,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
+        confirmTrialTokenizationCharge: z.ZodOptional<z.ZodBoolean>;
       },
       z.core.$strip
     >;
@@ -646,25 +737,16 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         cancelAtPeriodEnd,
         prorateAndCharge,
         subscriptionId,
+        confirmTrialTokenizationCharge,
       } = ctx.body;
 
       // 1. Validate Callback URL validation (same as before)
       if (callbackURL !== undefined && callbackURL !== null && callbackURL !== "") {
-        const checkTrusted = () => {
-          try {
-            if ((callbackURL as string | undefined)?.startsWith("/") === true) return true;
-            const baseUrl =
-              ((ctx.context as Record<string, unknown>)?.baseURL as string | undefined) ??
-              (ctx.request as unknown as { url?: string })?.url ??
-              "";
-            if (baseUrl === "") return false;
-            const baseOrigin = new URL(baseUrl).origin;
-            return new URL(callbackURL).origin === baseOrigin;
-          } catch {
-            return false;
-          }
-        };
-        if (checkTrusted() === false) {
+        const baseUrl =
+          ((ctx.context as Record<string, unknown>)?.baseURL as string | undefined) ??
+          (ctx.request as unknown as { url?: string })?.url ??
+          "";
+        if (!isTrustedCallbackURL(callbackURL, baseUrl)) {
           throw new APIError("FORBIDDEN", {
             message: "callbackURL is not a trusted origin.",
             status: 403,
@@ -832,6 +914,15 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
 
       const trial = await resolveTrialLifecycle(ctx, { referenceId, plan });
       const { trialStart, trialEnd } = trial;
+      const trialTokenizationCharge = trial.granted
+        ? getTrialTokenizationCharge(plan, finalCurrency)
+        : undefined;
+      if (trial.granted && confirmTrialTokenizationCharge !== true) {
+        throw new APIError("BAD_REQUEST", {
+          code: "TRIAL_TOKENIZATION_CHARGE_CONFIRMATION_REQUIRED",
+          message: `This Paystack trial requires a one-time tokenization charge of ${trialTokenizationCharge} minor units in ${finalCurrency}. Tell the customer the exact charge and retry with confirmTrialTokenizationCharge: true after they accept it.`,
+        });
+      }
 
       const normalizeInitializationError = (error: unknown): APIError => {
         ctx.context.logger.error("Failed to initialize Paystack transaction", error);
@@ -937,8 +1028,8 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
         if (plan !== undefined) {
           // Subscription Flow
           if (trialStart !== undefined) {
-            // Trial Flow: Authorize card with minimum amount, don't start sub yet
-            initBody.amount = 5000; // 50 NGN (minimum allowed)
+            // Paystack requires a small paid transaction to tokenize authorization before a local trial.
+            initBody.amount = trialTokenizationCharge;
           } else {
             // Standard Flow
             initBody.plan = plan.planCode;
@@ -1069,7 +1160,7 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
             }
           }
 
-          const newSubscription = await ctx.context.adapter.create<Subscription>({
+          await ctx.context.adapter.create<Subscription>({
             model: PAYSTACK_MODELS.subscription,
             data: {
               plan: plan.name.toLowerCase(),
@@ -1080,7 +1171,8 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
               subscriptionCode: undefined,
               planCode: plan.planCode,
               transactionReference: reference ?? "",
-              status: trialStart !== undefined ? "trialing" : "incomplete",
+              // Access remains incomplete until the tokenization charge succeeds.
+              status: "incomplete",
               billingInterval: plan.interval ?? null,
               seats: quantity ?? 1,
               periodStart: new Date(),
@@ -1092,16 +1184,6 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
               updatedAt: new Date(),
             },
           });
-
-          // Call trial start hook if trial was granted
-          if (
-            trialStart !== undefined &&
-            newSubscription !== undefined &&
-            newSubscription !== null &&
-            plan.freeTrial?.onTrialStart !== undefined
-          ) {
-            await plan.freeTrial.onTrialStart(newSubscription);
-          }
         }
 
         return ctx.json({
@@ -1110,6 +1192,14 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
           reference: reference ?? "",
           accessCode: accessCode ?? "",
           redirect: true,
+          ...(trial.granted && trialTokenizationCharge !== undefined
+            ? {
+                trial: {
+                  days: trial.requestedDays,
+                  tokenizationCharge: { amount: trialTokenizationCharge, currency: finalCurrency },
+                },
+              }
+            : {}),
         } satisfies PaystackInitializeResult);
       };
       return operation !== undefined
@@ -1118,6 +1208,34 @@ export const initializeTransaction = <P extends string = "/initialize-transactio
     },
   );
 };
+
+function getTrialTokenizationCharge(plan: PaystackPlan | undefined, currency: string): number {
+  const configured = plan?.freeTrial?.tokenizationCharge;
+  if (configured !== undefined) {
+    if (!Number.isSafeInteger(configured) || configured <= 0) {
+      throw new APIError("BAD_REQUEST", {
+        code: "INVALID_TRIAL_TOKENIZATION_CHARGE",
+        message: "freeTrial.tokenizationCharge must be a positive safe integer in minor units.",
+      });
+    }
+    return configured;
+  }
+  const documentedMinimums: Record<string, number> = {
+    NGN: 5_000,
+    GHS: 10,
+    ZAR: 100,
+    KES: 300,
+    USD: 200,
+  };
+  const amount = documentedMinimums[currency.toUpperCase()];
+  if (amount === undefined) {
+    throw new APIError("BAD_REQUEST", {
+      code: "TRIAL_TOKENIZATION_CHARGE_REQUIRED",
+      message: `Configure freeTrial.tokenizationCharge in minor units for ${currency}.`,
+    });
+  }
+  return amount;
+}
 
 // Aliases for Client DX Parity
 export const createSubscription = <P extends string = "/create-subscription">(
@@ -1142,6 +1260,7 @@ export const createSubscription = <P extends string = "/create-subscription">(
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
+        confirmTrialTokenizationCharge: z.ZodOptional<z.ZodBoolean>;
       },
       z.core.$strip
     >;
@@ -1172,6 +1291,7 @@ export const upgradeSubscription = <P extends string = "/upgrade-subscription">(
         scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
         prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
+        confirmTrialTokenizationCharge: z.ZodOptional<z.ZodBoolean>;
       },
       z.core.$strip
     >;

@@ -38,6 +38,8 @@ export interface PaystackActions {
       callbackURL?: string;
       product?: string;
       referenceId?: string;
+      /** Required to start a trial after the customer has been told about its tokenization charge. */
+      confirmTrialTokenizationCharge?: boolean;
     },
     options?: O,
   ) => Promise<FetchResult<PaystackInitializeResult, O>>;

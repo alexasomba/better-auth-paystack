@@ -15,6 +15,7 @@ export const initializeTransactionBodySchema: z.ZodObject<{
   scheduleAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
   cancelAtPeriodEnd: z.ZodOptional<z.ZodBoolean>;
   prorateAndCharge: z.ZodOptional<z.ZodBoolean>;
+  confirmTrialTokenizationCharge: z.ZodOptional<z.ZodBoolean>;
 }> = z.object({
   plan: z.string().optional(),
   product: z.string().optional(),
@@ -29,4 +30,5 @@ export const initializeTransactionBodySchema: z.ZodObject<{
   scheduleAtPeriodEnd: z.boolean().optional(),
   cancelAtPeriodEnd: z.boolean().optional(),
   prorateAndCharge: z.boolean().optional(),
+  confirmTrialTokenizationCharge: z.boolean().optional(),
 });

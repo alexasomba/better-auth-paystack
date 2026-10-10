@@ -453,9 +453,20 @@ React to billing events on the server by providing callbacks in your configurati
 
 #### Trial Hooks (`subscription.plans[].freeTrial.*`)
 
-- `onTrialStart`: Called when a new trial period begins.
+- `onTrialStart`: Called after the Paystack tokenization charge succeeds and a new trial begins.
 - `onTrialEnd`: Called when a trial converts to an active subscription.
 - `onTrialExpired`: Called when a trial ends without conversion.
+
+Paystack does not offer a no-charge trial authorization flow. The plugin tokenizes the payment
+method with a small one-time charge before the local trial; the default amount uses Paystack's
+documented minimum for NGN, GHS, ZAR, KES, or USD. For another currency, configure
+`freeTrial.tokenizationCharge` in minor units. Your UI must tell the customer the exact amount
+before calling `initializeTransaction` and then send `confirmTrialTokenizationCharge: true`.
+The response includes `trial.tokenizationCharge`; the subscription remains `incomplete` until
+the successful-charge webhook starts the trial. Refunds are not automatic; handle them explicitly
+with your own policy and [Paystack's refund API](https://paystack.com/docs/payments/refunds/) if you
+promise one. See the provider guidance for [charging cards](https://paystack.com/docs/payments/charge-card/)
+and [webhook events](https://paystack.com/docs/payments/webhooks/).
 
 Application callback failures are logged after billing state is persisted and do not cause an
 otherwise valid Paystack webhook to be replayed.
@@ -567,6 +578,8 @@ type upgradeSubscription = {
    * The callback URL to redirect to after payment.
    */
   callbackURL?: string;
+  /** Required for trial plans after your UI has disclosed the one-time tokenization charge. */
+  confirmTrialTokenizationCharge?: boolean;
   /**
    * Additional metadata to store with the transaction.
    */
