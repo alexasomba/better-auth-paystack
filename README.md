@@ -468,8 +468,17 @@ with your own policy and [Paystack's refund API](https://paystack.com/docs/payme
 promise one. See the provider guidance for [charging cards](https://paystack.com/docs/payments/charge-card/)
 and [webhook events](https://paystack.com/docs/payments/webhooks/).
 
-Application callback failures are logged after billing state is persisted and do not cause an
-otherwise valid Paystack webhook to be replayed.
+Callback failures leave webhook deliveries retryable (HTTP 503). Trusted transaction
+reconciliation also persists a lifecycle delivery journal before subscription activation,
+so a failed completion/update hook can resume from another verification transport without
+resetting the billing period or repeating an already checkpointed hook. Application hooks
+must remain idempotent by payment reference: a process can stop after an external side effect
+and before its delivery checkpoint. Claims expire after five minutes for crash recovery.
+Trial-start hooks use the same recovery mechanism after signed tokenization-charge webhooks.
+Remote trial subscription creation is reserved before dispatch. If the provider response is
+lost, the plugin keeps the reservation unresolved instead of creating a duplicate subscription;
+reconcile the existing provider subscription (including its signed `subscription.create` event)
+before retrying. A stored successful provider response can resume local activation normally.
 
 #### Global Hook
 

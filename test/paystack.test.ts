@@ -1004,6 +1004,8 @@ describe("paystack", () => {
         data: {
           status: "success",
           reference: "REF_unique_isolated_123",
+          amount: 1000,
+          currency: "NGN",
         },
       },
     });
@@ -1036,6 +1038,8 @@ describe("paystack", () => {
         data: {
           status: "success",
           reference: "REF_unique_isolated_123",
+          amount: 1000,
+          currency: "NGN",
         },
       },
     });

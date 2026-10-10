@@ -9,9 +9,16 @@ import {
   getMetadataString,
   parsePaystackMetadata,
 } from "./metadata.ts";
+import { PAYSTACK_MODELS } from "./models.ts";
 import { savePaystackPaymentCredentials } from "./payment-credentials.ts";
 import { getPaystackOps, unwrapSdkResult } from "./paystack-sdk.ts";
 import { authorizeBillingReference } from "./reference-access.ts";
+import {
+  claimSubscriptionFulfillment,
+  deliverSubscriptionFulfillment,
+  releaseSubscriptionFulfillment,
+  reserveRemoteTrialSubscription,
+} from "./subscription-fulfillment.ts";
 import type {
   AnyPaystackOptions,
   PaystackCheckoutChannel,
@@ -235,7 +242,7 @@ export async function reconcilePaystackTransaction(
   }
 
   const status = data.status ?? "failed";
-  const reference = data.reference ?? input.reference;
+  const reference = input.reference;
   const paystackIdRaw = (data as { id?: number | string | null }).id;
   const paystackId =
     paystackIdRaw !== undefined && paystackIdRaw !== null ? String(paystackIdRaw) : undefined;
@@ -302,6 +309,29 @@ export async function reconcilePaystackTransaction(
         },
       });
     }
+  }
+
+  if (
+    data.reference !== reference ||
+    (txRecord !== null && typeof txRecord.amount === "number" && txRecord.amount !== data.amount) ||
+    (txRecord !== null &&
+      typeof txRecord.currency === "string" &&
+      txRecord.currency !== data.currency)
+  ) {
+    return throwOrReturnFailure({
+      throwOnError,
+      apiStatus: "BAD_REQUEST",
+      source,
+      status,
+      reference,
+      data,
+      summary,
+      error: {
+        code: "PAYMENT_INTENT_MISMATCH",
+        message: "Verified payment does not match the stored reference, amount, and currency.",
+        status: 400,
+      },
+    });
   }
 
   const transactionUpdate: Partial<PaystackTransaction> & Record<string, unknown> = {
@@ -479,149 +509,185 @@ export async function reconcilePaystackTransaction(
   summary.subscription.id = targetSub?.id;
   summary.subscription.status = targetSub?.status;
 
-  // Payment verification is repeatable; terminal or already-active entitlements are not.
-  if (targetSub && targetSub.status !== "incomplete") {
+  // Terminal entitlements are never reactivated by a payment replay.
+  if (!targetSub || !["incomplete", "active", "trialing"].includes(targetSub.status)) {
     return { ok: true, source, status, reference, data, ...summary };
   }
+  const claim = await claimSubscriptionFulfillment(ctx, reference, targetSub);
+  if (claim === null) return { ok: true, source, status, reference, data, ...summary };
+  try {
+    if (targetSub.status !== "incomplete") {
+      if (
+        authorizationCode !== undefined &&
+        authorizationCode !== null &&
+        authorizationCode !== ""
+      ) {
+        await savePaystackPaymentCredentials(ctx.context.adapter, options, targetSub.id, {
+          authorizationCode,
+        });
+      }
+      await store.retireCompetingSubscriptions(
+        targetSub.referenceId,
+        targetSub.groupId ?? null,
+        targetSub.id,
+      );
+      const plans = await getPlans(options.subscription);
+      const plan = plans.find(
+        (candidate) => candidate.name.toLowerCase() === targetSub.plan.toLowerCase(),
+      );
+      await deliverSubscriptionFulfillment(
+        ctx,
+        options,
+        claim,
+        targetSub,
+        plan,
+        data as unknown as PaystackWebhookPayload,
+      );
+      return { ok: true, source, status, reference, data, ...summary };
+    }
 
-  if (isTrial && targetPlan !== undefined && trialEnd !== undefined) {
-    const email = data.customer?.email;
-    const plans = await getPlans(options.subscription);
-    const planConfig = plans.find((plan) => plan.name.toLowerCase() === targetPlan.toLowerCase());
+    if (isTrial && targetPlan !== undefined && trialEnd !== undefined) {
+      const email = data.customer?.email;
+      const plans = await getPlans(options.subscription);
+      const planConfig = plans.find((plan) => plan.name.toLowerCase() === targetPlan.toLowerCase());
 
-    if (
-      planConfig !== undefined &&
-      planConfig !== null &&
-      (planConfig.planCode === undefined ||
-        planConfig.planCode === null ||
-        planConfig.planCode === "")
-    ) {
-      subscriptionCode = `LOC_${reference}`;
-    } else if (
-      targetSub?.subscriptionCode !== undefined &&
-      targetSub.subscriptionCode !== null &&
-      targetSub.subscriptionCode !== ""
-    ) {
-      subscriptionCode = targetSub.subscriptionCode;
-    } else if (
-      authorizationCode !== undefined &&
-      authorizationCode !== null &&
-      email !== undefined &&
-      email !== null &&
-      email !== "" &&
-      planConfig?.planCode !== undefined &&
-      planConfig.planCode !== null &&
-      planConfig.planCode !== ""
-    ) {
-      const subResRaw = await paystack?.subscription?.create({
-        body: {
-          customer: email,
-          plan: planConfig.planCode,
-          authorization: authorizationCode,
-          start_date: trialEnd,
+      if (
+        planConfig !== undefined &&
+        planConfig !== null &&
+        (planConfig.planCode === undefined ||
+          planConfig.planCode === null ||
+          planConfig.planCode === "")
+      ) {
+        subscriptionCode = `LOC_${reference}`;
+      } else if (
+        targetSub?.subscriptionCode !== undefined &&
+        targetSub.subscriptionCode !== null &&
+        targetSub.subscriptionCode !== ""
+      ) {
+        subscriptionCode = targetSub.subscriptionCode;
+      } else if (
+        authorizationCode !== undefined &&
+        authorizationCode !== null &&
+        email !== undefined &&
+        email !== null &&
+        email !== "" &&
+        planConfig?.planCode !== undefined &&
+        planConfig.planCode !== null &&
+        planConfig.planCode !== ""
+      ) {
+        const planCode = planConfig.planCode;
+        subscriptionCode = await reserveRemoteTrialSubscription(ctx, claim, async () => {
+          const subResRaw = await paystack?.subscription?.create({
+            body: {
+              customer: email,
+              plan: planCode,
+              authorization: authorizationCode,
+              start_date: trialEnd,
+            },
+          });
+          const subRes =
+            unwrapSdkResult<components["schemas"]["SubscriptionListResponseArray"]>(subResRaw);
+          return subRes?.subscription_code;
+        });
+      }
+    } else if (isTrial === false) {
+      const planCodeFromPaystack = (data as { plan?: { plan_code?: string | null } }).plan
+        ?.plan_code;
+      if (
+        planCodeFromPaystack === undefined ||
+        planCodeFromPaystack === null ||
+        planCodeFromPaystack === ""
+      ) {
+        subscriptionCode = `LOC_${reference}`;
+      } else {
+        subscriptionCode =
+          (data as { subscription?: { subscription_code?: string | null } }).subscription
+            ?.subscription_code ?? undefined;
+      }
+    }
+
+    let updatedSubscription: Subscription | null = null;
+    if (targetSub !== undefined && targetSub !== null) {
+      const plans = await getPlans(options.subscription);
+      const resolvedPlan = plans.find(
+        (candidate) => candidate.name.toLowerCase() === targetSub.plan.toLowerCase(),
+      );
+      updatedSubscription = await ctx.context.adapter.update<Subscription>({
+        model: PAYSTACK_MODELS.subscription,
+        where: [
+          { field: "id", value: targetSub.id },
+          { field: "status", value: "incomplete" },
+          { field: "transactionReference", value: reference },
+        ],
+        update: {
+          status: isTrial ? "trialing" : "active",
+          billingInterval: resolvedPlan?.interval ?? targetSub.billingInterval ?? null,
+          periodStart: new Date(),
+          updatedAt: new Date(),
+          ...(isTrial && trialEnd !== undefined
+            ? {
+                trialStart: new Date(),
+                trialEnd: new Date(trialEnd),
+                periodEnd: new Date(trialEnd),
+              }
+            : {}),
+          ...(subscriptionCode !== undefined ? { subscriptionCode } : {}),
         },
       });
-      const subRes =
-        unwrapSdkResult<components["schemas"]["SubscriptionListResponseArray"]>(subResRaw);
-      subscriptionCode = subRes?.subscription_code;
+      summary.subscription.updated = updatedSubscription !== null;
+      summary.subscription.id = updatedSubscription?.id ?? targetSub.id;
+      summary.subscription.status = updatedSubscription?.status ?? targetSub.status;
+      if (
+        authorizationCode !== undefined &&
+        authorizationCode !== null &&
+        authorizationCode !== "" &&
+        updatedSubscription !== null
+      ) {
+        await savePaystackPaymentCredentials(ctx.context.adapter, options, updatedSubscription.id, {
+          authorizationCode,
+        });
+      }
+      if (
+        updatedSubscription !== null &&
+        (updatedSubscription.status === "active" || updatedSubscription.status === "trialing")
+      ) {
+        await store.retireCompetingSubscriptions(
+          updatedSubscription.referenceId,
+          updatedSubscription.groupId ?? null,
+          updatedSubscription.id,
+        );
+      }
     }
-  } else if (isTrial === false) {
-    const planCodeFromPaystack = (data as { plan?: { plan_code?: string | null } }).plan?.plan_code;
-    if (
-      planCodeFromPaystack === undefined ||
-      planCodeFromPaystack === null ||
-      planCodeFromPaystack === ""
-    ) {
-      subscriptionCode = `LOC_${reference}`;
-    } else {
-      subscriptionCode =
-        (data as { subscription?: { subscription_code?: string | null } }).subscription
-          ?.subscription_code ?? undefined;
-    }
-  }
 
-  let updatedSubscription: Subscription | null = null;
-  if (targetSub !== undefined && targetSub !== null) {
-    const plans = await getPlans(options.subscription);
-    const resolvedPlan = plans.find(
-      (candidate) => candidate.name.toLowerCase() === targetSub.plan.toLowerCase(),
-    );
-    updatedSubscription = await store.updateSubscription(targetSub.id, {
-      status: isTrial ? "trialing" : "active",
-      billingInterval: resolvedPlan?.interval ?? targetSub.billingInterval ?? null,
-      periodStart: new Date(),
-      updatedAt: new Date(),
-      ...(isTrial && trialEnd !== undefined
-        ? {
-            trialStart: new Date(),
-            trialEnd: new Date(trialEnd),
-            periodEnd: new Date(trialEnd),
-          }
-        : {}),
-      ...(subscriptionCode !== undefined ? { subscriptionCode } : {}),
-    });
-    summary.subscription.updated = updatedSubscription !== null;
-    summary.subscription.id = updatedSubscription?.id ?? targetSub.id;
-    summary.subscription.status = updatedSubscription?.status ?? targetSub.status;
-    if (
-      authorizationCode !== undefined &&
-      authorizationCode !== null &&
-      authorizationCode !== "" &&
-      updatedSubscription !== null
-    ) {
-      await savePaystackPaymentCredentials(ctx.context.adapter, options, updatedSubscription.id, {
-        authorizationCode,
+    if (updatedSubscription !== undefined && updatedSubscription !== null) {
+      const plans = await getPlans(options.subscription);
+      const plan = plans.find(
+        (candidate) => candidate.name.toLowerCase() === updatedSubscription.plan.toLowerCase(),
+      );
+      await deliverSubscriptionFulfillment(
+        ctx,
+        options,
+        claim,
+        updatedSubscription,
+        plan,
+        data as unknown as PaystackWebhookPayload,
+      );
+    } else {
+      throw new APIError("SERVICE_UNAVAILABLE", {
+        message: "Subscription activation is pending. Retry verification.",
       });
     }
-    if (
-      updatedSubscription !== null &&
-      (updatedSubscription.status === "active" || updatedSubscription.status === "trialing")
-    ) {
-      await store.retireCompetingSubscriptions(
-        updatedSubscription.referenceId,
-        updatedSubscription.groupId ?? null,
-        updatedSubscription.id,
-      );
-    }
-  }
 
-  if (updatedSubscription !== undefined && updatedSubscription !== null) {
-    const plans = await getPlans(options.subscription);
-    const plan = plans.find(
-      (candidate) => candidate.name.toLowerCase() === updatedSubscription.plan.toLowerCase(),
-    );
-    if (plan !== undefined) {
-      const callbackData = {
-        event: data as unknown as PaystackWebhookPayload,
-        subscription: updatedSubscription,
-        plan,
-      };
-      for (const callback of [
-        options.subscription?.onSubscriptionComplete,
-        options.subscription?.onSubscriptionUpdate,
-      ]) {
-        try {
-          await callback?.(callbackData, ctx);
-        } catch (error) {
-          ctx.context.logger.error("Paystack subscription callback failed", error);
-        }
-      }
-      if (targetSub?.status === "trialing" && updatedSubscription.status === "active") {
-        try {
-          await plan.freeTrial?.onTrialEnd?.(updatedSubscription);
-        } catch (error) {
-          ctx.context.logger.error("Paystack trial end callback failed", error);
-        }
-      }
-    }
+    return {
+      ok: true,
+      source,
+      status,
+      reference,
+      data,
+      ...summary,
+    };
+  } catch (error) {
+    await releaseSubscriptionFulfillment(ctx, claim);
+    throw error;
   }
-
-  return {
-    ok: true,
-    source,
-    status,
-    reference,
-    data,
-    ...summary,
-  };
 }

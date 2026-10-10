@@ -52,6 +52,11 @@ import {
   getWebhookRequest,
 } from "./route-modules/webhook.ts";
 import {
+  claimSubscriptionFulfillment,
+  deliverTrialStart,
+  releaseSubscriptionFulfillment,
+} from "./subscription-fulfillment.ts";
+import {
   handleProratedUpgrade,
   resolveCheckoutTargetEmail,
   resolveTrialLifecycle,
@@ -199,6 +204,7 @@ export const paystackWebhook = <P extends string = "/webhook">(
           where: [
             { field: "eventId", value: eventId },
             { field: "status", value: existingEvent.status },
+            { field: "updatedAt", value: existingEvent.updatedAt },
           ],
           update: { status: claimStatus, updatedAt: new Date() },
         });
@@ -235,18 +241,40 @@ export const paystackWebhook = <P extends string = "/webhook">(
                 where: [{ field: "transactionReference", value: reference }],
               });
               if (
-                pendingTrial?.status === "incomplete" &&
+                pendingTrial !== null &&
+                ["incomplete", "trialing"].includes(pendingTrial.status) &&
                 pendingTrial.trialStart !== undefined &&
                 pendingTrial.trialStart !== null
               ) {
-                const startedTrial = { ...pendingTrial, status: "trialing", updatedAt: new Date() };
-                await ctx.context.adapter.update({
-                  model: PAYSTACK_MODELS.subscription,
-                  where: [{ field: "id", value: pendingTrial.id }],
-                  update: { status: "trialing", updatedAt: startedTrial.updatedAt },
-                });
-                const trialPlan = await getPlanByName(options, pendingTrial.plan);
-                await trialPlan?.freeTrial?.onTrialStart?.(startedTrial);
+                const trialClaim = await claimSubscriptionFulfillment(
+                  ctx,
+                  reference,
+                  pendingTrial,
+                  "trial-start",
+                );
+                if (trialClaim !== null) {
+                  try {
+                    const startedTrial =
+                      pendingTrial.status === "trialing"
+                        ? pendingTrial
+                        : await ctx.context.adapter.update<Subscription>({
+                            model: PAYSTACK_MODELS.subscription,
+                            where: [
+                              { field: "id", value: pendingTrial.id },
+                              { field: "status", value: "incomplete" },
+                              { field: "transactionReference", value: reference },
+                            ],
+                            update: { status: "trialing", updatedAt: new Date() },
+                          });
+                    if (startedTrial === null)
+                      throw new Error("Trial activation changed concurrently; retry later.");
+                    const trialPlan = await getPlanByName(options, pendingTrial.plan);
+                    await deliverTrialStart(ctx, trialClaim, startedTrial, trialPlan ?? undefined);
+                  } catch (error) {
+                    await releaseSubscriptionFulfillment(ctx, trialClaim);
+                    throw error;
+                  }
+                }
               }
             }
 
