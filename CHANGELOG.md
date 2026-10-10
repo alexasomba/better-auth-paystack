@@ -4,6 +4,13 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.5.3](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.2...v3.5.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* persist the required fulfillment journal event type ([#206](https://github.com/alexasomba/better-auth-paystack/issues/206)) ([b6c4c5b](https://github.com/alexasomba/better-auth-paystack/commit/b6c4c5b84264fd2986daedc3a01fc0086471d579))
+
 ## [3.5.2](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.1...v3.5.2) (2026-10-10)
 
 
