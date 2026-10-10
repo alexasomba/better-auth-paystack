@@ -4,6 +4,19 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.4.3](https://github.com/alexasomba/better-auth-paystack/compare/v3.4.2...v3.4.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* use paystack-node 1.11.1 ([#198](https://github.com/alexasomba/better-auth-paystack/issues/198)) ([80a749d](https://github.com/alexasomba/better-auth-paystack/commit/80a749d533814145cf960a04c0299f0b3b9d1fc2))
+
+
+### Miscellaneous Chores
+
+* align pnpm and keep Next.js example buildable ([#195](https://github.com/alexasomba/better-auth-paystack/issues/195)) ([571b51f](https://github.com/alexasomba/better-auth-paystack/commit/571b51fcb2fb1751fd36f84dfbe03e6585a73e69))
+* bump pnpm to 12.11.2 ([#197](https://github.com/alexasomba/better-auth-paystack/issues/197)) ([63309dc](https://github.com/alexasomba/better-auth-paystack/commit/63309dc30553abed956029f711a111a1339c3bef))
+
 ## [3.4.2](https://github.com/alexasomba/better-auth-paystack/compare/v3.4.1...v3.4.2) (2026-10-09)
 
 
