@@ -986,6 +986,16 @@ describe("paystack", () => {
     }
     expect(initRes.status).toBe(200);
 
+    expect(paystackSdk.transaction.initialize).toHaveBeenLastCalledWith({
+      body: expect.objectContaining({ amount: 5000, currency: "NGN" }),
+    });
+    expect(
+      await ctx.adapter.findOne({
+        model: "paystackTransaction",
+        where: [{ field: "reference", value: "REF_unique_isolated_123" }],
+      }),
+    ).toMatchObject({ amount: 5000, currency: "NGN" });
+
     const subA0 = (
       await (ctx.adapter as unknown as DBAdapter).findMany({
         model: "paystackSubscription",
@@ -1004,7 +1014,7 @@ describe("paystack", () => {
         data: {
           status: "success",
           reference: "REF_unique_isolated_123",
-          amount: 1000,
+          amount: 5000,
           currency: "NGN",
         },
       },
@@ -1038,7 +1048,7 @@ describe("paystack", () => {
         data: {
           status: "success",
           reference: "REF_unique_isolated_123",
-          amount: 1000,
+          amount: 5000,
           currency: "NGN",
         },
       },
@@ -2047,7 +2057,7 @@ describe("paystack", () => {
       subscription: {
         enabled: true,
         plans: [
-          { name: "pro", amount: 5000, currency: "NGN", freeTrial: { days: 14, onTrialStart } },
+          { name: "pro", amount: 5000000, currency: "NGN", freeTrial: { days: 14, onTrialStart } },
         ],
       },
       secretKey: "sk_test_123",
@@ -2115,6 +2125,15 @@ describe("paystack", () => {
     expect(sub?.trialEnd).toBeDefined();
     expect(sub?.status).toBe("incomplete");
     expect(onTrialStart).not.toHaveBeenCalled();
+
+    expect(paystackSdk.transaction.initialize).toHaveBeenCalledWith({
+      body: expect.objectContaining({ amount: 5000, currency: "NGN" }),
+    });
+    const transaction = await ctx.adapter.findOne({
+      model: "paystackTransaction",
+      where: [{ field: "reference", value: "REF_FIRST_TRIAL" }],
+    });
+    expect(transaction).toMatchObject({ amount: 5000, currency: "NGN", status: "pending" });
 
     const payload = JSON.stringify({
       event: "charge.success",
