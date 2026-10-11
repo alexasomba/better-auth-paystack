@@ -4,6 +4,13 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.5.4](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.3...v3.5.4) (2026-10-11)
+
+
+### Bug Fixes
+
+* persist the initialized checkout amount for verification ([#208](https://github.com/alexasomba/better-auth-paystack/issues/208)) ([b036021](https://github.com/alexasomba/better-auth-paystack/commit/b036021ec333d6dde17b4f9cc81af72b6e30d5cc))
+
 ## [3.5.3](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.2...v3.5.3) (2026-10-10)
 
 
