@@ -1,3 +1,5 @@
+[English](README.md) · [Español](README.es-ES.md) · [Français](README.fr-FR.md)
+
 # Better Auth Paystack - TanStack Start Example
 
 A complete example demonstrating the `better-auth-paystack` plugin with TanStack Start, deployed on Cloudflare Workers.

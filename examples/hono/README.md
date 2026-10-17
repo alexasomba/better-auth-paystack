@@ -1,3 +1,5 @@
+[English](README.md) · [Español](README.es-ES.md) · [Français](README.fr-FR.md)
+
 # Hono + Better Auth + Paystack
 
 This example wires Better Auth and `better-auth-paystack` into a Hono Cloudflare Worker.
