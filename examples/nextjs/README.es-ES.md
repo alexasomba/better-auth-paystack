@@ -2,11 +2,9 @@
 
 # Abrir siguiente iniciador
 
-
 ## Mejor autenticación + Paystack
 
 Este ejemplo monta Better Auth (con el complemento Paystack) en `GET/POST /api/auth/[...all]`.
-
 
 ### Configuración
 
@@ -37,7 +35,6 @@ Opcional:
 
 Esta demostración admite la creación de clientes de Paystack en los flujos de registro y suscripción de Paystack, así que utilice una clave secreta de prueba de Paystack real.
 
-
 ### Validar
 
 Desde la raíz del repositorio:
@@ -48,7 +45,6 @@ vp -C examples/nextjs run lint
 vp -C examples/nextjs run build
 ```
 
-
 ### Almacenamiento
 
 Al igual que el ejemplo de TanStack Start, esta demostración utiliza el adaptador en memoria de Better Auth.
@@ -58,11 +54,9 @@ implementar datos de facturación persistentes.
 
 Este es un proyecto [Next.js](https://nextjs.org) iniciado con [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-
 ## Empezando
 
 Lea la documentación en https://opennext.js.org/cloudflare.
-
 
 ## Desarrollar
 
@@ -73,7 +67,6 @@ vp dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000) con su navegador para ver el resultado.
-
 
 ## Qué probar
 
@@ -90,7 +83,6 @@ Nota: la verificación del webhook es "funcional" en el sentido de que el punto 
 
 Puede comenzar a editar la página modificando `src/app/page.tsx`. La página se actualiza automáticamente a medida que edita el archivo.
 
-
 ## Vista previa
 
 Obtenga una vista previa de la aplicación localmente en el tiempo de ejecución de Cloudflare:
@@ -99,7 +91,6 @@ Obtenga una vista previa de la aplicación localmente en el tiempo de ejecución
 vp run preview
 ```
 
-
 ## Implementar
 
 Implemente la aplicación en Cloudflare:
@@ -107,7 +98,6 @@ Implemente la aplicación en Cloudflare:
 ```bash
 vp run deploy
 ```
-
 
 ## Más información
 

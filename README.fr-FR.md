@@ -17,7 +17,6 @@ Un plugin TypeScript first qui intègre Paystack dans [Better Auth](https://www.
 
 [**Démo en direct (démarrage Tanstack)**](https://better-auth-paystack.gittech.workers.dev) | [**Code source**](https://github.com/alexasomba/better-auth-paystack/tree/main/examples/tanstack)
 
-
 ## Compétences des agents IA
 
 Ce package publie les compétences des agents afin que les agents de codage d'IA puissent charger des conseils spécifiques au package pour la configuration, les abonnements, la facturation de l'organisation, l'intégration de TanStack Start, les API client, les webhooks, le cycle de vie des abonnements locaux, les modifications de schéma et les tests.
@@ -41,7 +40,6 @@ npx skills-npm --yes
 
 Pour ce référentiel, les responsables peuvent exécuter `pnpm run skills:dry-run` pour prévisualiser la découverte via l'exemple d'appareil TanStack ou `pnpm run skills:install` pour créer des liens symboliques de compétences d'agent local à partir de cet appareil.
 
-
 ## Fonctionnalités
 
 - [x] **Modèles de facturation** : prise en charge des forfaits natifs Paystack, des abonnements gérés localement et des paiements uniques (produits/montants).
@@ -58,22 +56,18 @@ Pour ce référentiel, les responsables peuvent exécuter `pnpm run skills:dry-r
 
 ---
 
-
 ## Démarrage rapide
-
 
 ### Prérequis
 
 - **Node.js** : `v22.0.0` ou supérieur.
 - **Meilleure authentification** : `v1.6.9` ou supérieur.
 
-
 ### 1. Installer le plugin et les SDK
 
 ```bash
 npm install better-auth better-auth-paystack @alexasomba/paystack-node
 ```
-
 
 #### Migration à partir du package étendu
 
@@ -91,13 +85,11 @@ Il s'agit d'une migration de nom de package. La version v4 déplace également l
 tables appartenant au fournisseur. Les noms de routes client existants restent compatibles, mais une migration de base de données
 et l'opération de migration approuvée décrite ci-dessous sont requises.
 
-
 #### Facultatif : SDK du navigateur (pour les modaux contextuels)
 
 ```bash
 npm install @alexasomba/paystack-inline
 ```
-
 
 ### 2. Configurer les variables d'environnement
 
@@ -106,7 +98,6 @@ PAYSTACK_SECRET_KEY=sk_test_...
 BETTER_AUTH_SECRET=...
 BETTER_AUTH_URL=http://localhost:8787
 ```
-
 
 ### 3. Configurer le plugin du serveur
 
@@ -158,7 +149,6 @@ Paystack signe les charges utiles du webhook avec le même `PAYSTACK_SECRET_KEY`
 il n’y a pas de secret de webhook distinct. Options anciennes `webhook.secret` et `paystackWebhookSecret`
 sont acceptés pour la compatibilité des sources mais ignorés.
 
-
 ### 4. Configurer le plugin client
 
 ```ts title="client.ts"
@@ -171,7 +161,6 @@ export const client = createAuthClient({
 });
 ```
 
-
 ### 5. Migrer le schéma de base de données
 
 ```bash
@@ -179,7 +168,6 @@ npx better-auth migrate
 ```
 
 ---
-
 
 ## Guide de migration
 
@@ -198,7 +186,6 @@ La version `2.0.0` contient une modification radicale axée sur la sécurité.
 - `syncPaystackProducts`
 - `syncPaystackPlans`
 
-
 ### Vieux
 
 ```ts
@@ -208,7 +195,6 @@ await authClient.paystack.chargeRecurringSubscription({
   subscriptionId: "sub_123",
 });
 ```
-
 
 ### Nouveau
 
@@ -238,12 +224,9 @@ Ces opérations sont intentionnellement réservées au serveur. Ne les exposez p
 
 ---
 
-
 ## Modèles de facturation
 
-
 ### 1. Abonnements
-
 
 #### Natif (recommandé)
 
@@ -253,7 +236,6 @@ Utilisez `planCode` à partir de votre tableau de bord Paystack. Paystack gère 
 { name: "pro", planCode: "PLN_xxx" }
 ```
 
-
 #### Local
 
 Utilisez `amount` et `interval`. Le plugin stocke le statut localement, vous permettant de gérer une logique récurrente personnalisée ou des « périodes d'accès » ponctuelles.
@@ -262,9 +244,7 @@ Utilisez `amount` et `interval`. Le plugin stocke le statut localement, vous per
 { name: "starter", amount: 50000, interval: "monthly" }
 ```
 
-
 ### 2. Paiements uniques
-
 
 #### Produits fixes
 
@@ -275,7 +255,6 @@ await authClient.paystack.transaction.initialize({
   product: "credits_50",
 });
 ```
-
 
 #### Montants ponctuels
 
@@ -291,18 +270,15 @@ await authClient.paystack.transaction.initialize({
 
 ---
 
-
 ## Limites et gestion des sièges
 
 Le plugin applique automatiquement les limites aux abonnements actifs et d’essai. Lorsque plusieurs
 les groupes d'abonnement définissent la même limite numérique, la valeur la plus élevée l'emporte ; les caractéristiques du forfait sont
 combinés.
 
-
 ### Limites de sièges pour les membres
 
 Les sièges achetés sont stockés dans le champ `subscription.seats`. Le plugin se connecte à `member.create` et `invitation.create` pour bloquer les ajouts une fois la limite atteinte.
-
 
 ### Limites des ressources (par exemple, équipes)
 
@@ -313,7 +289,6 @@ plans: [{ name: "pro", limits: { teams: 5, seats: 10 } }];
 ```
 
 Le plugin vérifie nativement la limite `teams` si vous utilisez le plugin Better Auth Organization.
-
 
 ### Groupes d'abonnement
 
@@ -333,25 +308,22 @@ comportement.
 
 ---
 
-
 ## Prise en charge des devises
 
 Le plugin prend en charge les devises suivantes avec validation automatique du montant minimum de transaction :
 
-| Monnaie | Nom | Montant minimum |
-| -------- | ---------------------- | ---------- |
-| **NGN** | Naira nigérian | 50,00 ₦ |
-| **SGH** | Cédi ghanéen | ₵0,10 |
-| **ZAR** | Rand sud-africain | R1.00 |
-| **KES** | Shilling kenyan | 3,00 KSh |
-| **USD** | Dollar américain | 2,00 $ |
-| **XOF** | Franc CFA ouest-africain | 100 FCFA |
+| Monnaie | Nom                      | Montant minimum |
+| ------- | ------------------------ | --------------- |
+| **NGN** | Naira nigérian           | 50,00 ₦         |
+| **SGH** | Cédi ghanéen             | ₵0,10           |
+| **ZAR** | Rand sud-africain        | R1.00           |
+| **KES** | Shilling kenyan          | 3,00 KSh        |
+| **USD** | Dollar américain         | 2,00 $          |
+| **XOF** | Franc CFA ouest-africain | 100 FCFA        |
 
 Les transactions inférieures à ces seuils seront rejetées avec une erreur `BAD_REQUEST`.
 
-
 ## Utilisation avancée
-
 
 ### Facturation de l'organisation
 
@@ -373,7 +345,6 @@ paystack({
 });
 ```
 
-
 ### Modal contextuel en ligne
 
 Utilisez `@alexasomba/paystack-inline` pour une interface utilisateur transparente.
@@ -389,14 +360,12 @@ if (data?.kind === "checkout") {
 }
 ```
 
-
 ### Modifications et annulations programmées
 
 Reportez les modifications à la fin du cycle de facturation en cours :
 
 - **Mises à niveau** : passez `scheduleAtPeriodEnd: true` dans `initializeTransaction()`.
 - **Annulations** : utilisez `authClient.subscription.cancel({ subscriptionCode, atPeriodEnd: true })` pour maintenir l'abonnement actif jusqu'à la fin de la période.
-
 
 ### Prorata de mi-cycle (`prorateAndCharge`)
 
@@ -425,7 +394,6 @@ if (data?.kind === "prorated") {
 
 Lorsque le flux revient à la caisse, vérifiez la référence de la transaction renvoyée après le paiement. Le plugin utilise les métadonnées de prorata stockées pour appliquer le changement de plan/siège en attente uniquement après une vérification réussie.
 
-
 ### Restreindre les canaux de paiement des abonnements
 
 Utilisez `subscription.allowedPaymentChannels` pour limiter les canaux de paiement Paystack qui peuvent être utilisés pour les flux d'abonnement.
@@ -442,7 +410,6 @@ paystack({
 ```
 
 Si le paiement d'un abonnement est ensuite vérifié avec un canal non autorisé, le plugin rejette l'activation au lieu de créer silencieusement l'abonnement.
-
 
 ### Sécurité des webhooks
 
@@ -466,16 +433,13 @@ paystack({
 Les signatures Webhook sont toujours vérifiées avec `secretKey`, comme l'exige Paystack. Ne créez pas ou
 configurer un `PAYSTACK_WEBHOOK_SECRET` distinct.
 
-
 ### Prévention des abus lors des procès
 
 Le plugin vérifie l'historique `referenceId`. Si un essai a déjà été utilisé (actif, expiré ou en cours d'essai), il ne sera plus accordé, empêchant ainsi les abus de réabonnement.
 
-
 ### Crochets de cycle de vie
 
 Réagissez aux événements de facturation sur le serveur en fournissant des rappels dans votre configuration :
-
 
 #### Crochets d'abonnement (`subscription.*`)
 
@@ -484,12 +448,10 @@ Réagissez aux événements de facturation sur le serveur en fournissant des rap
 - `onSubscriptionUpdate` : appelé après un changement persistant du cycle de vie.
 - `onSubscriptionCancel` : appelé lorsqu'un utilisateur ou une organisation annule son abonnement.
 
-
 #### Crochets client (`top-level` ou `organization.*`)
 
 - `onCustomerCreate` : appelé après que le plugin ait créé avec succès un client Paystack.
 - `getCustomerCreateParams` : renvoie un objet personnalisé pour remplacer/étendre les données envoyées à Paystack lors de la création du client.
-
 
 #### Crochets d'essai (`subscription.plans[].freeTrial.*`)
 
@@ -520,11 +482,9 @@ perdue, le plugin maintient la réservation non résolue au lieu de créer un ab
 rapprocher l'abonnement du fournisseur existant (y compris son événement `subscription.create` signé)
 avant de réessayer. Une réponse réussie du fournisseur stockée peut reprendre l’activation locale normalement.
 
-
 #### Crochet mondial
 
 - `onEvent` : reçoit chaque charge utile d'événement webhook envoyée par Paystack pour un traitement personnalisé.
-
 
 ### Opérations du serveur de confiance
 
@@ -561,9 +521,7 @@ await syncPaystackPlans(ctx, paystackOptions);
 
 Utilisez `reconcilePaystackTransaction` à partir des gestionnaires de webhooks, des tentatives de file d'attente, des tâches cron ou des actions d'administration lorsque le code du serveur approuvé nécessite les mêmes effets secondaires de vérification et de transaction/abonnement locaux que le point de terminaison de vérification du navigateur.
 
-
 ### Autorisation et sécurité
-
 
 #### `authorizeReference`
 
@@ -592,7 +550,6 @@ paystack({
 
 ---
 
-
 ## Référence du SDK client
 
 Le plugin client expose les méthodes canoniques entièrement typées sous `authClient.paystack`, `authClient.transaction` et `authClient.subscription`.
@@ -605,7 +562,6 @@ Les anciens alias de compatibilité restent disponibles pour la migration, mais 
 
 - `authClient.subscription.disable(...)` -> utiliser `authClient.subscription.cancel(...)`
 - `authClient.subscription.enable(...)` -> utiliser `authClient.subscription.restore(...)`
-
 
 ### `authClient.subscription.upgrade` / `create`
 
@@ -651,7 +607,6 @@ type upgradeSubscription = {
 };
 ```
 
-
 ### `authClient.paystack.transaction.initialize`
 
 Identique à `upgrade`, mais peut également être utilisé pour des paiements uniques en omettant `plan` et en fournissant `amount` ou `product`.
@@ -690,7 +645,6 @@ type initializeTransactionResult =
   | { kind: "prorated"; status: "success"; message: string; prorated: true };
 ```
 
-
 ### `authClient.subscription.list`
 
 Répertoriez les abonnements pour un utilisateur ou une organisation. Les actions de facturation à l'échelle de l'organisation nécessitent par défaut une adhésion propriétaire/administrateur. Pour autoriser des rôles tels que `billing`, configurez `organization.billingRoles`. Pour des ressources personnalisées ou des vérifications de stratégie plus approfondies, configurez `subscription.authorizeReference`.
@@ -705,7 +659,6 @@ type listSubscriptions = {
   };
 };
 ```
-
 
 ### `authClient.subscription.cancel` / `restore`
 
@@ -736,32 +689,28 @@ type cancelSubscription = {
 };
 ```
 
-
 ## Référence du schéma
 
 Le plugin étend votre base de données avec les champs et tables suivants.
-
 
 ### `user` et `organization`
 
 Les codes clients Paystack ne sont plus ajoutés aux tables d'authentification Better Auth. Organisation `email`
 reste disponible pour la facturation de secours.
 
-| Champ | Tapez | Obligatoire | Descriptif |
-| :------ | :------- | :------- | :--------------------------------------------------------------------------------- |
-| `email` | `string` | Non | L'e-mail de facturation de l'organisation. Retour à l'e-mail du propriétaire en cas d'absence. |
-
+| Champ   | Tapez    | Obligatoire | Descriptif                                                                                     |
+| :------ | :------- | :---------- | :--------------------------------------------------------------------------------------------- |
+| `email` | `string` | Non         | L'e-mail de facturation de l'organisation. Retour à l'e-mail du propriétaire en cas d'absence. |
 
 ### `paystackCustomer`
 
-| Champ | Tapez | Obligatoire | Descriptif |
-| :-------------- | :------- | :------- | :-------------------------------------------------- |
-| `referenceType` | `string` | Oui | `user` ou `organization`. |
-| `referenceId` | `string` | Oui | Posséder un identifiant Better Auth. |
-| `referenceKey` | `string` | Oui | Clé de référence unique appartenant au fournisseur. |
-| `customerCode` | `string` | Oui | Code client Paystack. |
-| `email` | `string` | Non | E-mail de facturation. |
-
+| Champ           | Tapez    | Obligatoire | Descriptif                                          |
+| :-------------- | :------- | :---------- | :-------------------------------------------------- |
+| `referenceType` | `string` | Oui         | `user` ou `organization`.                           |
+| `referenceId`   | `string` | Oui         | Posséder un identifiant Better Auth.                |
+| `referenceKey`  | `string` | Oui         | Clé de référence unique appartenant au fournisseur. |
+| `customerCode`  | `string` | Oui         | Code client Paystack.                               |
+| `email`         | `string` | Non         | E-mail de facturation.                              |
 
 ### `paystackPaymentCredential`
 
@@ -769,75 +718,71 @@ Les informations de paiement sont stockées séparément sous forme de texte chi
 renvoyé par les API d'abonnement, les rappels, les journaux ou les actions du client. Ensemble `credentialEncryptionKey`
 à un secret de production dédié ; le plugin revient à `secretKey` pour des raisons de compatibilité.
 
-| Champ | Tapez | Obligatoire | Descriptif |
-| :------------------------------- | :------- | :------- | :--------------------------------------------- |
-| `subscriptionId` | `string` | Oui | Identifiant unique d’abonnement Paystack. |
-| `authorizationCodeEncrypted` | `string` | Non | Autorisation de frais récurrents cryptée. |
-| `emailTokenEncrypted` | `string` | Non | Jeton de gestion des abonnements crypté. |
-
+| Champ                        | Tapez    | Obligatoire | Descriptif                                |
+| :--------------------------- | :------- | :---------- | :---------------------------------------- |
+| `subscriptionId`             | `string` | Oui         | Identifiant unique d’abonnement Paystack. |
+| `authorizationCodeEncrypted` | `string` | Non         | Autorisation de frais récurrents cryptée. |
+| `emailTokenEncrypted`        | `string` | Non         | Jeton de gestion des abonnements crypté.  |
 
 ### `paystackSubscription`
 
-| Champ | Tapez | Obligatoire | Descriptif |
-| :--------------------- | :-------- | :------- | :--------------------------------------------------------------------------------- |
-| `plan` | `string` | Oui | Nom en minuscule du plan actif. |
-| `referenceId` | `string` | Oui | ID utilisateur associé ou ID d’organisation. |
-| `userId` | `string` | Oui | Utilisateur qui a initié le paiement de l'abonnement. |
-| `customerCode` | `string` | Non | Le code client Paystack pour cet abonnement. |
-| `subscriptionCode` | `string` | Non | Le code unique de l'abonnement (par exemple, `SUB_...` ou `LOC_...`). |
-| `transactionReference` | `string` | Non | La référence de la transaction qui a démarré l'abonnement. |
-| `planCode` | `string` | Non | Le code du forfait Paystack, lorsque Paystack gère l'abonnement. |
-| `status` | `string` | Oui | `active`, `trialing`, `canceled`, `incomplete`. |
-| `periodStart` | `Date` | Non | Date de début de la période de facturation en cours. |
-| `periodEnd` | `Date` | Non | Date de fin de la période de facturation en cours. |
-| `trialStart` | `Date` | Non | Date de début de la période d'essai. |
-| `trialEnd` | `Date` | Non | Date de fin de la période d'essai. |
-| `cancelAtPeriodEnd` | `boolean` | Non | S'il faut annuler à la fin de la période en cours. |
-| `cancelAt` | `Date` | Non | Horodatage d’annulation programmée. |
-| `canceledAt` | `Date` | Non | Horodatage d’annulation. |
-| `endedAt` | `Date` | Non | Horodatage de fin d’abonnement. |
-| `billingInterval` | `string` | Non | Intervalle de facturation utilisé par le forfait. |
-| `groupId` | `string` | Non | Groupe d'abonnement optionnel. |
-| `pendingPlan` | `string` | Non | Planifiez en attendant un futur changement du cycle de vie. |
-| `seats` | `number` | Non | Nombre de sièges achetés pour la facturation de l'équipe. |
-| `createdAt` | `Date` | Oui | Horodatage de création d’enregistrement. |
-| `updatedAt` | `Date` | Oui | Enregistrer l’horodatage de la mise à jour. |
-
+| Champ                  | Tapez     | Obligatoire | Descriptif                                                            |
+| :--------------------- | :-------- | :---------- | :-------------------------------------------------------------------- |
+| `plan`                 | `string`  | Oui         | Nom en minuscule du plan actif.                                       |
+| `referenceId`          | `string`  | Oui         | ID utilisateur associé ou ID d’organisation.                          |
+| `userId`               | `string`  | Oui         | Utilisateur qui a initié le paiement de l'abonnement.                 |
+| `customerCode`         | `string`  | Non         | Le code client Paystack pour cet abonnement.                          |
+| `subscriptionCode`     | `string`  | Non         | Le code unique de l'abonnement (par exemple, `SUB_...` ou `LOC_...`). |
+| `transactionReference` | `string`  | Non         | La référence de la transaction qui a démarré l'abonnement.            |
+| `planCode`             | `string`  | Non         | Le code du forfait Paystack, lorsque Paystack gère l'abonnement.      |
+| `status`               | `string`  | Oui         | `active`, `trialing`, `canceled`, `incomplete`.                       |
+| `periodStart`          | `Date`    | Non         | Date de début de la période de facturation en cours.                  |
+| `periodEnd`            | `Date`    | Non         | Date de fin de la période de facturation en cours.                    |
+| `trialStart`           | `Date`    | Non         | Date de début de la période d'essai.                                  |
+| `trialEnd`             | `Date`    | Non         | Date de fin de la période d'essai.                                    |
+| `cancelAtPeriodEnd`    | `boolean` | Non         | S'il faut annuler à la fin de la période en cours.                    |
+| `cancelAt`             | `Date`    | Non         | Horodatage d’annulation programmée.                                   |
+| `canceledAt`           | `Date`    | Non         | Horodatage d’annulation.                                              |
+| `endedAt`              | `Date`    | Non         | Horodatage de fin d’abonnement.                                       |
+| `billingInterval`      | `string`  | Non         | Intervalle de facturation utilisé par le forfait.                     |
+| `groupId`              | `string`  | Non         | Groupe d'abonnement optionnel.                                        |
+| `pendingPlan`          | `string`  | Non         | Planifiez en attendant un futur changement du cycle de vie.           |
+| `seats`                | `number`  | Non         | Nombre de sièges achetés pour la facturation de l'équipe.             |
+| `createdAt`            | `Date`    | Oui         | Horodatage de création d’enregistrement.                              |
+| `updatedAt`            | `Date`    | Oui         | Enregistrer l’horodatage de la mise à jour.                           |
 
 ### `paystackTransaction`
 
-| Champ | Tapez | Obligatoire | Descriptif |
-| :------------ | :------- | :------- | :--------------------------------------------------- |
-| `reference` | `string` | Oui | Référence unique de la transaction. |
-| `referenceId` | `string` | Oui | ID utilisateur associé ou ID d’organisation. |
-| `userId` | `string` | Oui | L'ID de l'utilisateur qui a initié la transaction. |
-| `amount` | `number` | Oui | Montant de la transaction dans la plus petite unité monétaire. |
-| `currency` | `string` | Oui | Code de devise (par exemple, « NGN »). |
-| `status` | `string` | Oui | `success`, `pending`, `failed`, `abandoned`. |
-| `plan` | `string` | Non | Nom du plan associé à la transaction. |
-| `product` | `string` | Non | Nom du produit associé à la transaction. |
-| `metadata` | `string` | Non | Chaîne JSON de métadonnées de transaction supplémentaires. |
-| `paystackId` | `string` | Non | L’ID Paystack interne pour la transaction. |
-| `createdAt` | `Date` | Oui | Horodatage de création de transaction. |
-| `updatedAt` | `Date` | Oui | Horodatage de la dernière mise à jour de la transaction. |
-
+| Champ         | Tapez    | Obligatoire | Descriptif                                                     |
+| :------------ | :------- | :---------- | :------------------------------------------------------------- |
+| `reference`   | `string` | Oui         | Référence unique de la transaction.                            |
+| `referenceId` | `string` | Oui         | ID utilisateur associé ou ID d’organisation.                   |
+| `userId`      | `string` | Oui         | L'ID de l'utilisateur qui a initié la transaction.             |
+| `amount`      | `number` | Oui         | Montant de la transaction dans la plus petite unité monétaire. |
+| `currency`    | `string` | Oui         | Code de devise (par exemple, « NGN »).                         |
+| `status`      | `string` | Oui         | `success`, `pending`, `failed`, `abandoned`.                   |
+| `plan`        | `string` | Non         | Nom du plan associé à la transaction.                          |
+| `product`     | `string` | Non         | Nom du produit associé à la transaction.                       |
+| `metadata`    | `string` | Non         | Chaîne JSON de métadonnées de transaction supplémentaires.     |
+| `paystackId`  | `string` | Non         | L’ID Paystack interne pour la transaction.                     |
+| `createdAt`   | `Date`   | Oui         | Horodatage de création de transaction.                         |
+| `updatedAt`   | `Date`   | Oui         | Horodatage de la dernière mise à jour de la transaction.       |
 
 ### `paystackProduct`
 
-| Champ | Tapez | Obligatoire | Descriptif |
-| :------------ | :-------- | :------- | :-------------------------------------------- |
-| `name` | `string` | Oui | Nom du produit. |
-| `description` | `string` | Non | Description du produit. |
-| `price` | `number` | Oui | Prix ​​dans la plus petite unité monétaire. |
-| `currency` | `string` | Oui | Code de devise (par exemple, « NGN »). |
-| `quantity` | `number` | Non | Quantité de stock disponible. |
-| `unlimited` | `boolean` | Non | Si le produit a un stock illimité. |
-| `paystackId` | `string` | Non | L’ID de produit Paystack interne. |
-| `slug` | `string` | Oui | Limace unique pour le produit. |
-| `metadata` | `string` | Non | Chaîne JSON de métadonnées de produit supplémentaires. |
-| `createdAt` | `Date` | Oui | Horodatage de création du produit. |
-| `updatedAt` | `Date` | Oui | Horodatage de la dernière mise à jour du produit. |
-
+| Champ         | Tapez     | Obligatoire | Descriptif                                             |
+| :------------ | :-------- | :---------- | :----------------------------------------------------- |
+| `name`        | `string`  | Oui         | Nom du produit.                                        |
+| `description` | `string`  | Non         | Description du produit.                                |
+| `price`       | `number`  | Oui         | Prix ​​dans la plus petite unité monétaire.              |
+| `currency`    | `string`  | Oui         | Code de devise (par exemple, « NGN »).                 |
+| `quantity`    | `number`  | Non         | Quantité de stock disponible.                          |
+| `unlimited`   | `boolean` | Non         | Si le produit a un stock illimité.                     |
+| `paystackId`  | `string`  | Non         | L’ID de produit Paystack interne.                      |
+| `slug`        | `string`  | Oui         | Limace unique pour le produit.                         |
+| `metadata`    | `string`  | Non         | Chaîne JSON de métadonnées de produit supplémentaires. |
+| `createdAt`   | `Date`    | Oui         | Horodatage de création du produit.                     |
+| `updatedAt`   | `Date`    | Oui         | Horodatage de la dernière mise à jour du produit.      |
 
 ### `paystackWebhookEvent`
 
@@ -845,15 +790,14 @@ Le plugin enregistre les livraisons de webhooks vérifiées avec leur type d'év
 disponibles), l'état du traitement et l'horodatage du traitement. Cette table est espace de noms du fournisseur afin que le
 Les plugins Paystack et Flutterwave peuvent être installés ensemble sans partager l'état du webhook.
 
-| Champ | Tapez | Obligatoire | Descriptif |
-| :------------ | :------- | :------- | :--------------------------------------------- |
-| `eventId` | `string` | Oui | Hachage stable de la charge utile exacte vérifiée. |
-| `eventType` | `string` | Oui | Nom de l’événement Paystack. |
-| `reference` | `string` | Non | Référence de la transaction lorsqu'elle est disponible. |
-| `payload` | `string` | Oui | Charge utile brute exacte du webhook. |
-| `status` | `string` | Oui | `pending` ou `processed`. |
-| `processedAt` | `Date` | Non | Horodatage de fin de traitement. |
-
+| Champ         | Tapez    | Obligatoire | Descriptif                                              |
+| :------------ | :------- | :---------- | :------------------------------------------------------ |
+| `eventId`     | `string` | Oui         | Hachage stable de la charge utile exacte vérifiée.      |
+| `eventType`   | `string` | Oui         | Nom de l’événement Paystack.                            |
+| `reference`   | `string` | Non         | Référence de la transaction lorsqu'elle est disponible. |
+| `payload`     | `string` | Oui         | Charge utile brute exacte du webhook.                   |
+| `status`      | `string` | Oui         | `pending` ou `processed`.                               |
+| `processedAt` | `Date`   | Non         | Horodatage de fin de traitement.                        |
 
 ### Migration de schéma v4
 
@@ -886,7 +830,6 @@ codes. Supprimez manuellement ces anciennes colonnes une fois la migration véri
 
 ---
 
-
 ## Dépannage
 
 - **Signature Webhook** : assurez-vous que `PAYSTACK_SECRET_KEY` correspond à l'intégration qui envoie le webhook. Paystack utilise cette clé secrète API pour `x-paystack-signature`.
@@ -894,7 +837,6 @@ codes. Supprimez manuellement ces anciennes colonnes une fois la migration véri
 - **Échecs de redirection** : vérifiez la console de votre navigateur ; Paystack renvoie souvent des erreurs 429 si vous utilisez trop fréquemment l'API de test.
 - **Incohérences de référence** : assurez-vous que `referenceId` est transmis correctement pour la facturation de l'organisation.
 - **Autorisation refusée** : vérifiez que votre logique `authorizeReference` vérifie correctement les rôles d'utilisateur ou les appartenances à une organisation. Les tentatives non autorisées de vérification des transactions renvoient désormais une réponse `401 Unauthorized` pour éviter les fuites de données.
-
 
 ### Indexation de la base de données
 
@@ -914,16 +856,13 @@ Les champs suivants sont indexés :
 
 Les mises à niveau au prorata et les frais de renouvellement approuvés persistent également dans les lignes `paystackTransaction`, de sorte que l'historique des transactions locales reste aligné sur les frais hors session réussis.
 
-
 ### Synchronisation des produits
 
 Le plugin propose deux façons de maintenir votre inventaire de produits aligné sur Paystack :
 
-
 #### 1. Synchronisation automatisée des stocks
 
 Chaque fois qu'un paiement unique réussi est effectué (via webhook ou vérification manuelle), le plugin appelle automatiquement **`syncProductQuantityFromPaystack`**. Cela récupère la quantité restante en temps réel à partir de l'API Paystack et met à jour l'enregistrement de votre base de données locale, garantissant ainsi que votre inventaire est toujours exact.
-
 
 #### 2. Synchronisation groupée manuelle de confiance
 
@@ -938,14 +877,12 @@ const ctx = { context: await auth.$context } as any;
 await syncPaystackProducts(ctx, paystackOptions);
 ```
 
-
 ### Remarque sur la compatibilité du SDK
 
 Le plugin cible désormais directement la surface client groupée officielle `@alexasomba/paystack-node`.
 Si vous injectez un client personnalisé, il doit correspondre aux véritables méthodes du SDK utilisées par le plugin, telles que `transaction.initialize`, `transaction.verify`, `transaction.chargeAuthorization`, `subscription.create`, `subscription.disable` et `subscription.enable`.
 
 ---
-
 
 ## 🏗️ Développement et contribution
 
@@ -970,16 +907,13 @@ vp -C examples/tanstack dev
 
 Les contributions sont les bienvenues ! Veuillez ouvrir un problème ou une pull request.
 
-
 ## Licence
 
 Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
-
 ## Feuille de route
 
 Futures fonctionnalités prévues pour les prochaines versions :
-
 
 ### v1.1.0 - Abonnements récurrents manuels (disponibles maintenant)
 
@@ -990,13 +924,11 @@ Futures fonctionnalités prévues pour les prochaines versions :
 
 > **Remarque** : Pour les abonnements gérés localement (pas de `planCode`), le plugin capture et stocke automatiquement le `authorization_code`. Déclenchez des renouvellements à partir d’un code backend fiable avec `chargeSubscriptionRenewal(...)`.
 
-
 ### Considérations futures
 
 - [ ] Améliorations de la prise en charge multi-devises
 - [ ] Génération de facture
 - [ ] Logique de nouvelle tentative de paiement pour les renouvellements ayant échoué
-
 
 ## Liens
 
@@ -1009,7 +941,6 @@ Futures fonctionnalités prévues pour les prochaines versions :
 - API d'abonnement Paystack : https://paystack.com/docs/api/subscription/
 - API du plan Paystack : https://paystack.com/docs/api/plan/
 - [Meilleure documentation d'authentification](https://www.better-auth.com/docs)
-
 
 ### Hooks d'opération d'abonnement facultatifs
 
@@ -1044,7 +975,6 @@ const operationHooks: PaystackSubscriptionOperationHooks = {
 ```
 
 Une implémentation de production `proceed` doit réserver avant de retourner, dédupliquer les demandes simultanées, protéger les résultats de réexécution et résoudre les résultats incertains par rapport au fournisseur faisant autorité et à l'état d'abonnement. Les paiements uniques de produit/montant et les opérations de renouvellement récurrentes n’utilisent pas ces crochets de plan d’abonnement.
-
 
 ### Tarification et livraison de webhooks
 

@@ -6,7 +6,6 @@ Un exemple complet illustrant le plugin `better-auth-paystack` avec TanStack Sta
 
 [**Démo en direct**](https://better-auth-paystack.gittech.workers.dev)
 
-
 ## Fonctionnalités démontrées
 
 - [x] Connexion anonyme (à des fins de démonstration)
@@ -20,7 +19,6 @@ Un exemple complet illustrant le plugin `better-auth-paystack` avec TanStack Sta
 - [x] Configuration du plan dynamique via `/paystack/config`
 - [x] Métadonnées SEO au niveau de l'itinéraire, plan du site et robots.txt
 
-
 ## Pile technologique
 
 - **Framework** : [Démarrage TanStack](https://tanstack.com/start)
@@ -29,16 +27,13 @@ Un exemple complet illustrant le plugin `better-auth-paystack` avec TanStack Sta
 - **UI** : React + [Shadcn UI](https://ui.shadcn.com/) + Tailwind CSS
 - **Déploiement** : Cloudflare Workers
 
-
 ## Pour commencer
-
 
 ### 1. Installer les dépendances
 
 ```bash
 pnpm install
 ```
-
 
 ### 2. Configurer l'environnement
 
@@ -51,7 +46,6 @@ BETTER_AUTH_URL=http://localhost:3000
 VITE_BETTER_AUTH_URL=http://localhost:3000
 ```
 
-
 ### 3. Exécutez le serveur de développement
 
 ```bash
@@ -60,20 +54,17 @@ pnpm dev
 
 Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
-
 ### 4. Construire pour la production
 
 ```bash
 pnpm build
 ```
 
-
 ### 5. Déployer sur Cloudflare Workers
 
 ```bash
 pnpm deploy
 ```
-
 
 ## Structure du projet
 
@@ -97,9 +88,7 @@ src/
         └── OrganizationManager.tsx # Organization management
 ```
 
-
 ## Détails clés de la mise en œuvre
-
 
 ### Configuration du serveur (`src/lib/auth.ts`)
 
@@ -142,7 +131,6 @@ export const auth = betterAuth({
 });
 ```
 
-
 ### Configuration client (`src/lib/auth-client.ts`)
 
 ```ts
@@ -155,7 +143,6 @@ export const authClient = createAuthClient({
   plugins: [paystackClient({ subscription: true }), organizationClient(), adminClient()],
 });
 ```
-
 
 ### Facturation à une organisation
 
@@ -173,7 +160,6 @@ if (result.data?.kind === "checkout") {
   window.location.href = result.data.url;
 }
 ```
-
 
 ### Flux de serveur avancés
 
@@ -214,16 +200,14 @@ Ce qui reste la propriété du serveur :
 - Traitement des webhooks et hooks du cycle de vie des abonnements
 - application de l'éligibilité aux essais et automatisation du démarrage des essais
 
-
 ## Variables d'environnement
 
-| Variables | Descriptif |
-| ---------------------- | ----------------------------------------------------------------- |
-| `PAYSTACK_SECRET_KEY` | Clé API Paystack ; vérifie également les signatures des webhooks |
-| `BETTER_AUTH_SECRET` | Secret pour un meilleur cryptage de session d'authentification |
-| `BETTER_AUTH_URL` | URL de base côté serveur |
-| `VITE_BETTER_AUTH_URL` | URL de base côté client |
-
+| Variables              | Descriptif                                                       |
+| ---------------------- | ---------------------------------------------------------------- |
+| `PAYSTACK_SECRET_KEY`  | Clé API Paystack ; vérifie également les signatures des webhooks |
+| `BETTER_AUTH_SECRET`   | Secret pour un meilleur cryptage de session d'authentification   |
+| `BETTER_AUTH_URL`      | URL de base côté serveur                                         |
+| `VITE_BETTER_AUTH_URL` | URL de base côté client                                          |
 
 ## En savoir plus
 

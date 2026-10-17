@@ -4,7 +4,6 @@
 
 Este ejemplo conecta Better Auth y `better-auth-paystack` a un Hono Cloudflare Worker.
 
-
 ## Configuración
 
 1. Instale las dependencias y cree la biblioteca desde la raíz del repositorio:
@@ -27,7 +26,6 @@ vp -C examples/hono install
 
 Nota: La verificación del webhook de Paystack utiliza la misma clave secreta de Paystack para `x-paystack-signature` HMAC. `PAYSTACK_WEBHOOK_SECRET` es opcional y se puede configurar con el mismo valor que `PAYSTACK_SECRET_KEY`.
 
-
 ## Ejecutar
 
 ```txt
@@ -47,7 +45,6 @@ vp -C examples/hono typecheck
 vp -C examples/hono test
 vp -C examples/hono build
 ```
-
 
 ## Notas
 
