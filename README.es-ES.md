@@ -1,3 +1,5 @@
+[English](README.md) · [Español](README.es-ES.md) · [Français](README.fr-FR.md)
+
 # Plugin Paystack para Better Auth
 
 Complemento con prioridad en TypeScript que integra Paystack en [Better Auth](https://www.better-auth.com) y ofrece un sistema de facturación preparado para producción con suscripciones nativas y locales, pagos únicos, periodos de prueba, facturación para organizaciones y webhooks seguros.
