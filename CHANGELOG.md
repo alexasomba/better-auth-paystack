@@ -4,6 +4,18 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.5.5](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.4...v3.5.5) (2026-10-17)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump @types/node from 22.20.5 to 26.6.5 ([#210](https://github.com/alexasomba/better-auth-paystack/issues/210)) ([632bf5a](https://github.com/alexasomba/better-auth-paystack/commit/632bf5ace5696166ca026b2c7456a93548eb16a6))
+
+
+### Documentation
+
+* add Spanish README ([#212](https://github.com/alexasomba/better-auth-paystack/issues/212)) ([5156702](https://github.com/alexasomba/better-auth-paystack/commit/51567028601f32c3ecd32b35203e44f04ce4812e))
+
 ## [3.5.4](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.3...v3.5.4) (2026-10-11)
 
 
