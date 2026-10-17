@@ -4,6 +4,13 @@
 
 - publish the npmjs package through the official npm provenance path
 
+## [3.5.6](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.5...v3.5.6) (2026-10-17)
+
+
+### Documentation
+
+* **readme:** add Spanish and French translations ([#213](https://github.com/alexasomba/better-auth-paystack/issues/213)) ([dfbf9e6](https://github.com/alexasomba/better-auth-paystack/commit/dfbf9e6967a2c05eb33bef9a7a81fd6b1584cb1a))
+
 ## [3.5.5](https://github.com/alexasomba/better-auth-paystack/compare/v3.5.4...v3.5.5) (2026-10-17)
 
 
